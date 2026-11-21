@@ -1210,9 +1210,9 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     const CONFIGS: [(u8, bool, f64, u32, Option<bool>); 8] = [
         (0, false, 0.0, 0, Some(true)),
         (NO_SBP, false, 0.0, 0, None),
-        (0, false, 0.0, 0, None),
-        (1, true, 0.0, 0, Some(true)),
         (0, true, 0.0, 0, None),
+        (1, true, 0.0, 0, Some(true)),
+        (0, false, 0.0, 0, None),
         (1, false, 0.0, 0, None),
         (0, false, 0.01, 7, None),
         (NO_SBP, true, 0.0, 0, Some(true)),

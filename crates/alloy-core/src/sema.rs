@@ -1113,7 +1113,16 @@ impl<'a> Builder<'a> {
                 for sym in &v {
                     cands.push(match sym {
                         Sym::Sig(id) => RExpr::Sig(*id),
-                        Sym::Field(id) => if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) },
+                        Sym::Field(id) => {
+                            let r = if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) };
+                            // Java `populate`: inside a sig fact a field of an unrelated sig has penalty 1
+                            // (a one-element `Choice` marks a penalized candidate).
+                            if matches!(r, RExpr::Field(_)) && !self.this_sigs.is_empty() && !self.in_field_decl {
+                                RExpr::Choice(vec![r])
+                            } else {
+                                r
+                            }
+                        }
                         Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => RExpr::Call(*fid, Vec::new()),
                         // a function that needs arguments cannot be this bare name (Java ExprBadCall)
                         Sym::Func(_) => continue,

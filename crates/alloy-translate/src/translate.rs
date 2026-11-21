@@ -398,7 +398,12 @@ fn type_of(
         RExpr::Choice(c) if c.len() == 1 => t!(&c[0]),
         RExpr::Choice(c) => {
             let mut acc: Option<TupleSet> = None;
+            // penalized candidates (one-element `Choice`) only count when nothing else is available
+            let has_plain = c.iter().any(|x| !matches!(x, RExpr::Choice(v) if v.len() == 1));
             for x in c {
+                if has_plain && matches!(x, RExpr::Choice(v) if v.len() == 1) {
+                    continue;
+                }
                 let t = t!(x);
                 acc = Some(match acc {
                     Some(a) if a.arity == t.arity => a.union(&t),
@@ -601,7 +606,13 @@ impl<'a> Tr<'a> {
             RExpr::Block(items) if items.len() == 1 => self.resolve(&items[0], exp),
             RExpr::Choice(cands) => {
                 let mut keep = Vec::new();
+                let mut marked: Vec<bool> = Vec::new();
                 for c in cands {
+                    // a one-element `Choice` marks a penalized candidate (Java ExprChoice penalty)
+                    let (c, is_marked) = match c {
+                        RExpr::Choice(v) if v.len() == 1 => (&v[0], true),
+                        other_c => (other_c, false),
+                    };
                     let c = match c {
                         RExpr::Call(fid, args) => {
                             let params = self.model.funcs[*fid as usize].params.clone();
@@ -639,10 +650,39 @@ impl<'a> Tr<'a> {
                     };
                     if self.compatible(&c, exp) {
                         keep.push(c);
+                        marked.push(is_marked);
                     }
                 }
+                // lowest penalty wins
+                if marked.iter().any(|m| !*m) && marked.iter().any(|m| *m) {
+                    let mut k = Vec::new();
+                    for (c, m) in keep.into_iter().zip(&marked) {
+                        if !*m {
+                            k.push(c);
+                        }
+                    }
+                    keep = k;
+                }
                 match keep.len() {
-                    0 => Err(other("no overloaded candidate matches the expected type")),
+                    0 => {
+                        // Java types a join/equality of disjoint columns as an (irrelevant, warned) empty
+                        // relation: no candidate fits, so any candidate with the right shape gives the same result.
+                        let shape_ok = |t: &RExpr, tr: &Self| match (exp, tr.ty(t)) {
+                            (Exp::Same(w), Some(ty)) => ty.arity == w.arity,
+                            (Exp::JoinLeft(_) | Exp::JoinRight(_), Some(_)) | (_, None) => true,
+                            _ => true,
+                        };
+                        for c in cands {
+                            let inner = match c {
+                                RExpr::Choice(v) if v.len() == 1 => &v[0],
+                                other_c => other_c,
+                            };
+                            if shape_ok(inner, self) {
+                                return Ok(inner.clone());
+                            }
+                        }
+                        Err(other("no overloaded candidate matches the expected type"))
+                    }
                     1 => Ok(keep.remove(0)),
                     _ => Ok(RExpr::Choice(keep)),
                 }
@@ -1318,13 +1358,87 @@ impl<'a> Tr<'a> {
                 });
             }
             match sig.mult {
-                Some(Mult::One) => out.push(Formula::Multiplicity(Multiplicity::One, me)),
-                Some(Mult::Lone) => out.push(Formula::Multiplicity(Multiplicity::Lone, me)),
-                Some(Mult::Some) => out.push(Formula::Multiplicity(Multiplicity::Some, me)),
+                Some(Mult::One) => out.push(Formula::Multiplicity(Multiplicity::One, me.clone())),
+                Some(Mult::Lone) => out.push(Formula::Multiplicity(Multiplicity::Lone, me.clone())),
+                Some(Mult::Some) => out.push(Formula::Multiplicity(Multiplicity::Some, me.clone())),
                 _ => {}
+            }
+            // Java `BoundsComputer` size constraints: `#sig = n` (exact) or `#sig <= n` when the bounds do not
+            // already imply it.
+            if let Some(n) = self.lay.scope[i] {
+                let upper = sig_upper(self.model, self.lay, i as SigId, self.n_atoms)?.len() as i32;
+                let lower = self.lower_size(i as SigId) as i32;
+                let exact = self.lay.exact[i];
+                if exact && lower == n && upper == n {
+                    // fully determined by the bounds
+                } else if exact {
+                    let f = self.size_formula(me.clone(), n, true);
+                    out.push(f);
+                } else if upper > n {
+                    let f = self.size_formula(me.clone(), n, false);
+                    out.push(f);
+                }
             }
         }
         Ok(out)
+    }
+
+    /// Number of atoms a sig must contain (union of the exact sigs below it).
+    fn lower_size(&self, s: SigId) -> usize {
+        fn go(lay: &Layout, s: SigId, out: &mut std::collections::BTreeSet<u32>) {
+            if lay.exact[s as usize] {
+                out.extend(lay.lower(s));
+            } else {
+                for &k in lay.children(s) {
+                    go(lay, k, out);
+                }
+            }
+        }
+        let mut set = std::collections::BTreeSet::new();
+        go(self.lay, s, &mut set);
+        set.len()
+    }
+
+    /// Java `BoundsComputer.size`: the sig has exactly (`exact`) or at most `n` atoms, as
+    /// `some v1..vn: sig | v1 + .. + vn = sig` (plus pairwise disjointness for exact).
+    fn size_formula(&mut self, a: Expr, n: i32, exact: bool) -> Formula {
+        if n <= 0 {
+            return Formula::Multiplicity(Multiplicity::No, a);
+        }
+        if n == 1 {
+            return Formula::Multiplicity(if exact { Multiplicity::One } else { Multiplicity::Lone }, a);
+        }
+        let mut decls = Vec::new();
+        let mut sum: Option<Expr> = None;
+        let mut disj: Vec<Formula> = Vec::new();
+        for _ in 0..n {
+            let v = self.fresh();
+            self.local_arity.insert(v, 1);
+            decls.push(Decl { var: v, domain: a.clone(), disjoint: false, set: false });
+            let ve = Expr::Var(v);
+            match sum.take() {
+                None => sum = Some(ve),
+                Some(prev) => {
+                    if exact {
+                        disj.push(Formula::Multiplicity(
+                            Multiplicity::No,
+                            Expr::Intersection(Box::new(ve.clone()), Box::new(prev.clone())),
+                        ));
+                    }
+                    sum = Some(Expr::union(ve, prev));
+                }
+            }
+        }
+        let eq = Formula::Equal(sum.unwrap(), a.clone());
+        if exact {
+            disj.push(eq);
+            Formula::Quantified(Quantifier::Some, decls, Box::new(Formula::And(disj)))
+        } else {
+            Formula::Or(vec![
+                Formula::Multiplicity(Multiplicity::No, a),
+                Formula::Quantified(Quantifier::Some, decls, Box::new(eq)),
+            ])
+        }
     }
 
     /// Field constraints: `f in owner -> decl`, declared multiplicities, and defined fields `f = e`.

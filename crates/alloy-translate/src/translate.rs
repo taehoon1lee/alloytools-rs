@@ -574,14 +574,50 @@ impl<'a> Tr<'a> {
                     _ => Ok(RExpr::Choice(keep)),
                 }
             }
+            RExpr::Bin(op @ (BinOp::Plus | BinOp::Intersect | BinOp::Override), a, b) if Self::is_choice(e) => {
+                let a2 = self.resolve(a, exp)?;
+                let b2 = self.resolve(b, exp)?;
+                let (a2, b2) = self.resolve_pair(&a2, &b2)?;
+                Ok(RExpr::Bin(*op, Box::new(a2), Box::new(b2)))
+            }
+            RExpr::Bin(BinOp::Minus, a, b) if Self::is_choice(e) => {
+                let a2 = self.resolve(a, exp)?;
+                let b2 = self.resolve_pair(&a2, b)?.1;
+                Ok(RExpr::Bin(BinOp::Minus, Box::new(a2), Box::new(b2)))
+            }
+            RExpr::Un(UnOp::Transpose, x) if Self::is_choice(e) => {
+                let flipped = match exp {
+                    Exp::Any => Exp::Any,
+                    Exp::Same(w) => {
+                        Exp::Same(TupleSet::from_tuples(w.arity, w.tuples.iter().map(|t| t.iter().rev().copied().collect::<Vec<_>>())))
+                    }
+                    Exp::JoinRight(c) => Exp::JoinLeft(c.clone()),
+                    Exp::JoinLeft(c) => Exp::JoinRight(c.clone()),
+                };
+                Ok(RExpr::Un(UnOp::Transpose, Box::new(self.resolve(x, &flipped)?)))
+            }
+            RExpr::Un(op @ (UnOp::Closure | UnOp::ReflClosure | UnOp::Set), x) if Self::is_choice(e) => {
+                let exp2 = match exp {
+                    Exp::Any => Exp::Any,
+                    Exp::Same(w) => Exp::Same(w.clone()),
+                    Exp::JoinRight(c) => Exp::JoinRight(c.clone()),
+                    Exp::JoinLeft(c) => Exp::JoinLeft(c.clone()),
+                };
+                Ok(RExpr::Un(*op, Box::new(self.resolve(x, &exp2)?)))
+            }
             _ => Ok(e.clone()),
         }
     }
 
+    /// Does `e` contain an unresolved overload at a position `resolve` can reach?
     fn is_choice(e: &RExpr) -> bool {
         match e {
             RExpr::Choice(c) => c.len() > 1,
             RExpr::Block(items) if items.len() == 1 => Self::is_choice(&items[0]),
+            RExpr::Bin(BinOp::Plus | BinOp::Minus | BinOp::Intersect | BinOp::Override, a, b) => {
+                Self::is_choice(a) || Self::is_choice(b)
+            }
+            RExpr::Un(UnOp::Transpose | UnOp::Closure | UnOp::ReflClosure | UnOp::Set, x) => Self::is_choice(x),
             _ => false,
         }
     }

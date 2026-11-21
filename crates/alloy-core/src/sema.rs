@@ -1057,22 +1057,7 @@ impl<'a> Builder<'a> {
         match found {
             Some(v) if v.len() == 1 => match &v[0] {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
-                Sym::Field(id) => {
-                    // Inside a sig body a field of that sig (or of an ancestor) means `this.field`.
-                    if let (Some(&ts), Some((_, this_l))) =
-                        (self.this_sigs.last(), self.locals.iter().rev().find(|(name, _)| name == "this"))
-                    {
-                        let owner = self.model.fields[*id as usize].owner;
-                        let mut p = Some(ts);
-                        while let Some(x) = p {
-                            if x == owner {
-                                return Ok(RExpr::Bin(BinOp::Join, Box::new(RExpr::Local(*this_l)), Box::new(RExpr::Field(*id))));
-                            }
-                            p = self.model.sigs[x as usize].parent;
-                        }
-                    }
-                    Ok(RExpr::Field(*id))
-                }
+                Sym::Field(id) => Ok(if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) }),
                 Sym::Func(fid) => {
                     if self.model.funcs[*fid as usize].nparams == 0 {
                         Ok(RExpr::Call(*fid, Vec::new()))
@@ -1091,7 +1076,7 @@ impl<'a> Builder<'a> {
                 for sym in &v {
                     cands.push(match sym {
                         Sym::Sig(id) => RExpr::Sig(*id),
-                        Sym::Field(id) => RExpr::Field(*id),
+                        Sym::Field(id) => if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) },
                         Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => RExpr::Call(*fid, Vec::new()),
                         _ => return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)"))),
                     });
@@ -1100,6 +1085,23 @@ impl<'a> Builder<'a> {
             }
             None => err(i, self.mods, e.loc.line, e.loc.col, format!("The name \"{n}\" cannot be found.")),
         }
+    }
+
+    /// A field named inside a sig body (own or inherited field) means `this.field`.
+    fn field_ref(&self, id: FieldId) -> RExpr {
+        if let (Some(&ts), Some((_, this_l))) =
+            (self.this_sigs.last(), self.locals.iter().rev().find(|(name, _)| name == "this"))
+        {
+            let owner = self.model.fields[id as usize].owner;
+            let mut p = Some(ts);
+            while let Some(x) = p {
+                if x == owner {
+                    return RExpr::Bin(BinOp::Join, Box::new(RExpr::Local(*this_l)), Box::new(RExpr::Field(id)));
+                }
+                p = self.model.sigs[x as usize].parent;
+            }
+        }
+        RExpr::Field(id)
     }
 
     /// Macro call: the body is resolved with the parameters bound to the argument expressions

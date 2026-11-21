@@ -60,3 +60,8 @@ Integers (bit-vector Int in kodkod, IntExpr/IntCmp, numbers as singleton atoms);
 commands resolved after all functions (param counts known at declaration); higher-order `some x: set S` nested under
 universal quantifiers reported as Java's ERROR (polarity tracked in alloy-translate); abstract sig scope from children.
 next: ExprChoice on non-receiver positions, pred/totalOrder, decl-type errors (syncimpl), arrow mults in expressions, lone/some decls.
+
+## 2026-11-21 status — verdict 196/465 (gate green), perf 154/465, parse 195/199, commands 195/199
+Open: (1) overloaded box calls `f[x]` with several candidates -> ExprChoice by argument types (patch saved in tmp/overload_choice.patch;
+it is correct but makes dijkstra-K-state Closure (16 s) and addressBook1h delUndoesAdd (2.4 s) too slow for the harness budget;
+needs M6 perf first). (2) opt_spantree 4 cmds wrong (see NOTES). (3) temporal (M8, ~19 cmds), --count (M7), perf (M6).

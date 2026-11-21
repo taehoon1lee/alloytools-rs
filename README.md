@@ -37,7 +37,8 @@ docs/JAVA_MAP.md              Java 파일 ↔ Rust 모듈 매핑
 | perf | verdict 일치 **그리고** `rust_ms ≤ 1.1 × java_ms + 20ms` |
 | --count | (M7) symmetry=0에서 해 개수가 같음 |
 
-현재 기준선: 모두 0 (Rust는 모든 곳에서 `unsupported` 반환).
+현재 상태: 모든 점수 0 (아직 파서 없음). 드라이버 검증 중 Haiku가 실제로 2회 실행되어 **M1.1 lexer, M1.2 surface AST는
+이미 완료·커밋**되어 있습니다(`git log` 참고). 다음 작업은 M1.3 표현식 파서입니다.
 
 ## Haiku 루프 실행 방법
 
@@ -59,11 +60,12 @@ New-Item loop/STOP                                    # 현재 반복이 끝나�
 4. `crates/` 변경 없는 반복이 4회 연속이면 정지 (막힘 감지)
 
 로그: `loop/logs/driver.log` (요약), `loop/logs/iter-NNN-*.jsonl` (세션 전체 stream-json).
+드라이버 자체 점검(Claude 호출 없음): `-Agent <가짜 에이전트.ps1>`로 대체 실행 가능.
 
 ### 방법 B — 대화형 Haiku 세션
 ```powershell
 cd D:\sw\alloytoolRS
-claude --model haiku
+claude --model haiku --settings loop/haiku-settings.json
 > /loop loop/PROMPT.md 를 읽고 그 절차대로 반복 1회를 수행해
 ```
 한 세션에서 컨텍스트가 계속 쌓이므로(자동 요약 발생) 장시간 실행에는 방법 A가 낫습니다.
@@ -91,6 +93,7 @@ python harness/gen_golden.py --count-mode --force -j 4
 - **Rust 실행**: harness는 명령마다 별도 프로세스로 실행(크래시/무한루프 격리), 타임아웃 = `min(60s, max(3s, 5×Java+2s))`.
 - **SAT solver**: Java 기본값 SAT4J에 대응해 순수 Rust `batsat`(MiniSat 계열)를 `satsolver` 트레이트 뒤에 둠.
   툴체인이 `x86_64-pc-windows-gnu`(C 컴파일러 없음)라 순수 Rust 의존성만 허용.
-- **부정행위 방지**: Rust 코드가 golden을 읽거나 파일명 특수처리 금지(CLAUDE.md), 보호 파일은 settings.json
-  deny 규칙 + 드라이버 원복으로 이중 보호.
+- **부정행위 방지**: Rust 코드가 golden을 읽거나 파일명 특수처리 금지(CLAUDE.md). 보호 파일은
+  `loop/haiku-settings.json`의 deny 규칙(드라이버가 `--settings`로 Haiku에만 적용) + 드라이버의 자동 원복으로 이중 보호.
+  대화형 세션(방법 B)에는 deny 규칙이 적용되지 않으니, 그 경우 `claude --model haiku --settings loop/haiku-settings.json`으로 실행하세요.
 - 인스턴스(해) 자체는 SAT solver마다 달라질 수 있어 비교하지 않고, 대신 해 개수(symmetry=0)로 의미적 동일성을 검사(M7).

@@ -27,8 +27,8 @@
   value; our `Tok::Str` stores the content without quotes (keep this in mind when comparing string constants).
 
 ## Design decisions
+- Surface AST (`syntax.rs`): `c => a else b` is `ExprKind::IfElse`; `a !in b` / `a != b` have no own BinOp —
+  build `Unary(Not, Binary(In|Equals))` like Java's `ExprUnary.Op.NOT` wrapping. `a[b]` stays `BoxJoin` until M3.
 - SAT backend: `satsolver::BatSat` (pure-Rust MiniSat-like). Java baseline uses SAT4J (Java MiniSat-like).
 
 ## HARNESS ISSUES (write evidence here instead of editing harness/)
-- Surface AST (`syntax.rs`): `c => a else b` is `ExprKind::IfElse`; `a !in b` / `a != b` have no own BinOp —
-  build `Unary(Not, Binary(In|Equals))` like Java's `ExprUnary.Op.NOT` wrapping. `a[b]` stays `BoxJoin` until M3.

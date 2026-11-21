@@ -53,6 +53,10 @@ pub struct Translator<'a, S: SatSolver> {
     fv_cache: HashMap<usize, std::rc::Rc<Vec<VarId>>>,
     /// > 0 while translating temporary expressions (no caching by address).
     no_cache: u32,
+    /// SAT variables of skolem bits (branched on right after the primary variables).
+    skolem_vars: Vec<u32>,
+    /// Number of relation (primary) variables allocated at construction: SAT variables `1..=base_primary`.
+    base_primary: u32,
     /// Number of primary variables (free upper-bound tuples).
     pub primary_vars: usize,
     /// Polarity of the formula being translated (true = positive).
@@ -89,11 +93,17 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             expr_cache: HashMap::new(),
             fv_cache: HashMap::new(),
             no_cache: 0,
+            skolem_vars: Vec::new(),
+            base_primary: primary_vars as u32,
             primary_vars,
             pol: true,
             no_skolem: 0,
             univ_depth: 0,
         }
+    }
+
+    fn primary_vars_base(&self) -> u32 {
+        self.base_primary
     }
 
     fn n(&self) -> u32 {
@@ -762,6 +772,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     continue;
                 }
                 let bit = self.f.new_var();
+                if let BoolVal::Lit(l) = bit {
+                    self.skolem_vars.push(l.unsigned_abs());
+                }
                 self.primary_vars += 1;
                 if *v != BoolVal::TRUE {
                     cons.push(self.f.implies(bit, *v));
@@ -1227,6 +1240,13 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
     tr.f.assert_true(top);
     add_symmetry_breaking(&mut tr, order);
     tr.f.finish();
+    // NOTE: Kodkod numbers skolem relations before gate variables; branching on them first (`set_priority`) made
+    // some hard UNSAT models (ceilingsAndFloors) 3x slower and others slightly faster, so it is not enabled.
+    if std::env::var("KSAT_PRIO").is_ok() {
+        let mut prio: Vec<u32> = (1..=tr.primary_vars_base()).collect();
+        prio.extend(tr.skolem_vars.iter().copied());
+        tr.f.sat.set_priority(&prio);
+    }
     let primary_vars = tr.primary_vars;
     let vars = tr.f.sat.num_vars();
     let clauses = tr.f.sat.num_clauses();

@@ -21,6 +21,8 @@ pub trait SatSolver {
     fn add_clause(&mut self, lits: &[i32]) -> bool;
     /// Solve. `Some(true)` = SAT, `Some(false)` = UNSAT, `None` = aborted/unknown.
     fn solve(&mut self) -> Option<bool>;
+    /// Variables (1-based DIMACS ids) the solver should branch on first (Kodkod numbers primary variables first).
+    fn set_priority(&mut self, _vars: &[u32]) {}
     /// Abort `solve()` (returning `None`) after this many conflicts; `None` = unlimited.
     fn set_conflict_limit(&mut self, _limit: Option<u64>) {}
     /// Abort `solve()` (returning `None`) after this much wall-clock time; `None` = unlimited.
@@ -49,11 +51,18 @@ impl batsat::Callbacks for Budget {
 }
 
 pub struct BatSat {
+    /// Clauses are buffered (flat, 0-terminated) and the solver variables are created at `solve()` in priority
+    /// order, so decisions start on the primary / skolem variables like Kodkod's variable numbering.
+    pending: Vec<i32>,
+    n_vars: u32,
+    priority: Vec<u32>,
+    unsat: bool,
+    solved_vars: Vec<Var>,
+    built: bool,
     time_limit: Option<std::time::Duration>,
     s: Solver<Budget>,
     vars: Vec<Var>,
     clauses: u64,
-    buf: Vec<Lit>,
 }
 
 impl Default for BatSat {
@@ -96,18 +105,24 @@ impl Default for BatSat {
         if let Some(v) = f("KSAT_CD") {
             o.clause_decay = v;
         }
-        BatSat { time_limit: None, s: Solver::new(o, Budget::default()), vars: Vec::new(), clauses: 0, buf: Vec::new() }
+        BatSat {
+            pending: Vec::new(),
+            n_vars: 0,
+            priority: Vec::new(),
+            unsat: false,
+            solved_vars: Vec::new(),
+            built: false,
+            time_limit: None,
+            s: Solver::new(o, Budget::default()),
+            vars: Vec::new(),
+            clauses: 0,
+        }
     }
 }
 
 impl BatSat {
     pub fn new() -> Self {
         Self::default()
-    }
-    #[inline]
-    fn lit(&self, l: i32) -> Lit {
-        let v = self.vars[(l.unsigned_abs() - 1) as usize];
-        Lit::new(v, l > 0)
     }
 }
 
@@ -121,36 +136,98 @@ impl SatSolver for BatSat {
         self.time_limit = limit;
     }
     fn num_vars(&self) -> u32 {
-        self.vars.len() as u32
+        self.n_vars
     }
     fn num_clauses(&self) -> u64 {
         self.clauses
     }
     fn add_variables(&mut self, n: u32) {
-        for _ in 0..n {
-            let v = match std::env::var("KSAT_POL").ok().as_deref() {
-                Some("1") => self.s.new_var(lbool::TRUE, true),
-                Some("0") => self.s.new_var(lbool::FALSE, true),
-                _ => self.s.new_var_default(),
-            };
-            self.vars.push(v);
+        self.n_vars += n;
+        if self.built {
+            for _ in 0..n {
+                let v = self.s.new_var_default();
+                self.solved_vars.push(v);
+            }
         }
+    }
+    fn set_priority(&mut self, vars: &[u32]) {
+        self.priority = vars.to_vec();
     }
     fn add_clause(&mut self, lits: &[i32]) -> bool {
         self.clauses += 1;
-        let mut buf = std::mem::take(&mut self.buf);
-        buf.clear();
-        buf.extend(lits.iter().map(|&l| self.lit(l)));
-        let ok = self.s.add_clause_reuse(&mut buf);
-        self.buf = buf;
-        ok
+        if lits.is_empty() {
+            self.unsat = true;
+            return false;
+        }
+        if self.built {
+            // incremental use after the first solve: the variables already exist
+            let mut buf: Vec<Lit> =
+                lits.iter().map(|&l| Lit::new(self.solved_vars[(l.unsigned_abs() - 1) as usize], l > 0)).collect();
+            let ok = self.s.add_clause_reuse(&mut buf);
+            if !ok {
+                self.unsat = true;
+            }
+            return ok;
+        }
+        self.pending.extend_from_slice(lits);
+        self.pending.push(0);
+        true
     }
     fn solve(&mut self) -> Option<bool> {
+        if self.unsat {
+            return Some(false);
+        }
+        if self.built {
+            return self.run();
+        }
+        // create the solver variables: priority ones first, then the rest in id order
+        let mut order: Vec<u32> = Vec::with_capacity(self.n_vars as usize);
+        let mut seen = vec![false; self.n_vars as usize + 1];
+        for &v in &self.priority {
+            if v >= 1 && v <= self.n_vars && !seen[v as usize] {
+                seen[v as usize] = true;
+                order.push(v);
+            }
+        }
+        for v in 1..=self.n_vars {
+            if !seen[v as usize] {
+                order.push(v);
+            }
+        }
+        let mut var_of = vec![None; self.n_vars as usize + 1];
+        for v in order {
+            let sv = self.s.new_var_default();
+            var_of[v as usize] = Some(sv);
+        }
+        self.vars = (1..=self.n_vars).map(|v| var_of[v as usize].unwrap()).collect();
+        let pending = std::mem::take(&mut self.pending);
+        let mut buf: Vec<Lit> = Vec::new();
+        for chunk in pending.split(|&l| l == 0) {
+            if chunk.is_empty() {
+                continue;
+            }
+            buf.clear();
+            buf.extend(chunk.iter().map(|&l| Lit::new(self.vars[(l.unsigned_abs() - 1) as usize], l > 0)));
+            if !self.s.add_clause_reuse(&mut buf) {
+                return Some(false);
+            }
+        }
+        self.solved_vars = self.vars.clone();
+        self.built = true;
+        self.run()
+    }
+    fn value_of(&self, v: u32) -> bool {
+        self.s.value_var(self.solved_vars[(v - 1) as usize]) == lbool::TRUE
+    }
+}
+
+impl BatSat {
+    fn run(&mut self) -> Option<bool> {
         let t0 = std::time::Instant::now();
         self.s.cb_mut().deadline = self.time_limit.map(|d| t0 + d);
         let r = self.s.solve_limited(&[]);
         if std::env::var("KSAT_STATS").is_ok() {
-            eprintln!("sat: conflicts {} time {:?} vars {} clauses {}", self.s.num_conflicts(), t0.elapsed(), self.vars.len(), self.clauses);
+            eprintln!("sat: conflicts {} time {:?} vars {} clauses {}", self.s.num_conflicts(), t0.elapsed(), self.n_vars, self.clauses);
         }
         if r == lbool::TRUE {
             Some(true)
@@ -159,9 +236,6 @@ impl SatSolver for BatSat {
         } else {
             None
         }
-    }
-    fn value_of(&self, v: u32) -> bool {
-        self.s.value_var(self.vars[(v - 1) as usize]) == lbool::TRUE
     }
 }
 

@@ -103,23 +103,55 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
         .commands
         .get(index)
         .ok_or_else(|| AlloyError::new(ErrorKind::Other, None, format!("no command {index}")))?;
-    let problem = translate::translate(&model, cmd, opt)?;
-    let translate_ms = t0.elapsed().as_secs_f64() * 1000.0;
-
-    let t1 = Instant::now();
-    let sol = kodkod::translate::solve(&problem.bounds, &problem.formula)
-        .map_err(|e| AlloyError::new(ErrorKind::Other, None, e))?;
-    let solve_ms = t1.elapsed().as_secs_f64() * 1000.0;
-
-    let instance = sol
-        .instance
-        .as_ref()
-        .map(|i| to_instance(&model, &problem.bounds, i));
+    let temporal = model.temporal;
+    let (min_trace, max_trace) = if temporal {
+        let (smin, smax) = cmd.steps.map_or((None, -1), |(a, b)| (a, b));
+        if smax == i32::MAX {
+            // Java: the bounded engines cannot do unbounded (complete) model checking
+            return Err(AlloyError::new(
+                ErrorKind::Other,
+                None,
+                "Bounded engines do not support complete model checking.",
+            ));
+        }
+        (smin.unwrap_or(1).max(1), if smax > 0 { smax } else { 10 })
+    } else {
+        (-1, -1)
+    };
+    let mut translate_ms = 0.0;
+    let mut solve_ms = 0.0;
+    let mut result = None;
+    let mut trace_len = 1;
+    let ks: Vec<Option<usize>> = if temporal { (min_trace..=max_trace).map(|k| Some(k as usize)).collect() } else { vec![None] };
+    for k in ks {
+        let t1 = Instant::now();
+        let problem = translate::translate(&model, cmd, opt, k)?;
+        translate_ms += t1.elapsed().as_secs_f64() * 1000.0;
+        let t2 = Instant::now();
+        let sol = kodkod::translate::solve(&problem.bounds, &problem.formula)
+            .map_err(|e| AlloyError::new(ErrorKind::Other, None, e))?;
+        solve_ms += t2.elapsed().as_secs_f64() * 1000.0;
+        let sat = sol.sat == Some(true);
+        trace_len = k.unwrap_or(1) as i32;
+        result = Some((problem, sol));
+        if sat {
+            break;
+        }
+    }
+    let (problem, sol) = result.ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace length to try"))?;
+    let _ = t0;
+    let instance = sol.instance.as_ref().map(|i| {
+        if temporal {
+            to_temporal_instance(&model, &problem.bounds, i, trace_len as usize)
+        } else {
+            to_instance(&model, &problem.bounds, i)
+        }
+    });
     Ok(Solution {
         sat: sol.sat == Some(true),
-        temporal: false,
-        min_trace: -1,
-        max_trace: -1,
+        temporal,
+        min_trace,
+        max_trace,
         translate_ms,
         solve_ms,
         stats: Stats {
@@ -129,6 +161,61 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
         },
         instance,
     })
+}
+
+/// Splits the time column off the variable relations: one atom-name map per state, plus the loop position.
+fn to_temporal_instance(model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod::instance::Instance, k: usize) -> Instance {
+    let mut var_names: std::collections::HashSet<String> = std::collections::HashSet::new();
+    for s in &model.sigs {
+        if s.is_var {
+            var_names.insert(s.label.clone());
+        }
+    }
+    for f in &model.fields {
+        if f.is_var {
+            var_names.insert(f.label.clone());
+        }
+    }
+    let time_index = |a: u32| -> Option<usize> {
+        bounds.universe.atom(a).strip_prefix("$time$").and_then(|x| x.parse::<usize>().ok())
+    };
+    let mut states: Vec<BTreeMap<String, Vec<Vec<String>>>> = vec![BTreeMap::new(); k];
+    let mut loop_state = -1;
+    for (name, ts) in &inst.relations {
+        if name == "$loop" {
+            if let Some(t) = ts.tuples.iter().next() {
+                loop_state = time_index(t[0]).map_or(-1, |x| x as i32);
+            }
+            continue;
+        }
+        if name.starts_with('$') {
+            continue;
+        }
+        if var_names.contains(name) {
+            for st in states.iter_mut() {
+                st.entry(name.clone()).or_default();
+            }
+            for t in &ts.tuples {
+                let (last, rest) = t.split_last().unwrap();
+                if let Some(si) = time_index(*last) {
+                    states[si]
+                        .entry(name.clone())
+                        .or_default()
+                        .push(rest.iter().map(|&a| bounds.universe.atom(a).to_string()).collect());
+                }
+            }
+        } else {
+            let tuples: Vec<Vec<String>> = ts
+                .tuples
+                .iter()
+                .map(|t| t.iter().map(|&a| bounds.universe.atom(a).to_string()).collect())
+                .collect();
+            for st in states.iter_mut() {
+                st.insert(name.clone(), tuples.clone());
+            }
+        }
+    }
+    Instance { trace_length: k as i32, loop_state, states }
 }
 
 /// Atom names of every relation of a kodkod instance, under the Java key names.

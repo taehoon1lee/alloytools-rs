@@ -61,6 +61,8 @@ pub struct Sig {
     pub module: usize,
     /// Declared by an `enum` (Java `Sig.isEnum`): its scope is 0 and its values are the atoms.
     pub is_enum: bool,
+    /// `var sig` (membership changes over time).
+    pub is_var: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -73,6 +75,8 @@ pub struct Field {
     pub decl: RExpr,
     /// The local standing for `this` inside `decl`.
     pub this_local: LocalId,
+    /// `var` field (its value changes over time).
+    pub is_var: bool,
     /// Multiplicity keyword of the declared bound (None = none written: `one` when the bound is unary).
     pub mult: Option<Mult>,
     /// Defined field `f = e` (Java `EXACTLYOF`).
@@ -172,6 +176,8 @@ pub struct RCommand {
     pub maxseq: Option<i32>,
     /// Per-sig scopes from the `for ... but` list (`int`/`seq`/`steps` are not among them).
     pub scopes: Vec<RScope>,
+    /// `N steps` / `min..max steps`: (min, max), max == i32::MAX for `N..` (unbounded).
+    pub steps: Option<(Option<i32>, i32)>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -190,6 +196,8 @@ pub struct Model {
     pub exact_sigs: Vec<SigId>,
     /// Every string literal of the model (without quotes), in order of first use.
     pub strings: Vec<String>,
+    /// The model uses `var` sigs/fields or temporal operators (Alloy 6 traces).
+    pub temporal: bool,
     /// Uses of a bare name that denotes a parameterless function of this module and also functions of the same
     /// name in opened modules (Java sees all of them; identical declared types make the use ambiguous).
     pub shadowed_uses: Vec<Vec<FuncId>>,
@@ -290,6 +298,7 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
                 bitwidth: None,
                 maxseq: None,
                 scopes: Vec::new(),
+                steps: None,
             });
         }
     }
@@ -323,6 +332,7 @@ impl<'a> Builder<'a> {
             fields: Vec::new(),
             module: 0,
             is_enum: false,
+            is_var: false,
         };
         self.model.sigs = vec![mk("univ"), mk("none"), mk("Int"), mk("String"), mk("seq/Int")];
     }
@@ -353,10 +363,11 @@ impl<'a> Builder<'a> {
                     for name in &s.names {
                         let id = self.model.sigs.len() as SigId;
                         let mult = s.quals.one.then_some(Mult::One).or(s.quals.lone.then_some(Mult::Lone)).or(s.quals.some.then_some(Mult::Some));
-                        if s.quals.var {
-                            return Err(unsupported("var sigs (temporal) are not supported yet (M8)"));
-                        }
                         self.push_sig(i, name, None, s.quals.is_abstract, mult, s.quals.is_private);
+                        if s.quals.var {
+                            self.model.sigs[id as usize].is_var = true;
+                            self.model.temporal = true;
+                        }
                         self.add_name(i, name, Sym::Sig(id), s.quals.is_private);
                         for d in &s.fields {
                             for f in &d.names {
@@ -367,6 +378,7 @@ impl<'a> Builder<'a> {
                                     owner: id,
                                     decl: RExpr::Num(0),
                                     this_local: 0,
+                                    is_var: d.var,
                                     mult: None,
                                     defined: false,
                                     is_private: d.is_private,
@@ -440,6 +452,7 @@ impl<'a> Builder<'a> {
             fields: Vec::new(),
             module: i,
             is_enum: false,
+            is_var: false,
         });
         id
     }
@@ -868,6 +881,7 @@ impl<'a> Builder<'a> {
             bitwidth: c.scopes.bitwidth,
             maxseq: c.scopes.maxseq,
             scopes,
+            steps: c.scopes.steps.map(|s| (s.min, s.max)),
         })
     }
 
@@ -1055,7 +1069,12 @@ impl<'a> Builder<'a> {
                 }
                 RExpr::Str(text.clone())
             }
-            ExprKind::Unary(op, x) => RExpr::Un(*op, Box::new(self.expr(i, x)?)),
+            ExprKind::Unary(op, x) => {
+                if matches!(op, UnOp::Always | UnOp::Eventually | UnOp::Historically | UnOp::Once | UnOp::Before | UnOp::After | UnOp::Prime) {
+                    self.model.temporal = true;
+                }
+                RExpr::Un(*op, Box::new(self.expr(i, x)?))
+            }
             ExprKind::Binary(BinOp::Join, l, r) => {
                 let cands = self.func_cands(i, r, 1);
                 if !cands.is_empty() {
@@ -1066,7 +1085,12 @@ impl<'a> Builder<'a> {
                 let rr = self.expr(i, r)?;
                 RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(rr))
             }
-            ExprKind::Binary(op, l, r) => RExpr::Bin(*op, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?)),
+            ExprKind::Binary(op, l, r) => {
+                if matches!(op, BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered) {
+                    self.model.temporal = true;
+                }
+                RExpr::Bin(*op, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?))
+            }
             ExprKind::BoxJoin(f, args) => {
                 if let ExprKind::Name(n) = &f.kind {
                     if n == "disj" {

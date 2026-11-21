@@ -33,9 +33,35 @@ fn other(msg: impl Into<String>) -> AlloyError {
 /// Max depth of nested predicate/function inlining (guards recursive definitions).
 const MAX_CALL_DEPTH: usize = 40;
 
-pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem, AlloyError> {
+/// One point of the unrolled lasso trace: `level` 1 = the first pass over states `0..k`, level 2 = the loop part
+/// (states `l..k`, entered again after the last state). Past operators see level 1 completely before level 2.
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub(crate) struct Tp {
+    level: u8,
+    state: usize,
+}
+
+/// Relations of a temporal problem with `k` states (Pardinus' `STATE`/`LOOP`).
+#[derive(Clone)]
+pub(crate) struct Temporal {
+    k: usize,
+    time_rel: Vec<u32>,
+    #[allow(dead_code)]
+    time_all: u32,
+    loop_rel: u32,
+}
+
+/// `trace`: number of states of the lasso trace when the model is temporal (`var` sigs/fields, LTL).
+pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usize>) -> Result<Problem, AlloyError> {
     let _ = opt;
-    let lay = compute_scopes(model, cmd)?;
+    let mut lay = compute_scopes(model, cmd)?;
+    if let Some(k) = trace {
+        let t0 = lay.atoms.len() as u32;
+        for i in 0..k {
+            lay.atoms.push(format!("$time${i}"));
+        }
+        lay.time_range = (t0, t0 + k as u32);
+    }
     // Java always adds the integer atoms to the universe (bitwidth 4 unless the command says otherwise),
     // exact in the `Int` relation, so they cost no primary variables.
     let bitwidth = cmd.bitwidth.unwrap_or(4);
@@ -77,6 +103,23 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         (0..maxseq).map(|i| vec![(n_sig_atoms as i64 + (i - int_min_v)) as u32]),
     );
     let seqint_rel = bounds.bound("seq/Int", seq_tuples.clone(), seq_tuples).map_err(other)?;
+    // Time atoms: every state is its own exact relation (so symmetry breaking tells them apart), `loop` is free.
+    let temporal = match trace {
+        Some(k) => {
+            let mut time_rel = Vec::new();
+            for i in 0..k {
+                let a = lay.time_range.0 + i as u32;
+                let ts = TupleSet::from_tuples(1, std::iter::once(vec![a]));
+                time_rel.push(bounds.bound(&format!("$time{i}"), ts.clone(), ts).map_err(other)?);
+            }
+            let all = TupleSet::from_tuples(1, (lay.time_range.0..lay.time_range.1).map(|a| vec![a]));
+            let time_all = bounds.bound("$Time", all.clone(), all.clone()).map_err(other)?;
+            let loop_rel = bounds.bound("$loop", TupleSet::empty(1), all).map_err(other)?;
+            Some(Temporal { k, time_rel, time_all, loop_rel })
+        }
+        None => None,
+    };
+    let time_set: Option<TupleSet> = trace.map(|_| unary((lay.time_range.0..lay.time_range.1).collect()));
     bounds.ordered_atoms = (n_sig_atoms..n_atoms).collect();
     bounds.int_start = n_sig_atoms;
     bounds.int_min = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
@@ -88,14 +131,19 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     for i in 0..model.sigs.len() {
         let s = &model.sigs[i];
         if s.kind == SigKind::User && s.parent.is_none() && s.subset_of.is_empty() {
-            allocate_prim_sig(model, &lay, n_atoms, i as SigId, &mut bounds, &mut sig_expr, &mut disjoint)?;
+            allocate_prim_sig(model, &lay, n_atoms, i as SigId, &mut bounds, &mut sig_expr, &mut disjoint, time_set.as_ref())?;
         }
     }
     for (i, s) in model.sigs.iter().enumerate() {
         if s.kind == SigKind::User && !s.subset_of.is_empty() {
             let up = sig_upper(model, &lay, i as SigId, n_atoms)?;
             let lo = lay.lower(i as SigId);
-            let id = bounds.bound(&s.label, unary(lo), unary(up)).map_err(other)?;
+            let id = if s.is_var {
+                let ts = time_set.as_ref().ok_or_else(|| other("var sig in a static problem"))?;
+                bounds.bound(&s.label, TupleSet::empty(2), unary(up).product(ts)).map_err(other)?
+            } else {
+                bounds.bound(&s.label, unary(lo), unary(up)).map_err(other)?
+            };
             sig_expr[i] = Some(Expr::Rel(id));
         }
     }
@@ -104,6 +152,12 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     let mut memo: Vec<Option<TupleSet>> = vec![None; model.fields.len()];
     for (fi, f) in model.fields.iter().enumerate() {
         let upper = field_upper(model, &lay, n_atoms, fi as FieldId, &mut memo, &mut Vec::new())?;
+        let upper = if f.is_var {
+            let ts = time_set.as_ref().ok_or_else(|| other("var field in a static problem"))?;
+            upper.product(ts)
+        } else {
+            upper
+        };
         let lower = TupleSet::empty(upper.arity);
         let id = bounds.bound(&f.label, lower, upper).map_err(other)?;
         field_rel[fi] = Some(id);
@@ -118,6 +172,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
 
     let mut tr = Tr {
         pinned,
+        temporal: temporal.clone(),
+        tp: temporal.as_ref().map(|_| Tp { level: 1, state: 0 }),
         model,
         lay: &lay,
         sig_expr,
@@ -139,11 +195,22 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     };
 
     let mut conjuncts = Vec::new();
+    if let Some(t) = &temporal {
+        conjuncts.push(Formula::Multiplicity(Multiplicity::One, Expr::Rel(t.loop_rel)));
+    }
     for f in &model.facts {
         conjuncts.push(tr.formula(&f.body)?);
     }
     for (sid, body) in &model.sig_facts {
-        conjuncts.push(tr.formula(body)?);
+        let f = tr.formula(body)?;
+        // appended facts of a temporal model hold in every state
+        if temporal.is_some() && model.temporal {
+            let rexpr = RExpr::Un(UnOp::Always, Box::new(body.clone()));
+            let _ = f;
+            conjuncts.push(tr.formula(&rexpr)?);
+        } else {
+            conjuncts.push(f);
+        }
         let _ = sid;
     }
     conjuncts.extend(tr.sig_constraints()?);
@@ -168,12 +235,22 @@ fn allocate_prim_sig(
     bounds: &mut Bounds,
     sig_expr: &mut Vec<Option<Expr>>,
     disjoint: &mut Vec<Formula>,
+    time: Option<&TupleSet>,
 ) -> Result<Expr, AlloyError> {
     let sig = &model.sigs[sid as usize];
+    if sig.is_var {
+        // a variable sig is one relation with a time column (its sub-/super-sig relations are per-state constraints)
+        let ts = time.ok_or_else(|| other("var sig in a static problem"))?;
+        let up = sig_upper(model, lay, sid, n_atoms)?;
+        let id = bounds.bound(&sig.label, TupleSet::empty(2), unary(up).product(ts)).map_err(other)?;
+        let e = Expr::Rel(id);
+        sig_expr[sid as usize] = Some(e.clone());
+        return Ok(e);
+    }
     let kids: Vec<SigId> = lay.children(sid).to_vec();
     let mut sum: Option<Expr> = None;
     for &k in &kids {
-        let ce = allocate_prim_sig(model, lay, n_atoms, k, bounds, sig_expr, disjoint)?;
+        let ce = allocate_prim_sig(model, lay, n_atoms, k, bounds, sig_expr, disjoint, time)?;
         sum = Some(match sum {
             None => ce,
             Some(prev) => {
@@ -319,7 +396,7 @@ fn sig_upper(model: &Model, lay: &Layout, s: SigId, n_atoms: u32) -> Result<Vec<
     let sig = &model.sigs[s as usize];
     if sig.kind == SigKind::Builtin {
         return Ok(match s {
-            SIG_UNIV => (0..n_atoms).collect(),
+            SIG_UNIV => (0..n_atoms).filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1).collect(),
             SIG_NONE => Vec::new(),
             SIG_INT => (lay.atoms.len() as u32..n_atoms).collect(),
             SIG_STRING => (lay.string_range.0..lay.string_range.1).collect(),
@@ -385,9 +462,9 @@ fn type_of(
     Ok(match e {
         RExpr::Sig(s) => unary(sig_upper(model, lay, *s, n_atoms)?),
         RExpr::Field(f) => field_upper(model, lay, n_atoms, *f, memo, stack)?,
-        RExpr::Const(Const::Univ) => unary((0..n_atoms).collect()),
+        RExpr::Const(Const::Univ) => unary((0..n_atoms).filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1).collect()),
         RExpr::Const(Const::None) => TupleSet::empty(1),
-        RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some, x) => t!(x),
+        RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some | UnOp::Prime, x) => t!(x),
         RExpr::Un(UnOp::Seq, x) => unary(sig_upper(model, lay, SIG_SEQINT, n_atoms)?).product(&t!(x)),
         RExpr::Bin(BinOp::Plus, a, b) => t!(a).union(&t!(b)),
         RExpr::Bin(BinOp::Intersect, a, b) => {
@@ -524,6 +601,9 @@ enum Exp {
 }
 
 struct Tr<'a> {
+    temporal: Option<Temporal>,
+    /// The time point the expression/formula being translated is evaluated at (None for static problems).
+    tp: Option<Tp>,
     pinned: std::collections::HashSet<(SigId, FieldId, FieldId)>,
     model: &'a Model,
     lay: &'a Layout,
@@ -558,9 +638,36 @@ impl<'a> Tr<'a> {
         self.next_var - 1
     }
 
+    /// `univ` without the time atoms.
+    fn univ(&self) -> Expr {
+        match &self.temporal {
+            Some(t) => Expr::Difference(Box::new(Expr::Const(KConst::Univ)), Box::new(Expr::Rel(t.time_all))),
+            None => Expr::Const(KConst::Univ),
+        }
+    }
+
+    fn time_atom(&self, s: usize) -> Result<Expr, AlloyError> {
+        let t = self.temporal.as_ref().ok_or_else(|| other("temporal construct in a static problem"))?;
+        Ok(Expr::Rel(t.time_rel[s]))
+    }
+
+    /// The relation `e` (which has a trailing time column) read at the current time point.
+    fn at_now(&self, e: Expr) -> Result<Expr, AlloyError> {
+        let tp = self.tp.ok_or_else(|| other("variable relation outside a time point"))?;
+        Ok(Expr::join(e, self.time_atom(tp.state)?))
+    }
+
     fn sig_expr(&self, s: SigId) -> Result<Expr, AlloyError> {
+        let e = self.sig_expr_raw(s)?;
+        if s >= 5 && self.model.sigs[s as usize].is_var {
+            return self.at_now(e);
+        }
+        Ok(e)
+    }
+
+    fn sig_expr_raw(&self, s: SigId) -> Result<Expr, AlloyError> {
         match s {
-            SIG_UNIV => Ok(Expr::Const(KConst::Univ)),
+            SIG_UNIV => Ok(self.univ()),
             SIG_NONE => Ok(Expr::Const(KConst::None)),
             SIG_INT => Ok(Expr::Rel(self.int_rel)),
             SIG_STRING => Ok(Expr::Rel(self.string_rel)),
@@ -573,9 +680,13 @@ impl<'a> Tr<'a> {
     }
 
     fn field_expr(&self, f: FieldId) -> Result<Expr, AlloyError> {
-        self.field_rel[f as usize]
+        let e = self.field_rel[f as usize]
             .map(Expr::Rel)
-            .ok_or_else(|| other("field without a relation"))
+            .ok_or_else(|| other("field without a relation"))?;
+        if self.model.fields[f as usize].is_var {
+            return self.at_now(e);
+        }
+        Ok(e)
     }
 
     /// Static arity of a kodkod expression.
@@ -833,9 +944,9 @@ impl<'a> Tr<'a> {
 
     /// `univ^k` for the k-ary complement used by domain/range restriction.
     fn univ_pow(&self, k: usize) -> Expr {
-        let mut e = Expr::Const(KConst::Univ);
+        let mut e = self.univ();
         for _ in 1..k {
-            e = Expr::product(e, Expr::Const(KConst::Univ));
+            e = Expr::product(e, self.univ());
         }
         e
     }
@@ -854,7 +965,13 @@ impl<'a> Tr<'a> {
                 Some(r) => Expr::Rel(*r),
                 None => return Err(other("string literal without an atom")),
             },
-            RExpr::Const(Const::Iden) => Expr::Const(KConst::Iden),
+            RExpr::Const(Const::Iden) => match &self.temporal {
+                Some(t) => Expr::Difference(
+                    Box::new(Expr::Const(KConst::Iden)),
+                    Box::new(Expr::product(Expr::Rel(t.time_all), Expr::Rel(t.time_all))),
+                ),
+                None => Expr::Const(KConst::Iden),
+            },
             RExpr::Const(c @ (Const::IntMin | Const::IntMax)) => Expr::IntToExpr(Box::new(self.int_of(&RExpr::Const(*c))?)),
             RExpr::Const(Const::IntNext) => self.int_next()?,
             RExpr::Const(other_c) => {
@@ -866,6 +983,7 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
                 Expr::IntToExpr(Box::new(self.int_of(e)?))
             }
+            RExpr::Un(UnOp::Prime, x) => self.prime_expr(x)?,
             RExpr::Un(UnOp::Set, x) => self.expr(x)?,
             RExpr::Un(UnOp::Seq, x) => Expr::product(Expr::Rel(self.seqint_rel), self.expr(x)?),
             RExpr::Un(UnOp::Transpose, x) => Expr::Transpose(Box::new(self.expr(x)?)),
@@ -1035,6 +1153,10 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::Le, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?),
             RExpr::Bin(BinOp::Gt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(b)?, self.int_of(a)?),
             RExpr::Bin(BinOp::Ge, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(b)?, self.int_of(a)?),
+            RExpr::Un(op @ (UnOp::Always | UnOp::Eventually | UnOp::After | UnOp::Before | UnOp::Historically | UnOp::Once), x) => {
+                self.ltl_unary(*op, x)?
+            }
+            RExpr::Bin(op @ (BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered), a, b) => self.ltl_binary(*op, a, b)?,
             RExpr::Un(UnOp::Not, x) => {
                 self.pol = !self.pol;
                 let r = self.formula(x);
@@ -1409,14 +1531,252 @@ impl<'a> Tr<'a> {
     }
 
     /// `all s: sig | ...` constraints of the sig hierarchy (Java `TranslateAlloyToKodkod.visit(Sig)`).
+    // ---- temporal logic over the unrolled lasso trace ----------------------------------------------------------
+
+    fn k(&self) -> Result<usize, AlloyError> {
+        Ok(self.temporal.as_ref().ok_or_else(|| other("temporal operator in a static problem"))?.k)
+    }
+
+    fn loop_is(&self, l: usize) -> Result<Formula, AlloyError> {
+        let t = self.temporal.as_ref().ok_or_else(|| other("no trace"))?;
+        Ok(Formula::Subset(Expr::Rel(t.time_rel[l]), Expr::Rel(t.loop_rel)))
+    }
+
+    /// State `s` belongs to the loop part (`s >= loop`).
+    fn reach2(&self, s: usize) -> Result<Formula, AlloyError> {
+        let mut parts = Vec::new();
+        for l in 0..=s {
+            parts.push(self.loop_is(l)?);
+        }
+        Ok(Formula::Or(parts))
+    }
+
+    fn at_formula(&mut self, tp: Tp, f: &RExpr) -> Result<Formula, AlloyError> {
+        let saved = self.tp;
+        self.tp = Some(tp);
+        let r = self.formula(f);
+        self.tp = saved;
+        r
+    }
+
+    /// The time points reachable from `tp` (including `tp`), in path order, with the guard saying the point exists.
+    fn future_path(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
+        let k = self.k()?;
+        let mut out = Vec::new();
+        if tp.level == 1 {
+            for s in tp.state..k {
+                out.push((None, Tp { level: 1, state: s }));
+            }
+            for j in 0..k {
+                out.push((Some(self.reach2(j)?), Tp { level: 2, state: j }));
+            }
+        } else {
+            for j in (tp.state..k).chain(0..tp.state) {
+                out.push((Some(self.reach2(j)?), Tp { level: 2, state: j }));
+            }
+        }
+        Ok(out)
+    }
+
+    /// The time points up to `tp`, going back in time (starting with `tp`).
+    fn past_path(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
+        let k = self.k()?;
+        let mut out = Vec::new();
+        if tp.level == 2 {
+            for j in (0..=tp.state).rev() {
+                out.push((Some(self.reach2(j)?), Tp { level: 2, state: j }));
+            }
+            for j in (0..k).rev() {
+                out.push((None, Tp { level: 1, state: j }));
+            }
+        } else {
+            for j in (0..=tp.state).rev() {
+                out.push((None, Tp { level: 1, state: j }));
+            }
+        }
+        Ok(out)
+    }
+
+    fn next_tps(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
+        let k = self.k()?;
+        if tp.state + 1 < k {
+            return Ok(vec![(None, Tp { level: tp.level, state: tp.state + 1 })]);
+        }
+        let mut out = Vec::new();
+        for l in 0..k {
+            out.push((Some(self.loop_is(l)?), Tp { level: 2, state: l }));
+        }
+        Ok(out)
+    }
+
+    fn prev_tps(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
+        let k = self.k()?;
+        if tp.level == 1 {
+            return Ok(if tp.state == 0 { Vec::new() } else { vec![(None, Tp { level: 1, state: tp.state - 1 })] });
+        }
+        let s = tp.state;
+        let mut out = vec![(Some(self.loop_is(s)?), Tp { level: 1, state: k - 1 })];
+        if s > 0 {
+            out.push((
+                Some(Formula::And(vec![self.reach2(s)?, Formula::Not(Box::new(self.loop_is(s)?))])),
+                Tp { level: 2, state: s - 1 },
+            ));
+        }
+        Ok(out)
+    }
+
+    fn ltl_unary(&mut self, op: UnOp, f: &RExpr) -> Result<Formula, AlloyError> {
+        let tp = self.tp.ok_or_else(|| other("temporal operator without a time point"))?;
+        match op {
+            UnOp::Always | UnOp::Eventually | UnOp::Historically | UnOp::Once => {
+                let path = if matches!(op, UnOp::Always | UnOp::Eventually) { self.future_path(tp)? } else { self.past_path(tp)? };
+                let universal = matches!(op, UnOp::Always | UnOp::Historically);
+                let mut parts = Vec::new();
+                for (g, p) in path {
+                    let body = self.at_formula(p, f)?;
+                    parts.push(match (g, universal) {
+                        (None, _) => body,
+                        (Some(g), true) => Formula::Implies(Box::new(g), Box::new(body)),
+                        (Some(g), false) => Formula::And(vec![g, body]),
+                    });
+                }
+                Ok(if universal { Formula::And(parts) } else { Formula::Or(parts) })
+            }
+            UnOp::After | UnOp::Before => {
+                let tps = if op == UnOp::After { self.next_tps(tp)? } else { self.prev_tps(tp)? };
+                let mut parts = Vec::new();
+                for (g, p) in tps {
+                    let body = self.at_formula(p, f)?;
+                    parts.push(match g {
+                        None => body,
+                        Some(g) => Formula::And(vec![g, body]),
+                    });
+                }
+                Ok(Formula::Or(parts))
+            }
+            _ => Err(other("not a temporal operator")),
+        }
+    }
+
+    /// `a until b` (future paths) / `a since b` (past paths) over `path` (ordered from the current point):
+    /// some point satisfies `b` and `a` holds at every earlier point of the path.
+    fn until_over(
+        &mut self,
+        path: Vec<(Option<Formula>, Tp)>,
+        a: &RExpr,
+        b: &RExpr,
+        negate: bool,
+    ) -> Result<Formula, AlloyError> {
+        let mut a_at: Vec<Formula> = Vec::new();
+        let mut alts = Vec::new();
+        for (g, p) in &path {
+            let mut fa = self.at_formula(*p, a)?;
+            let mut fb = self.at_formula(*p, b)?;
+            if negate {
+                fa = Formula::Not(Box::new(fa));
+                fb = Formula::Not(Box::new(fb));
+            }
+            let mut conj = Vec::new();
+            if let Some(g) = g {
+                conj.push(g.clone());
+            }
+            conj.push(fb);
+            conj.extend(a_at.iter().cloned());
+            alts.push(Formula::And(conj));
+            a_at.push(match g {
+                None => fa,
+                Some(g) => Formula::Implies(Box::new(g.clone()), Box::new(fa)),
+            });
+        }
+        Ok(Formula::Or(alts))
+    }
+
+    fn ltl_binary(&mut self, op: BinOp, a: &RExpr, b: &RExpr) -> Result<Formula, AlloyError> {
+        let tp = self.tp.ok_or_else(|| other("temporal operator without a time point"))?;
+        Ok(match op {
+            BinOp::Until => {
+                let path = self.future_path(tp)?;
+                self.until_over(path, a, b, false)?
+            }
+            BinOp::Releases => {
+                let path = self.future_path(tp)?;
+                Formula::Not(Box::new(self.until_over(path, a, b, true)?))
+            }
+            BinOp::Since => {
+                let path = self.past_path(tp)?;
+                self.until_over(path, a, b, false)?
+            }
+            BinOp::Triggered => {
+                let path = self.past_path(tp)?;
+                Formula::Not(Box::new(self.until_over(path, a, b, true)?))
+            }
+            _ => return Err(other("not a temporal operator")),
+        })
+    }
+
+    /// `e'`: `e` evaluated in the next state (after the last state of the trace: the loop target).
+    fn prime_expr(&mut self, e: &RExpr) -> Result<Expr, AlloyError> {
+        let tp = self.tp.ok_or_else(|| other("prime outside a time point"))?;
+        let tps = self.next_tps(tp)?;
+        let saved = self.tp;
+        let mut branches: Vec<(Option<Formula>, Expr)> = Vec::new();
+        for (g, p) in tps {
+            self.tp = Some(p);
+            let r = self.expr(e);
+            self.tp = saved;
+            branches.push((g, r?));
+        }
+        let (_, mut acc) = branches.pop().ok_or_else(|| other("no next state"))?;
+        while let Some((g, x)) = branches.pop() {
+            acc = match g {
+                Some(g) => Expr::IfThenElse(Box::new(g), Box::new(x), Box::new(acc)),
+                None => x,
+            };
+        }
+        Ok(acc)
+    }
+
+    /// Time points a constraint about var relations must hold at (all states), else the current point only.
+    fn constraint_points(&self, involves_var: bool) -> Vec<Option<Tp>> {
+        match (&self.temporal, involves_var) {
+            (Some(t), true) => (0..t.k).map(|s| Some(Tp { level: 1, state: s })).collect(),
+            _ => vec![self.tp],
+        }
+    }
+
+    fn sig_involves_var(&self, s: SigId) -> bool {
+        let sig = &self.model.sigs[s as usize];
+        sig.is_var
+            || sig.parent.map_or(false, |p| self.model.sigs[p as usize].is_var)
+            || sig.subset_of.iter().any(|t| self.model.sigs[*t as usize].is_var)
+    }
+
     fn sig_constraints(&mut self) -> Result<Vec<Formula>, AlloyError> {
-        let mut out = std::mem::take(&mut self.sig_disjoint);
-        let n = self.model.sigs.len();
-        for i in 0..n {
-            let sig = &self.model.sigs[i];
-            if sig.kind != SigKind::User {
+        let mut out = Vec::new();
+        for i in 0..self.model.sigs.len() {
+            if self.model.sigs[i].kind != SigKind::User {
                 continue;
             }
+            let pts = self.constraint_points(self.sig_involves_var(i as SigId));
+            let saved = self.tp;
+            for p in pts {
+                self.tp = p;
+                let r = self.sig_constraints_one(i);
+                self.tp = saved;
+                out.extend(r?);
+            }
+        }
+        // the static hierarchy part (sibling disjointness)
+        let mut all = std::mem::take(&mut self.sig_disjoint);
+        all.extend(out);
+        Ok(all)
+    }
+
+    fn sig_constraints_one(&mut self, i: usize) -> Result<Vec<Formula>, AlloyError> {
+        let mut out = Vec::new();
+        {
+            let model = self.model;
+            let sig = &model.sigs[i];
             let me = self.sig_expr(i as SigId)?;
             if !sig.subset_of.is_empty() {
                 let mut targets = Vec::new();
@@ -1429,6 +1789,10 @@ impl<'a> Tr<'a> {
                 } else {
                     Formula::Subset(me.clone(), rhs)
                 });
+            } else if sig.is_var {
+                if let Some(p) = sig.parent {
+                    out.push(Formula::Subset(me.clone(), self.sig_expr(p)?));
+                }
             }
             match sig.mult {
                 Some(Mult::One) => out.push(Formula::Multiplicity(Multiplicity::One, me.clone())),
@@ -1442,7 +1806,7 @@ impl<'a> Tr<'a> {
                 let upper = sig_upper(self.model, self.lay, i as SigId, self.n_atoms)?.len() as i32;
                 let lower = self.lower_size(i as SigId) as i32;
                 let exact = self.lay.exact[i];
-                if exact && lower == n && upper == n {
+                if exact && lower == n && upper == n && !sig.is_var {
                     // fully determined by the bounds
                 } else if exact {
                     let f = self.size_formula(me.clone(), n, true);
@@ -1518,22 +1882,44 @@ impl<'a> Tr<'a> {
     fn field_constraints(&mut self) -> Result<Vec<Formula>, AlloyError> {
         let mut out = Vec::new();
         for g in self.model.field_disjoint.clone() {
-            for i in 0..g.len() {
-                for j in i + 1..g.len() {
-                    let inter = Expr::Intersection(Box::new(self.field_expr(g[i])?), Box::new(self.field_expr(g[j])?));
-                    out.push(Formula::Multiplicity(Multiplicity::No, inter));
+            let any_var = g.iter().any(|f| self.model.fields[*f as usize].is_var);
+            for p in self.constraint_points(any_var) {
+                let saved = self.tp;
+                self.tp = p;
+                for i in 0..g.len() {
+                    for j in i + 1..g.len() {
+                        let inter = Expr::Intersection(Box::new(self.field_expr(g[i])?), Box::new(self.field_expr(g[j])?));
+                        out.push(Formula::Multiplicity(Multiplicity::No, inter));
+                    }
                 }
+                self.tp = saved;
             }
         }
         let nf = self.model.fields.len();
         for fi in 0..nf {
+            let f = self.model.fields[fi].clone();
+            let involves = f.is_var || self.model.sigs[f.owner as usize].is_var;
+            let pts = self.constraint_points(involves);
+            let saved = self.tp;
+            for p in pts {
+                self.tp = p;
+                let r = self.field_constraint_one(fi);
+                self.tp = saved;
+                out.extend(r?);
+            }
+        }
+        Ok(out)
+    }
+
+    fn field_constraint_one(&mut self, fi: usize) -> Result<Vec<Formula>, AlloyError> {
+        let mut out = Vec::new();
             let f = self.model.fields[fi].clone();
             let rel = self.field_expr(fi as FieldId)?;
             let owner = self.sig_expr(f.owner)?;
             if f.defined {
                 let rhs = self.expr(&f.decl)?;
                 out.push(Formula::Equal(rel.clone(), rhs));
-                continue;
+                return Ok(out);
             }
             // `all this: owner | this.f in decl` (the multiplicity keyword or arrow multiplicities apply per `this`).
             let this = self.fresh();
@@ -1579,7 +1965,6 @@ impl<'a> Tr<'a> {
                 vec![Decl { var: this, domain: owner, disjoint: false, set: false }],
                 Box::new(body),
             ));
-        }
         Ok(out)
     }
 }

@@ -26,6 +26,8 @@ pub struct Layout {
     model_sigs_len: usize,
     /// Atom range `[start, end)` of the `String` sig (string literals, padded to the `String` scope).
     pub string_range: (u32, u32),
+    /// Atom range of the time atoms of a temporal problem (`(0, 0)` when static).
+    pub time_range: (u32, u32),
 }
 
 impl Layout {
@@ -244,6 +246,7 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
         is_subset: is_subset.clone(),
         model_sigs_len: n,
         string_range: (0, 0),
+        time_range: (0, 0),
     };
     let mut atoms = Vec::new();
     let mut range = vec![(0u32, 0u32); n];

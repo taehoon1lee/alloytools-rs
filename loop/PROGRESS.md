@@ -16,3 +16,9 @@ next: M1.3 expression parser (precedence from Alloy.cup) producing `syntax::Expr
 parse 0/199, commands 0/199, verdict 0/465, perf 0/465 (no paragraph parser yet; 19 alloy-core unit tests pass; gate exit 0)
 Surface AST: added `Mult`, `BinOp::Arrow(Mult,Mult)`, `IntPlus/IntMinus`, `UnOp::IntCast`, `Const::IntMin/IntMax/IntNext`.
 next: M1.4 declarations/paragraphs (sigs, fields via `Parser::decl`, facts, pred/fun, assert, run/check, open, enum, let)
+
+## 2026-11-21 M1.4a — paragraph parser (`parse_module` in `parser.rs`: header, open, enum, sig, fact, assert, pred, fun)
+parse 0/199, commands 0/199, verdict 0/465, perf 0/465 (`parse_everything_from_file` not wired yet; 26 alloy-core tests pass; gate exit 0)
+Fixed M1.3 bug: `pred/totalOrder[..]` in primary position bumped 2 tokens instead of 3.
+Corpus test: every file parses except run/check/let/labelled commands (Unsupported). Errors after the first command are not checked yet.
+next: M1.4b run/check/labelled commands + `let` macros + `x = e` field form, then wire `parse_everything_from_file` (`World::commands`)

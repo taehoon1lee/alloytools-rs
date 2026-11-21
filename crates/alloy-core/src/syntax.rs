@@ -46,6 +46,7 @@ pub enum Paragraph {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Open {
     pub loc: Loc,
+    pub is_private: bool,
     /// Module path as written, e.g. `util/ordering`.
     pub name: String,
     /// Actual module arguments, each a name or expression.
@@ -70,6 +71,8 @@ pub enum SigExtends {
     Extends(Expr),
     /// `in B + C` (subset signature)
     In(Vec<Expr>),
+    /// `= B + C` (exact union signature; Java marker `"="`)
+    Equal(Vec<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -89,6 +92,7 @@ pub struct SigDecl {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EnumDecl {
     pub loc: Loc,
+    pub is_private: bool,
     pub name: String,
     pub values: Vec<String>,
 }
@@ -117,6 +121,7 @@ pub struct Fact {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Func {
     pub loc: Loc,
+    pub is_private: bool,
     /// Qualified name, e.g. `this/A.f` for sig-local functions (kept as written).
     pub name: String,
     pub params: Vec<Decl>,
@@ -346,8 +351,18 @@ mod tests {
     fn builds_nested_surface_tree() {
         // `all x: A | x.f in B`  (shape only; parser comes in M1.3)
         let l = Loc { line: 2, col: 3 };
-        let body = Expr::new(l, ExprKind::Binary(BinOp::In, Box::new(n("x")), Box::new(n("B"))));
-        let decl = Decl { loc: l, is_private: false, disjoint: false, var: false, names: vec!["x".into()], expr: n("A") };
+        let body = Expr::new(
+            l,
+            ExprKind::Binary(BinOp::In, Box::new(n("x")), Box::new(n("B"))),
+        );
+        let decl = Decl {
+            loc: l,
+            is_private: false,
+            disjoint: false,
+            var: false,
+            names: vec!["x".into()],
+            expr: n("A"),
+        };
         let q = Expr::new(l, ExprKind::Quant(Quant::All, vec![decl], Box::new(body)));
         match &q.kind {
             ExprKind::Quant(Quant::All, decls, body) => {

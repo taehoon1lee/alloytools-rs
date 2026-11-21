@@ -43,6 +43,11 @@
 
 - Expression parser (`parser.rs`): one method per CUP level, no precedence table. Surface conventions are listed in
   the module doc (e.g. `{}` = TRUE, `disj[..]`/`pred/totalOrder[..]` = `BoxJoin(Name(..))`, `int[e]`/`e.int` = `IntCast`).
+- Paragraph parser (`parse_module`): `Super` blocks are `Vec<Expr>` conjuncts; `a; b c` is parsed by `super_p` as
+  `a` and `after({b; c})` (Java `SuperP`), NOT by `expr()` (which would make `after(b)` and leave `c` at time 0).
+  `pred`/`fun` bodies are `Block(conjuncts)`; `{}` = `Block([])` = TRUE. Sig-local names are kept as `Sig.name`.
+  `sig A = B` is `SigExtends::Equal` (Java marker `"="`), `in` is `SigExtends::In`, `extends` is `SigExtends::Extends`.
+- Labelled commands (`L: run {..}`) exist in the corpus (Alloy 6 syntax); they return Unsupported until M1.4b.
 - Known gaps (not ported yet): `int[a, b]` multi-argument form (error for now); the `x = e` declaration form
   (`Declb EQUALS`, used for fields); multiplicity on `in`/`=` right operands is not rewritten to `*Of` forms (M3 must
   apply `CompModule.mult`).

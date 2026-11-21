@@ -577,7 +577,7 @@ impl Parser {
                 return Ok(keyword_box("disj", args, loc));
             }
             _ if self.is_total_order() => {
-                self.bump_n(2);
+                self.bump_n(3);
                 let args = self.bracket_args()?;
                 return Ok(keyword_box("pred/totalOrder", args, loc));
             }
@@ -793,6 +793,357 @@ impl Parser {
     }
 }
 
+/// Parses one `.als` file into a [`Module`]: optional `module` header, then paragraphs in source order.
+/// Java: `Spec` productions of `Alloy.cup` (+ the `CompModule.add*` actions they call).
+/// `run`/`check`/`let` paragraphs are not parsed yet (M1.4b) and return `Unsupported`.
+pub fn parse_module(file: &str, src: &str) -> PResult<Module> {
+    let mut p = Parser::new(file, lex(file, src)?);
+    let header = if *p.peek() == Tok::Module {
+        Some(p.module_header()?)
+    } else {
+        None
+    };
+    let mut paragraphs = Vec::new();
+    while *p.peek() != Tok::Eof {
+        paragraphs.push(p.paragraph()?);
+    }
+    Ok(Module { header, paragraphs })
+}
+
+// ---- paragraphs (Alloy.cup `Spec`, `Sig`, `Function`, `Predicate`, `Super`) -----------------
+impl Parser {
+    /// `module Name [ [exactly] A, B ]` (Java `Spec MODULE Name [Namex]`).
+    fn module_header(&mut self) -> PResult<ModuleHeader> {
+        let loc = self.loc();
+        self.expect(&Tok::Module)?;
+        let name = self.name()?;
+        let mut params = Vec::new();
+        if self.eat(&Tok::LBracket) {
+            loop {
+                self.eat(&Tok::Exactly);
+                params.push(self.name()?);
+                if !self.eat(&Tok::Comma) {
+                    break;
+                }
+            }
+            self.expect(&Tok::RBracket)?;
+        }
+        Ok(ModuleHeader { loc, name, params })
+    }
+
+    /// One paragraph. `[private]` is consumed here for the productions that accept `Vis`;
+    /// sigs re-read their own qualifiers.
+    fn paragraph(&mut self) -> PResult<Paragraph> {
+        let start = self.pos;
+        let is_private = self.eat(&Tok::Private);
+        // `label: run ...` / `label: check ...` (Alloy 6 labelled commands) are commands (M1.4b).
+        let labelled = matches!(self.peek(), Tok::Id(_)) && *self.tok(1) == Tok::Colon;
+        if labelled {
+            return Err(AlloyError::unsupported(
+                "labelled run/check paragraphs are not parsed yet (M1.4b)",
+            ));
+        }
+        let p = match self.peek() {
+            Tok::Open => Paragraph::Open(self.open(is_private)?),
+            Tok::Enum => Paragraph::Enum(self.enum_decl(is_private)?),
+            Tok::Fact => Paragraph::Fact(self.fact()?),
+            Tok::Assert => Paragraph::Assert(self.assert()?),
+            Tok::Pred => Paragraph::Pred(self.func(is_private, false)?),
+            Tok::Fun => Paragraph::Fun(self.func(is_private, true)?),
+            Tok::Run | Tok::Check | Tok::Let => {
+                return Err(AlloyError::unsupported(
+                    "run/check/let paragraphs are not parsed yet (M1.4b)",
+                ))
+            }
+            _ => {
+                self.pos = start;
+                Paragraph::Sig(self.sig()?)
+            }
+        };
+        Ok(p)
+    }
+
+    /// `[private] open Name [ '[' SigRefs ']' ] [as Name]`.
+    fn open(&mut self, is_private: bool) -> PResult<Open> {
+        let loc = self.loc();
+        self.expect(&Tok::Open)?;
+        let name = self.name()?;
+        let mut args = Vec::new();
+        if self.eat(&Tok::LBracket) {
+            if !self.eat(&Tok::RBracket) {
+                loop {
+                    args.push(self.sig_ref()?);
+                    if !self.eat(&Tok::Comma) {
+                        break;
+                    }
+                }
+                self.expect(&Tok::RBracket)?;
+            }
+        }
+        let alias = if self.eat(&Tok::As) {
+            Some(self.name()?)
+        } else {
+            None
+        };
+        Ok(Open {
+            loc,
+            is_private,
+            name,
+            args,
+            alias,
+        })
+    }
+
+    /// `[private] enum Name { A, B }` (the empty body `{}` is accepted, as in Java).
+    fn enum_decl(&mut self, is_private: bool) -> PResult<EnumDecl> {
+        let loc = self.loc();
+        self.expect(&Tok::Enum)?;
+        let name = self.name()?;
+        self.expect(&Tok::LBrace)?;
+        let mut values = Vec::new();
+        if !self.eat(&Tok::RBrace) {
+            loop {
+                values.push(self.name()?);
+                if !self.eat(&Tok::Comma) {
+                    break;
+                }
+            }
+            self.expect(&Tok::RBrace)?;
+        }
+        Ok(EnumDecl {
+            loc,
+            is_private,
+            name,
+            values,
+        })
+    }
+
+    /// `fact [Name | "string"] Super`.
+    fn fact(&mut self) -> PResult<Fact> {
+        let loc = self.loc();
+        self.expect(&Tok::Fact)?;
+        let name = self.para_name()?;
+        let body = self.super_block()?;
+        Ok(Fact { loc, name, body })
+    }
+
+    /// `assert [Name | "string"] Super`.
+    fn assert(&mut self) -> PResult<Assert> {
+        let loc = self.loc();
+        self.expect(&Tok::Assert)?;
+        let name = self.para_name()?;
+        let body = self.super_block()?;
+        Ok(Assert { loc, name, body })
+    }
+
+    /// Optional name of a fact/assert: an identifier path or a string literal.
+    fn para_name(&mut self) -> PResult<Option<String>> {
+        match self.peek().clone() {
+            Tok::LBrace => Ok(None),
+            Tok::Str(s) => {
+                self.bump();
+                Ok(Some(s))
+            }
+            _ => Ok(Some(self.name()?)),
+        }
+    }
+
+    /// `[private] pred [Sig.]name [ (decls) | [decls] ] Super` and
+    /// `[private] fun [Sig.]name [ (decls) | [decls] ] : Expr Super`.
+    /// The body is stored as one `Block` of conjuncts (Java wraps `Super` in `NOOP`).
+    fn func(&mut self, is_private: bool, is_fun: bool) -> PResult<Func> {
+        let loc = self.loc();
+        self.bump(); // `pred` or `fun`
+        let name = self.func_name()?;
+        let params = if self.eat(&Tok::LParen) {
+            let d = self.decl_list(&Tok::RParen)?;
+            self.expect(&Tok::RParen)?;
+            d
+        } else if self.eat(&Tok::LBracket) {
+            let d = self.decl_list(&Tok::RBracket)?;
+            self.expect(&Tok::RBracket)?;
+            d
+        } else {
+            Vec::new()
+        };
+        let ret = if is_fun {
+            self.expect(&Tok::Colon)?;
+            Some(self.expr()?)
+        } else {
+            None
+        };
+        let body_loc = self.loc();
+        let body = Expr::new(body_loc, ExprKind::Block(self.super_block()?));
+        Ok(Func {
+            loc,
+            is_private,
+            name,
+            params,
+            ret,
+            body,
+        })
+    }
+
+    /// `Name` or `SigRef . Name` (sig-local `pred`/`fun`, rendered as `Sig.name`).
+    fn func_name(&mut self) -> PResult<String> {
+        let save = self.pos;
+        if let Ok(sig) = self.sig_ref_name() {
+            if self.eat(&Tok::Dot) {
+                let n = self.name()?;
+                return Ok(format!("{sig}.{n}"));
+            }
+        }
+        self.pos = save;
+        self.name()
+    }
+
+    /// `[private] [var] [abstract] [lone|one|some] sig Names [extends|in|= ...] { decls } [Super]`.
+    /// Java `Sig` + `SigQuals` (a repeated qualifier is a syntax error at the second occurrence).
+    fn sig(&mut self) -> PResult<SigDecl> {
+        let loc = self.loc();
+        let mut quals = SigQuals::default();
+        loop {
+            let at = self.loc();
+            let slot: &mut bool = match self.peek() {
+                Tok::Abstract => &mut quals.is_abstract,
+                Tok::Lone => &mut quals.lone,
+                Tok::One => &mut quals.one,
+                Tok::SomeKw => &mut quals.some,
+                Tok::Private => &mut quals.is_private,
+                Tok::Var => &mut quals.var,
+                Tok::Sig => break,
+                _ => return self.err("expected 'sig'"),
+            };
+            if *slot {
+                return self.err_at(
+                    at,
+                    "The same qualifier cannot be specified more than once for the same sig.",
+                );
+            }
+            *slot = true;
+            self.bump();
+        }
+        self.expect(&Tok::Sig)?;
+        let mut names = vec![self.name()?];
+        while self.eat(&Tok::Comma) {
+            names.push(self.name()?);
+        }
+        let extends = match self.peek() {
+            Tok::Extends => {
+                self.bump();
+                Some(SigExtends::Extends(self.sig_ref()?))
+            }
+            Tok::In => {
+                self.bump();
+                Some(SigExtends::In(self.sig_ref_plus()?))
+            }
+            Tok::Equals => {
+                self.bump();
+                Some(SigExtends::Equal(self.sig_ref_plus()?))
+            }
+            _ => None,
+        };
+        self.expect(&Tok::LBrace)?;
+        let fields = self.decl_list(&Tok::RBrace)?;
+        self.expect(&Tok::RBrace)?;
+        let appended_fact = if *self.peek() == Tok::LBrace {
+            Some(self.super_block()?)
+        } else {
+            None
+        };
+        Ok(SigDecl {
+            loc,
+            quals,
+            names,
+            extends,
+            fields,
+            appended_fact,
+        })
+    }
+
+    /// Possibly empty `decl (, decl)*` ending before `close` (Java `Decls`); `close` is not consumed.
+    fn decl_list(&mut self, close: &Tok) -> PResult<Vec<Decl>> {
+        let mut out = Vec::new();
+        while self.peek() != close {
+            out.push(self.decl()?);
+            if !self.eat(&Tok::Comma) {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    /// `SigRef (+ SigRef)*` (Java `SigRefu`).
+    fn sig_ref_plus(&mut self) -> PResult<Vec<Expr>> {
+        let mut out = vec![self.sig_ref()?];
+        while self.eat(&Tok::Plus) {
+            out.push(self.sig_ref()?);
+        }
+        Ok(out)
+    }
+
+    /// A sig reference as an expression (Java `SigRef`): a name or a built-in sig keyword.
+    fn sig_ref(&mut self) -> PResult<Expr> {
+        let loc = self.loc();
+        let s = self.sig_ref_name()?;
+        Ok(Expr::new(loc, ExprKind::Name(s)))
+    }
+
+    /// Text of a `SigRef`: `univ`, `String`, `steps` (Java `TIME`), `Int`, `none`, `seq/Int`, or a `Name`.
+    fn sig_ref_name(&mut self) -> PResult<String> {
+        let s = match self.peek() {
+            Tok::Univ => "univ",
+            Tok::StringKw => "String",
+            Tok::Time => "steps",
+            Tok::SigInt => "Int",
+            Tok::NoneKw => "none",
+            _ => return self.name(),
+        };
+        self.bump();
+        Ok(s.to_string())
+    }
+
+    /// `{ conjunct* }` (Java `Super`). Returns the top-level conjuncts; `{}` gives an empty list (TRUE).
+    fn super_block(&mut self) -> PResult<Vec<Expr>> {
+        self.expect(&Tok::LBrace)?;
+        let out = self.super_p(&Tok::RBrace)?;
+        self.expect(&Tok::RBrace)?;
+        Ok(out)
+    }
+
+    /// Java `SuperP`: `ExprNoSeq*`, where `a ; rest` makes `rest` the operand of `after`
+    /// (`a ; b c` = `a and after(b and c)`), so the sequence rule is applied here, not by `expr()`.
+    fn super_p(&mut self, close: &Tok) -> PResult<Vec<Expr>> {
+        let mut out = Vec::new();
+        while self.peek() != close {
+            let loc = self.loc();
+            out.push(self.or_level()?);
+            if self.eat(&Tok::TrcSeq) {
+                let rest = self.super_p(close)?;
+                let block = Expr::new(loc, ExprKind::Block(rest));
+                out.push(Expr::new(
+                    loc,
+                    ExprKind::Unary(UnOp::After, Box::new(block)),
+                ));
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    /// Syntax error at an explicit location (like `err`, but not at the cursor).
+    fn err_at<T>(&self, at: Loc, msg: &str) -> PResult<T> {
+        Err(AlloyError::syntax(
+            Pos {
+                file: self.file.clone(),
+                line: at.line,
+                col: at.col,
+            },
+            msg,
+        ))
+    }
+}
+
 // ---- constructors and helpers ---------------------------------------------------------------
 
 fn bin(op: BinOp, l: Expr, r: Expr) -> Expr {
@@ -957,6 +1308,7 @@ mod tests {
         assert_eq!(p("seq/Int"), "seq/Int");
         assert_eq!(p("a[b, c]"), "(Box a b c)");
         assert_eq!(p("disj[a, b]"), "(Box disj a b)");
+        assert_eq!(p("pred/totalOrder[a, b, c]"), "(Box pred/totalOrder a b c)");
         assert_eq!(p("int[x]"), "(IntCast x)");
         assert_eq!(p("sum x"), "(IntCast x)");
         assert_eq!(p("some A"), "(Some A)");
@@ -972,6 +1324,175 @@ mod tests {
         assert_eq!(p("a ++ b & c"), "(Override a (Intersect b c))");
         assert_eq!(p("not a and b"), "(And (Not a) b)");
         assert_eq!(p("a; b"), "(And a (After b))");
+    }
+
+    use crate::error::ErrorKind;
+
+    fn module(src: &str) -> Module {
+        parse_module("t.als", src).unwrap_or_else(|e| panic!("{src}: {e:?}"))
+    }
+
+    #[test]
+    fn header_open_and_enum() {
+        let m = module(
+            "module util/foo[exactly T, U]\nprivate open util/ordering[S] as ord\nopen a/b\nprivate enum Color { Red, Green }\nenum E {}",
+        );
+        let h = m.header.unwrap();
+        assert_eq!(h.name, "util/foo");
+        assert_eq!(h.params, vec!["T", "U"]);
+        let Paragraph::Open(o) = &m.paragraphs[0] else {
+            panic!()
+        };
+        assert!(o.is_private);
+        assert_eq!(o.name, "util/ordering");
+        assert_eq!(o.alias.as_deref(), Some("ord"));
+        assert_eq!(o.args.len(), 1);
+        let Paragraph::Open(o2) = &m.paragraphs[1] else {
+            panic!()
+        };
+        assert!(!o2.is_private && o2.args.is_empty() && o2.alias.is_none());
+        let Paragraph::Enum(e) = &m.paragraphs[2] else {
+            panic!()
+        };
+        assert_eq!(e.values, vec!["Red", "Green"]);
+        let Paragraph::Enum(e2) = &m.paragraphs[3] else {
+            panic!()
+        };
+        assert!(e2.values.is_empty());
+    }
+
+    #[test]
+    fn sigs_with_qualifiers_fields_and_appended_fact() {
+        let m = module(
+            "abstract lone sig A, B extends C {f, g: set A, h: one B -> lone A} { some f } \
+             var private sig D in A + B {} sig E = A + B {}",
+        );
+        let Paragraph::Sig(s) = &m.paragraphs[0] else {
+            panic!()
+        };
+        assert!(s.quals.is_abstract && s.quals.lone && !s.quals.one);
+        assert_eq!(s.names, vec!["A", "B"]);
+        assert!(matches!(&s.extends, Some(SigExtends::Extends(e)) if show(e) == "C"));
+        assert_eq!(s.fields.len(), 2);
+        assert_eq!(s.fields[0].names, vec!["f", "g"]);
+        assert_eq!(s.appended_fact.as_ref().map(Vec::len), Some(1));
+        let Paragraph::Sig(d) = &m.paragraphs[1] else {
+            panic!()
+        };
+        assert!(d.quals.var && d.quals.is_private);
+        assert!(matches!(d.extends, Some(SigExtends::In(ref v)) if v.len() == 2));
+        assert!(d.appended_fact.is_none());
+        let Paragraph::Sig(e) = &m.paragraphs[2] else {
+            panic!()
+        };
+        assert!(matches!(e.extends, Some(SigExtends::Equal(ref v)) if v.len() == 2));
+    }
+
+    #[test]
+    fn facts_asserts_preds_and_funs() {
+        let m = module(
+            "fact \"name\" { all x: A | x in B  some C }\nassert NoX { no x }\nfact { }\n\
+             pred p[a: A, b: B] { a = b }\nfun A.f(x: A): lone B { x.r }\nfun g: A { none }\n\
+             pred Sig/h { }",
+        );
+        let Paragraph::Fact(f) = &m.paragraphs[0] else {
+            panic!()
+        };
+        assert_eq!(f.name.as_deref(), Some("name"));
+        assert_eq!(f.body.len(), 2);
+        let Paragraph::Assert(a) = &m.paragraphs[1] else {
+            panic!()
+        };
+        assert_eq!(a.name.as_deref(), Some("NoX"));
+        let Paragraph::Fact(f2) = &m.paragraphs[2] else {
+            panic!()
+        };
+        assert!(f2.name.is_none() && f2.body.is_empty());
+        let Paragraph::Pred(p) = &m.paragraphs[3] else {
+            panic!()
+        };
+        assert_eq!(p.name, "p");
+        assert_eq!(p.params.len(), 2);
+        assert!(p.ret.is_none());
+        let Paragraph::Fun(f3) = &m.paragraphs[4] else {
+            panic!()
+        };
+        assert_eq!(f3.name, "A.f");
+        assert!(f3.ret.is_some());
+        let Paragraph::Fun(g) = &m.paragraphs[5] else {
+            panic!()
+        };
+        assert_eq!(g.name, "g");
+        let Paragraph::Pred(h) = &m.paragraphs[6] else {
+            panic!()
+        };
+        assert_eq!(h.name, "Sig/h");
+    }
+
+    #[test]
+    fn temporal_sequence_inside_block_wraps_rest_in_after() {
+        let m = module("fact { a; b c }");
+        let Paragraph::Fact(f) = &m.paragraphs[0] else {
+            panic!()
+        };
+        assert_eq!(f.body.len(), 2);
+        assert_eq!(show(&f.body[0]), "a");
+        assert_eq!(show(&f.body[1]), "(After {b; c})");
+    }
+
+    #[test]
+    fn repeated_qualifier_and_missing_braces_are_syntax_errors() {
+        let e = parse_module("t.als", "lone lone sig A {}").unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Syntax);
+        assert_eq!(e.pos.as_ref().map(|p| p.col), Some(6));
+        assert!(parse_module("t.als", "sig A").is_err());
+        assert!(parse_module("t.als", "fact { a").is_err());
+        assert!(parse_module("t.als", "pred p").is_err());
+    }
+
+    fn collect_als(dir: &std::path::Path, out: &mut Vec<std::path::PathBuf>) {
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            return;
+        };
+        for ent in rd.flatten() {
+            let p = ent.path();
+            if p.is_dir() {
+                collect_als(&p, out);
+            } else if p.extension().is_some_and(|x| x == "als") {
+                out.push(p);
+            }
+        }
+    }
+
+    /// Every corpus file must parse, except for the paragraphs that are still unsupported
+    /// (`run`/`check`/`let`). Reports the other failures so the next step is obvious.
+    #[test]
+    fn corpus_parses_apart_from_unsupported_paragraphs() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference");
+        let mut files = Vec::new();
+        collect_als(&root, &mut files);
+        assert!(!files.is_empty());
+        let mut failures = Vec::new();
+        for f in &files {
+            let src = std::fs::read_to_string(f).unwrap_or_default();
+            match parse_module(&f.display().to_string(), &src) {
+                Ok(_) => {}
+                Err(e) if e.kind == ErrorKind::Unsupported => {}
+                Err(e) => failures.push(format!("{}: {e}", f.display())),
+            }
+        }
+        assert!(
+            failures.is_empty(),
+            "{} files failed to parse:\n{}",
+            failures.len(),
+            failures.join("\n")
+        );
+    }
+
+    #[test]
+    fn run_check_let_are_not_parsed_yet() {
+        let e = parse_module("t.als", "run { }").unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Unsupported);
     }
 
     #[test]

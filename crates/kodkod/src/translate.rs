@@ -1186,7 +1186,7 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // (symmetry-breaking order, conflict limit, time limit). Java's predicate first (most commands, UNSAT proofs
     // profit from it), a short no-SBP attempt for satisfiable puzzles it makes hard, then unlimited.
     const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 3] =
-        [(0, None, Some(300)), (NO_SBP, None, Some(1_000)), (0, None, None)];
+        [(0, Some(6_000), Some(200)), (NO_SBP, None, Some(1_000)), (0, None, None)];
     for (order, conflicts, limit_ms) in ATTEMPTS {
         let mut sat = BatSat::new();
         sat.set_conflict_limit(conflicts);

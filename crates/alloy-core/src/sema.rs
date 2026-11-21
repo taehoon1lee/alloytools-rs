@@ -912,6 +912,10 @@ impl<'a> Builder<'a> {
                         return Ok(RExpr::TotalOrder(self.exprs(i, args)?));
                     }
                 }
+                // `Int[e]` casts an integer to its `Int` atom (Java CAST2SIGINT).
+                if matches!(&f.kind, ExprKind::Const(Const::SigInt)) && args.len() == 1 {
+                    return Ok(RExpr::Un(UnOp::IntCast, Box::new(self.expr(i, &args[0])?)));
+                }
                 // `x.f[a]` where `f` takes parameters: call with the receiver first.
                 if let ExprKind::Binary(BinOp::Join, l, r) = &f.kind {
                     // Same for a macro: the receiver is its first parameter.
@@ -1074,15 +1078,6 @@ impl<'a> Builder<'a> {
             RExpr::Call(cands[0], args)
         } else {
             RExpr::Choice(cands.into_iter().map(|f| RExpr::Call(f, args.clone())).collect())
-        }
-    }
-
-    /// The function a name denotes when it is a function with at least one parameter.
-    fn func_with_params(&self, i: usize, e: &Expr) -> Option<FuncId> {
-        let ExprKind::Name(n) = &e.kind else { return None };
-        match self.lookup(i, n)?.first()? {
-            Sym::Func(fid) if self.model.funcs[*fid as usize].nparams > 0 => Some(*fid),
-            _ => None,
         }
     }
 

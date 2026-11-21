@@ -71,3 +71,11 @@ Done: field decl types (this/Call/Compr), overload resolution by static atom-typ
 `in_formula` with nested arrow multiplicities (fields = `all this: O | this.f in decl`), Kodkod-style skolemization (depth 0; kodkod `skolemize`),
 `module m[exactly A]` params forced exact, `breakTotalOrder` port (util/ordering relations pinned to constants, Ord.First/Next 0 primary vars).
 next: overload ambiguity (einstein: `this.(prev+next)`, 56 cmds), `join arity 1,1` (philosophers, 28), flipflop "no candidate" (17), `min[..]` with args (12).
+
+## 2026-11-21 name resolution/SBP/solver — verdict 412/465 (gate green)
+Done: Java `populate` visibility in field decls, `Int[e]`, restrict-operator overloads, field `disj`, implicit `one` on unary field bounds,
+`Equals` int-vs-set semantics (+/- are set ops), `allocatePrimSig` (abstract sigs = union of children, `_remainder` rel), facts in positive polarity,
+higher-order arrow-bound decl vars, kodkod static_arity of outer vars, Java `generateSBP` (20 bit pairs, rels sorted by arity+name),
+geometric restarts (SAT4J-like), restart portfolio in `kodkod::translate::solve` (no-SBP 400ms -> Java SBP -> alt order).
+Remaining 53: temporal (~21, M8), lone/some decl mult (5), `=`/union arity (6), hotel3/4 overloads (4), javatypes (4), p306-hotel/ceilings perf, misc.
+next: perf (--perf), remaining non-temporal failures, then M8 temporal.

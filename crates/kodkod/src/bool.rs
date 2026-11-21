@@ -54,6 +54,8 @@ pub struct BoolFactory<S: SatSolver> {
     roots: Vec<i32>,
     /// Set when a constant made the problem trivially unsatisfiable.
     pub trivially_unsat: bool,
+    /// Emit both directions of every gate (plain Tseitin) instead of the polarity-aware encoding.
+    pub full_tseitin: bool,
 }
 
 impl<S: SatSolver> BoolFactory<S> {
@@ -65,6 +67,7 @@ impl<S: SatSolver> BoolFactory<S> {
             by_var: HashMap::new(),
             roots: Vec::new(),
             trivially_unsat: false,
+            full_tseitin: false,
         }
     }
 
@@ -190,14 +193,15 @@ impl<S: SatSolver> BoolFactory<S> {
             // A primary variable (not a gate output): its value is free, nothing to emit.
             let Some(&gi) = self.by_var.get(&l.abs()) else { continue };
             let gate_pos = if l > 0 { p } else { !p };
+            let full = self.full_tseitin;
             let (kind, inputs, out, need_pos, need_neg) = {
                 let g = &self.gates[gi];
                 (
                     g.kind,
                     g.inputs.clone(),
                     g.var,
-                    gate_pos && !g.pos_done,
-                    !gate_pos && !g.neg_done,
+                    (gate_pos || full) && !g.pos_done,
+                    (!gate_pos || full) && !g.neg_done,
                 )
             };
             if !need_pos && !need_neg {

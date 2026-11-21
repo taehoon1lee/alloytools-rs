@@ -63,9 +63,6 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         let mut rels = Vec::with_capacity(bounds.relations.len());
         let mut primary_vars = 0;
         for rb in &bounds.relations {
-            if std::env::var("KDBG_BOUNDS").is_ok() {
-                eprintln!("rel {} arity {} lower {} upper {}", rb.name, rb.arity, rb.lower.tuples.len(), rb.upper.tuples.len());
-            }
             let mut m = BoolMatrix::empty(rb.arity);
             for t in &rb.upper.tuples {
                 let v = if rb.lower.contains(t) {
@@ -480,7 +477,11 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     pub fn static_arity(&self, e: &Expr, vars: &mut HashMap<VarId, usize>) -> Result<usize, String> {
         Ok(match e {
             Expr::Rel(r) => self.bounds.rel(*r).arity,
-            Expr::Var(v) => *vars.get(v).ok_or_else(|| format!("unbound variable {v}"))?,
+            Expr::Var(v) => match vars.get(v) {
+                Some(a) => *a,
+                // variables of enclosing quantifiers are bound in the environment
+                None => self.env.get(v).map(|m| m.arity).ok_or_else(|| format!("unbound variable {v}"))?,
+            },
             Expr::Const(Const::Univ) | Expr::Const(Const::None) => 1,
             Expr::Const(Const::Iden) => 2,
             Expr::Literal(ts) => ts.arity,
@@ -815,19 +816,28 @@ pub fn interchangeable(bounds: &Bounds, a: u32, b: u32) -> bool {
     })
 }
 
-/// Interchangeable atom pairs: `(a, b)` such that swapping `a` and `b` maps every relation's lower and
-/// upper bound onto itself (Kodkod's `SymmetryDetector`, restricted to transpositions). Atoms in
-/// `ordered_atoms` are excluded.
-pub fn symmetric_pairs(bounds: &Bounds) -> Vec<(u32, u32)> {
+/// Symmetry classes: sets of mutually interchangeable atoms (Kodkod's `SymmetryDetector` partitions, found here
+/// by testing transpositions). Atoms in `ordered_atoms` are excluded. Classes (and atoms in them) ascend.
+pub fn symmetry_classes(bounds: &Bounds) -> Vec<Vec<u32>> {
     let n = bounds.universe.size() as u32;
     // signature: degree of each atom in every relation's bounds (a cheap class key; verified below)
     let mut key: Vec<Vec<usize>> = vec![Vec::new(); n as usize];
     for rb in &bounds.relations {
-        for a in 0..n {
-            let lo = rb.lower.tuples.iter().filter(|t| t.contains(&a)).count();
-            let up = rb.upper.tuples.iter().filter(|t| t.contains(&a)).count();
-            key[a as usize].push(lo);
-            key[a as usize].push(up);
+        let mut lo = vec![0usize; n as usize];
+        let mut up = vec![0usize; n as usize];
+        for t in &rb.lower.tuples {
+            for &a in t {
+                lo[a as usize] += 1;
+            }
+        }
+        for t in &rb.upper.tuples {
+            for &a in t {
+                up[a as usize] += 1;
+            }
+        }
+        for a in 0..n as usize {
+            key[a].push(lo[a]);
+            key[a].push(up[a]);
         }
     }
     let mut groups: std::collections::BTreeMap<Vec<usize>, Vec<u32>> = std::collections::BTreeMap::new();
@@ -837,53 +847,109 @@ pub fn symmetric_pairs(bounds: &Bounds) -> Vec<(u32, u32)> {
         }
         groups.entry(key[a as usize].clone()).or_default().push(a);
     }
-    let mut pairs = Vec::new();
+    let mut classes: Vec<Vec<u32>> = Vec::new();
     for atoms in groups.values() {
-        for w in atoms.windows(2) {
-            let (a, b) = (w[0], w[1]);
-            let invariant = interchangeable(bounds, a, b);
-            if invariant {
-                pairs.push((a, b));
+        let mut local: Vec<Vec<u32>> = Vec::new();
+        for &a in atoms {
+            match local.iter_mut().find(|cl| interchangeable(bounds, cl[0], a)) {
+                Some(cl) => cl.push(a),
+                None => local.push(vec![a]),
             }
         }
+        classes.extend(local.into_iter().filter(|cl| cl.len() > 1));
     }
-    pairs
+    classes.sort();
+    classes
 }
 
-/// Lex-leader symmetry breaking (Kodkod `SymmetryBreaker`): for every symmetric pair `(a, b)` the bit
-/// vector of all relations is lexicographically at most its image under the swap of `a` and `b`.
-/// Every orbit keeps its lex-smallest member, so satisfiability is unchanged.
-fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>) {
+/// Portfolio attempt without symmetry breaking.
+const NO_SBP: u8 = 255;
+
+/// Java `SymmetryBreaker.generateSBP` (symmetry = 20): for every adjacent pair `(prev, cur)` of a symmetry class,
+/// the bits of the non-constant relations (sorted by arity, then name; whole relations are taken until 20 bit
+/// pairs are collected) must be lexicographically at most their image under swapping `prev` and `cur`.
+fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
+    let pred_length: usize = 20;
     let bounds = tr.bounds;
-    for (a, b) in symmetric_pairs(bounds) {
-        let swap = |t: &[u32]| -> Vec<u32> {
-            t.iter().map(|&x| if x == a { b } else if x == b { a } else { x }).collect()
-        };
-        let mut xs = Vec::new();
-        let mut ys = Vec::new();
-        for (r, rb) in bounds.relations.iter().enumerate() {
-            let m = &tr.rels[r];
-            for t in &rb.upper.tuples {
-                xs.push(m.get(t));
-                ys.push(m.get(&swap(t)));
+    let classes = if order == NO_SBP { Vec::new() } else { symmetry_classes(bounds) };
+    if classes.is_empty() {
+        return;
+    }
+    let mut class_of: Vec<usize> = vec![usize::MAX; bounds.universe.size()];
+    for (ci, cl) in classes.iter().enumerate() {
+        for &a in cl {
+            class_of[a as usize] = ci;
+        }
+    }
+    // non-constant relations with the classes their upper bound ranges over
+    let mut rels: Vec<(usize, usize, String, std::collections::BTreeSet<usize>)> = Vec::new();
+    for (r, rb) in bounds.relations.iter().enumerate() {
+        if rb.upper.tuples.len() == rb.lower.tuples.len() {
+            continue;
+        }
+        let mut reps = std::collections::BTreeSet::new();
+        for t in &rb.upper.tuples {
+            for &a in t {
+                let ci = class_of[a as usize];
+                if ci != usize::MAX {
+                    reps.insert(ci);
+                }
             }
         }
-        let leq = lex_leq(&mut tr.f, &xs, &ys);
-        tr.f.assert_true(leq);
+        rels.push((r, rb.arity, rb.name.clone(), reps));
     }
-}
-
-/// `xs <=lex ys` as a circuit: `leq_i = (!x_i & y_i) | ((x_i <-> y_i) & leq_{i+1})`, `leq_n = true`.
-fn lex_leq<S: SatSolver>(f: &mut BoolFactory<S>, xs: &[BoolVal], ys: &[BoolVal]) -> BoolVal {
-    let mut acc = BoolVal::TRUE;
-    for i in (0..xs.len()).rev() {
-        let nx = f.not(xs[i]);
-        let lt = f.and2(nx, ys[i]);
-        let eq = f.iff(xs[i], ys[i]);
-        let keep = f.and2(eq, acc);
-        acc = f.or2(lt, keep);
+    match order {
+        // Java: by arity, then relation name
+        0 => rels.sort_by(|a, b| a.1.cmp(&b.1).then_with(|| a.2.cmp(&b.2))),
+        // portfolio alternatives: by arity then declaration order, or declaration order only
+        1 => rels.sort_by(|a, b| a.1.cmp(&b.1)),
+        _ => {}
     }
-    acc
+    for (ci, cl) in classes.iter().enumerate() {
+        for w in cl.windows(2) {
+            let (prev, cur) = (w[0], w[1]);
+            let swap = |t: &[u32]| -> Vec<u32> {
+                t.iter().map(|&x| if x == prev { cur } else if x == cur { prev } else { x }).collect()
+            };
+            let mut orig: Vec<BoolVal> = Vec::new();
+            let mut perm: Vec<BoolVal> = Vec::new();
+            for (r, _, _, reps) in &rels {
+                if orig.len() >= pred_length {
+                    break;
+                }
+                if !reps.contains(&ci) {
+                    continue;
+                }
+                let m = &tr.rels[*r];
+                for (t, v) in &m.entries {
+                    if *v == BoolVal::FALSE {
+                        continue;
+                    }
+                    let pt = swap(t);
+                    if pt == *t {
+                        continue;
+                    }
+                    let pv = m.get(&pt);
+                    if orig.iter().zip(perm.iter()).any(|(o, p)| *o == pv && *p == *v) {
+                        continue;
+                    }
+                    orig.push(*v);
+                    perm.push(pv);
+                }
+            }
+            // leq: for every i, (all earlier pairs equal) => (orig[i] => perm[i])
+            let mut parts = Vec::new();
+            let mut prev_eq = BoolVal::TRUE;
+            for i in 0..orig.len() {
+                let imp = tr.f.implies(orig[i], perm[i]);
+                parts.push(tr.f.implies(prev_eq, imp));
+                let eq = tr.f.iff(orig[i], perm[i]);
+                prev_eq = tr.f.and2(prev_eq, eq);
+            }
+            let leq = tr.f.and(&parts);
+            tr.f.assert_true(leq);
+        }
+    }
 }
 
 /// The result of solving one bounded problem.
@@ -899,14 +965,30 @@ pub struct Solution {
 
 /// Translates `formula` under `bounds`, solves with the default SAT backend and decodes the model.
 pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
-    solve_with(bounds, formula, BatSat::new())
+    // Restart portfolio: SAT search time is heavy-tailed in the symmetry-breaking predicate (it helps UNSAT
+    // proofs but can make satisfiable puzzles much harder), so a short attempt without it is followed by
+    // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
+    const ATTEMPTS: [(u8, Option<u64>); 4] = [(NO_SBP, Some(400)), (0, Some(8_000)), (1, Some(8_000)), (0, None)];
+    for (order, limit_ms) in ATTEMPTS {
+        let mut sat = BatSat::new();
+        sat.set_time_limit(limit_ms.map(std::time::Duration::from_millis));
+        let sol = solve_ordered(bounds, formula, sat, order)?;
+        if sol.sat.is_some() || limit_ms.is_none() {
+            return Ok(sol);
+        }
+    }
+    unreachable!("the last attempt is unlimited")
 }
 
 pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> Result<Solution, String> {
+    solve_ordered(bounds, formula, sat, 0)
+}
+
+fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order: u8) -> Result<Solution, String> {
     let mut tr = Translator::new(bounds, sat);
     let top = tr.formula(formula)?;
     tr.f.assert_true(top);
-    add_symmetry_breaking(&mut tr);
+    add_symmetry_breaking(&mut tr, order);
     tr.f.finish();
     let primary_vars = tr.primary_vars;
     let vars = tr.f.sat.num_vars();

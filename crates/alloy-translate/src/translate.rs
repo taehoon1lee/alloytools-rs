@@ -86,7 +86,7 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
     // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
     let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> = std::collections::HashSet::new();
-    for (_, body) in model.sig_facts.iter().filter(|_| std::env::var("KNOPIN").is_err()) {
+    for (_, body) in model.sig_facts.iter() {
         pin_total_orders(body, &mut bounds, &sig_expr, &field_rel, &mut pinned);
     }
 

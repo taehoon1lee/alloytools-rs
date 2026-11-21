@@ -102,3 +102,8 @@
 - Skolemization (kodkod translator): `some`/negated `all` at positive polarity, not under a universal and not in Iff/ITE/comprehension -> fresh bits per variable (+ one-constraint). Matches Java skolemDepth=0 (primary vars +N).
 - `util/ordering`: Java BoundsComputer/SymmetryBreaker pin Ord.First/Next to constants when the elem atoms are interchangeable (alloy-translate `pin_total_orders`); module header `[exactly elem]` forces the sig exact (`Model.exact_sigs`).
 - Perf lesson: unrolled existentials (2700 leaves) were the cause of addressBook1h/dijkstra slowness; a fix in circuit shape beats solver tuning.
+- SAT perf lessons: batsat Luby restarts were 5x slower than geometric on hard UNSAT (ceilingsAndFloors); Java's truncated SBP (20 bit pairs, rels sorted by arity,name)
+  makes iolus 4x faster than full lex-leader but slows SAT puzzles (handshake) -> portfolio: 400ms no-SBP attempt first. Plain Tseitin vs polarity encoding: no difference.
+- Java `Equals`: int equality only when BOTH sides are int-typed, else set equality; `+`/`-` are always set union/difference (ints via plus/minus funcs).
+- Java sig allocation: abstract sig with children has no relation (union of children); non-abstract parent adds `<label>_remainder`; primary var counts match Java exactly now.
+- Name visibility (CompModule.populate): inside a field decl only own/ancestor fields (as `this.f`) and no funcs; elsewhere all fields visible.

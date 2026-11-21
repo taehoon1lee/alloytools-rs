@@ -180,7 +180,9 @@ fn field_upper(
     stack.push(f);
     let fld = &model.fields[f as usize];
     let owner = unary(sig_upper(model, lay, fld.owner, n_atoms)?);
-    let decl = type_of(model, lay, n_atoms, &fld.decl, memo, stack)?;
+    let mut env = HashMap::new();
+    env.insert(LocalId::MAX, owner.clone());
+    let decl = type_of(model, lay, n_atoms, &fld.decl, memo, stack, &mut env)?;
     stack.pop();
     let upper = owner.product(&decl);
     memo[f as usize] = Some(upper.clone());
@@ -195,10 +197,11 @@ fn type_of(
     e: &RExpr,
     memo: &mut Vec<Option<TupleSet>>,
     stack: &mut Vec<FieldId>,
+    env: &mut HashMap<LocalId, TupleSet>,
 ) -> Result<TupleSet, AlloyError> {
     macro_rules! t {
         ($x:expr) => {
-            type_of(model, lay, n_atoms, $x, memo, stack)?
+            type_of(model, lay, n_atoms, $x, memo, stack, env)?
         };
     }
     Ok(match e {
@@ -218,7 +221,40 @@ fn type_of(
         RExpr::Bin(BinOp::Minus, a, b) => t!(a).difference(&t!(b)),
         RExpr::Bin(BinOp::Arrow(_, _), a, b) => t!(a).product(&t!(b)),
         RExpr::Bin(BinOp::Join, a, b) => join_ts(&t!(a), &t!(b))?,
-        _ => return Err(unsupported("declaration type that is not a sig expression")),
+        RExpr::Local(l) => match env.get(l).or_else(|| env.get(&LocalId::MAX)) {
+            Some(t) => t.clone(),
+            None => return Err(unsupported("unbound local in a declaration type")),
+        },
+        RExpr::Compr(decls, _) => {
+            let mut acc: Option<TupleSet> = None;
+            for d in decls {
+                let b = t!(&d.bound);
+                for v in &d.vars {
+                    env.insert(*v, b.clone());
+                    acc = Some(match acc {
+                        None => b.clone(),
+                        Some(a) => a.product(&b),
+                    });
+                }
+            }
+            acc.ok_or_else(|| other("empty comprehension"))?
+        }
+        RExpr::Call(fid, args) => {
+            let f = &model.funcs[*fid as usize];
+            for ((pid, _), a) in f.params.iter().zip(args) {
+                let ty = t!(a);
+                env.insert(*pid, ty);
+            }
+            t!(&f.body)
+        }
+        RExpr::Block(items) if items.len() == 1 => t!(&items[0]),
+        RExpr::Choice(c) if c.len() == 1 => t!(&c[0]),
+        RExpr::Ite(_, a, b) => t!(a).union(&t!(b)),
+        RExpr::Un(UnOp::Transpose, x) => {
+            let a = t!(x);
+            TupleSet::from_tuples(a.arity, a.tuples.iter().map(|t| t.iter().rev().copied().collect::<Vec<_>>()))
+        }
+        other_e => return Err(unsupported(format!("declaration type that is not a sig expression: {:.80}", format!("{other_e:?}")))),
     })
 }
 
@@ -347,7 +383,7 @@ impl<'a> Tr<'a> {
             _ => return Ok(None),
         };
         let mut memo = vec![None; self.model.fields.len()];
-        let ty = type_of(self.model, self.lay, self.n_atoms, &bound, &mut memo, &mut Vec::new())?;
+        let ty = type_of(self.model, self.lay, self.n_atoms, &bound, &mut memo, &mut Vec::new(), &mut HashMap::new())?;
         Ok(Some(ty))
     }
 

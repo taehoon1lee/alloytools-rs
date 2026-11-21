@@ -56,7 +56,166 @@ pub fn load_root(root: &Path) -> Result<Vec<LoadedModule>, AlloyError> {
     let mut out = Vec::new();
     let mut chain = vec![key.clone()];
     load_one(&key, &src, &mut chain, &mut out)?;
-    Ok(out)
+    Ok(merge_instances(out))
+}
+
+/// Canonical identity of a sig: (module instance, name).
+type SigKey = (usize, String);
+
+/// Java `CompModule.resolveModules`: two module instances of the same file instantiated with the same
+/// (resolved) sig arguments are one module. E.g. `open util/ordering[Tick]` in two files yields a single
+/// ordering. Instances are loaded in pre-order, so an opener always precedes the modules it opens.
+fn merge_instances(mods: Vec<LoadedModule>) -> Vec<LoadedModule> {
+    let n = mods.len();
+    // parent[i] = (opener, paragraph index of the open) for every non-root instance
+    let mut parent: Vec<Option<(usize, usize)>> = vec![None; n];
+    for (o, m) in mods.iter().enumerate() {
+        for r in &m.opens {
+            if let Some(k) = r.paragraph {
+                if parent[r.target].is_none() {
+                    parent[r.target] = Some((o, k));
+                }
+            }
+        }
+    }
+    let declares = |m: &LoadedModule, name: &str| {
+        m.module.paragraphs.iter().any(|p| match p {
+            Paragraph::Sig(s) => s.names.iter().any(|x| x == name),
+            Paragraph::Enum(e) => e.name == name,
+            _ => false,
+        })
+    };
+    let mut rep: Vec<usize> = (0..n).collect();
+    // actual parameters of each instance, canonical
+    let mut actuals: Vec<Option<Vec<SigKey>>> = vec![None; n];
+    actuals[0] = Some(Vec::new());
+    let mut seen: Vec<(String, Vec<SigKey>, usize)> = Vec::new();
+    for i in 1..n {
+        let Some((o, k)) = parent[i] else {
+            // the implicit integer open (no paragraph) and any unparented instance: keyed by path only
+            let key = (mods[i].path.clone(), Vec::new());
+            match seen.iter().find(|(p, a, _)| *p == key.0 && *a == key.1) {
+                Some(&(_, _, j)) => rep[i] = j,
+                None => seen.push((key.0, key.1, i)),
+            }
+            actuals[i] = Some(Vec::new());
+            continue;
+        };
+        let o = rep[o];
+        let Paragraph::Open(open) = &mods[o].module.paragraphs[k] else { continue };
+        let mut args: Option<Vec<SigKey>> = Some(Vec::new());
+        for a in &open.args {
+            let crate::syntax::ExprKind::Name(nm) = &a.kind else {
+                args = None;
+                break;
+            };
+            let key = canonical_sig(&mods, &rep, &actuals, &declares, o, nm);
+            match (key, args.as_mut()) {
+                (Some(k2), Some(v)) => v.push(k2),
+                _ => {
+                    args = None;
+                    break;
+                }
+            }
+        }
+        match args {
+            Some(a) => {
+                match seen.iter().find(|(p, a2, _)| *p == mods[i].path && *a2 == a) {
+                    Some(&(_, _, j)) => rep[i] = j,
+                    None => seen.push((mods[i].path.clone(), a.clone(), i)),
+                }
+                actuals[i] = Some(a);
+            }
+            None => actuals[i] = None,
+        }
+    }
+    if rep.iter().enumerate().all(|(i, &r)| i == r) {
+        return mods;
+    }
+    // keep representatives only, renumbered
+    let mut new_idx = vec![usize::MAX; n];
+    let mut next = 0;
+    for i in 0..n {
+        if rep[i] == i {
+            new_idx[i] = next;
+            next += 1;
+        }
+    }
+    let mut out = Vec::with_capacity(next);
+    for (i, mut m) in mods.into_iter().enumerate() {
+        if rep[i] != i {
+            continue;
+        }
+        for r in &mut m.opens {
+            r.target = new_idx[rep[r.target]];
+        }
+        out.push(m);
+    }
+    out
+}
+
+/// Resolves a module argument name written in module `o` to a canonical sig identity.
+fn canonical_sig(
+    mods: &[LoadedModule],
+    rep: &[usize],
+    actuals: &[Option<Vec<SigKey>>],
+    declares: &dyn Fn(&LoadedModule, &str) -> bool,
+    o: usize,
+    name: &str,
+) -> Option<SigKey> {
+    // a parameter of the opener
+    let header = mods[o].module.header.as_ref();
+    if let Some(h) = header {
+        if let Some(pos) = h.params.iter().position(|p| p == name) {
+            return actuals[o].as_ref()?.get(pos).cloned();
+        }
+    }
+    if let Some((prefix, base)) = name.rsplit_once('/') {
+        // `alias/.../Name`: follow the aliases
+        let mut cur = o;
+        for seg in prefix.split('/') {
+            if seg == "this" {
+                continue;
+            }
+            let r = mods[cur].opens.iter().find(|r| r.alias == seg)?;
+            cur = rep[r.target];
+        }
+        return canonical_in(mods, rep, actuals, declares, cur, base);
+    }
+    if declares(&mods[o], name) {
+        return Some((o, name.to_string()));
+    }
+    // unqualified: a sig of some opened module
+    let mut stack: Vec<usize> = mods[o].opens.iter().map(|r| rep[r.target]).collect();
+    let mut visited = vec![o];
+    while let Some(m) = stack.pop() {
+        if visited.contains(&m) {
+            continue;
+        }
+        visited.push(m);
+        if let Some(k) = canonical_in(mods, rep, actuals, declares, m, name) {
+            return Some(k);
+        }
+        stack.extend(mods[m].opens.iter().map(|r| rep[r.target]));
+    }
+    None
+}
+
+fn canonical_in(
+    mods: &[LoadedModule],
+    rep: &[usize],
+    actuals: &[Option<Vec<SigKey>>],
+    declares: &dyn Fn(&LoadedModule, &str) -> bool,
+    m: usize,
+    name: &str,
+) -> Option<SigKey> {
+    let _ = rep;
+    if declares(&mods[m], name) {
+        return Some((m, name.to_string()));
+    }
+    let h = mods[m].module.header.as_ref()?;
+    let pos = h.params.iter().position(|p| p == name)?;
+    actuals[m].as_ref()?.get(pos).cloned()
 }
 
 /// Parses one file and loads its opens. Returns the index of the new module instance.

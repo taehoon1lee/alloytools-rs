@@ -79,3 +79,8 @@ higher-order arrow-bound decl vars, kodkod static_arity of outer vars, Java `gen
 geometric restarts (SAT4J-like), restart portfolio in `kodkod::translate::solve` (no-SBP 400ms -> Java SBP -> alt order).
 Remaining 53: temporal (~21, M8), lone/some decl mult (5), `=`/union arity (6), hotel3/4 overloads (4), javatypes (4), p306-hotel/ceilings perf, misc.
 next: perf (--perf), remaining non-temporal failures, then M8 temporal.
+
+## 2026-11-21 module merge/sum/div/lone-some — verdict 425/465 (gate green)
+Done: Java `resolveModules` port (`loader::merge_instances`: same file + same canonical sig args = one module instance, so two `open util/ordering[Tick]` share one ordering),
+`sum x: e | i` (IntExpr::SumOver), signed div/rem circuits, `x: lone/some e` decl vars, multi-var `lone/one`, bare-name overloads skip arg-taking funcs.
+Remaining 40: temporal (~21), hotel3/4 (4 overload), javatypes_soundness (4), INSLabel (2 higher-order), view-backing/stable-orient-ring (arity), basic-auth (strings), perf-heavy (p306-hotel, ceilings).

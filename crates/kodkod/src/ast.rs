@@ -59,6 +59,8 @@ pub enum IntExpr {
     /// Remainder with the sign of the dividend.
     Rem(Box<IntExpr>, Box<IntExpr>),
     Neg(Box<IntExpr>),
+    /// `sum x: e | i`: the sum of `i` over all bindings of the declarations.
+    SumOver(Vec<Decl>, Box<IntExpr>),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

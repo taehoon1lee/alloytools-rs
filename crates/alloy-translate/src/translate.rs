@@ -275,6 +275,7 @@ fn is_numeric(e: &RExpr) -> bool {
             RExpr::Num(_)
                 | RExpr::Const(Const::IntMin | Const::IntMax)
                 | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
+                | RExpr::Quant(Quant::Sum, _, _)
                 | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _)
         ),
     }
@@ -420,6 +421,7 @@ fn type_of(
             }
         }
         RExpr::Num(_)
+        | RExpr::Quant(Quant::Sum, _, _)
         | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
         | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
             unary(sig_upper(model, lay, SIG_INT, n_atoms)?)
@@ -554,7 +556,10 @@ impl<'a> Tr<'a> {
     /// Static (upper-bound atom) type of an expression; `None` when it cannot be computed.
     fn ty(&self, e: &RExpr) -> Option<TupleSet> {
         let mut env: HashMap<LocalId, TupleSet> = HashMap::new();
+        // Locals are numbered in creation order, so a bound only refers to smaller ids: ascending order is
+        // deterministic and needs one pass (a few more passes cover odd orders).
         let mut pending: Vec<(&LocalId, &RExpr)> = self.local_bound.iter().collect();
+        pending.sort_by_key(|(l, _)| **l);
         for _ in 0..3 {
             let mut rest = Vec::new();
             for (l, b) in pending {
@@ -766,7 +771,7 @@ impl<'a> Tr<'a> {
             RExpr::Const(other_c) => {
                 return Err(unsupported(format!("constant {other_c:?} (temporal)")))
             }
-            e @ (RExpr::Num(_) | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)) => {
+            e @ (RExpr::Num(_) | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _) | RExpr::Quant(Quant::Sum, _, _)) => {
                 Expr::IntToExpr(Box::new(self.int_of(e)?))
             }
             RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
@@ -880,6 +885,14 @@ impl<'a> Tr<'a> {
             RExpr::Un(UnOp::IntCast, x) => IntExpr::Sum(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Neg, x) => IntExpr::Neg(Box::new(self.int_of(x)?)),
             RExpr::Block(items) if items.len() == 1 => self.int_of(&items[0])?,
+            RExpr::Quant(Quant::Sum, decls, body) => {
+                let (kdecls, _disj, guards) = self.decls(decls)?;
+                let b = self.int_of(body)?;
+                if !guards.is_empty() {
+                    return Err(unsupported("sum over higher-order declarations"));
+                }
+                IntExpr::SumOver(kdecls, Box::new(b))
+            }
             RExpr::Bin(BinOp::IntPlus, a, b) => IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::IntMinus, a, b) => IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::Mul, a, b) => IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),

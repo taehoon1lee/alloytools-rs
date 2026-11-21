@@ -361,6 +361,24 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let a = self.int_expr(a)?;
                 self.neg_bits(&a)
             }
+            IntExpr::SumOver(decls, body) => {
+                let w = self.bounds.bitwidth as usize;
+                let mut key = Vec::new();
+                let mut leaves: Vec<(Vec<u32>, BoolVal)> = Vec::new();
+                let mut terms: Vec<Vec<BoolVal>> = Vec::new();
+                let body = (**body).clone();
+                self.leaves(decls, 0, BoolVal::TRUE, &mut key, false, &mut leaves, &mut |t: &mut Self, g| {
+                    let v = t.int_expr(&body)?;
+                    let masked: Vec<BoolVal> = v.iter().map(|b| t.f.and2(g, *b)).collect();
+                    terms.push(masked);
+                    Ok(BoolVal::TRUE)
+                })?;
+                let mut acc = vec![BoolVal::FALSE; w];
+                for t in terms {
+                    acc = self.add_bits(&acc, &t);
+                }
+                acc
+            }
         })
     }
 
@@ -1022,7 +1040,7 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
     // (symmetry-breaking order, conflict limit, time limit)
     const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 4] =
-        [(NO_SBP, Some(25_000), Some(1_500)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
+        [(NO_SBP, Some(15_000), Some(800)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
     for (order, conflicts, limit_ms) in ATTEMPTS {
         let mut sat = BatSat::new();
         sat.set_conflict_limit(conflicts);

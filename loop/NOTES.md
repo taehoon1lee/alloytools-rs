@@ -107,3 +107,6 @@
 - Java `Equals`: int equality only when BOTH sides are int-typed, else set equality; `+`/`-` are always set union/difference (ints via plus/minus funcs).
 - Java sig allocation: abstract sig with children has no relation (union of children); non-abstract parent adds `<label>_remainder`; primary var counts match Java exactly now.
 - Name visibility (CompModule.populate): inside a field decl only own/ancestor fields (as `this.f`) and no funcs; elsewhere all fields visible.
+- Java merges module instances (same file, same resolved params): `util/ordering[Tick]` opened in two files is ONE ordering (`CompModule.resolveModules`). Ported in `loader::merge_instances`.
+- `ty()` must iterate `local_bound` in sorted order (HashMap order made overload resolution nondeterministic).
+- Portfolio budgets are load-sensitive (time-based limits under -j8); keep the first attempt small (15k conflicts / 800ms).

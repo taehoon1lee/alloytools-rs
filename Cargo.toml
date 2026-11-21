@@ -6,6 +6,7 @@ members = [
     "crates/satsolver",
     "crates/alloy-translate",
     "crates/alloy-cli",
+    "crates/batsat",
 ]
 
 [workspace.package]
@@ -15,7 +16,7 @@ edition = "2021"
 [workspace.dependencies]
 # RULE: pure-Rust crates only (toolchain is x86_64-pc-windows-gnu without a C compiler). Add serde etc. here when needed.
 serde_json = "1"
-batsat = "0.6"
+batsat = { path = "crates/batsat" }   # vendored batsat 0.6.0 (MIT), modified in-tree
 
 [profile.release]
 opt-level = 3

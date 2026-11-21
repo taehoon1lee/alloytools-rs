@@ -80,9 +80,12 @@ struct Gate {
 pub struct BoolFactory<S: SatSolver> {
     pub sat: S,
     gates: Vec<Gate>,
+    /// Hash-consing of gates with more than two inputs.
     by_key: HashMap<(GateKind, Vec<i32>), usize>,
-    /// Gate index of every gate output variable.
-    by_var: HashMap<i32, usize>,
+    /// Hash-consing of two-input gates (no allocation per lookup).
+    by_pair: HashMap<(GateKind, i32, i32), usize>,
+    /// Gate index + 1 of every gate output variable (0 = not a gate), indexed by variable.
+    by_var: Vec<u32>,
     /// Literals that must be true (encoded by [`BoolFactory::finish`]).
     roots: Vec<i32>,
     /// Set when a constant made the problem trivially unsatisfiable.
@@ -97,7 +100,8 @@ impl<S: SatSolver> BoolFactory<S> {
             sat,
             gates: Vec::new(),
             by_key: HashMap::default(),
-            by_var: HashMap::default(),
+            by_pair: HashMap::default(),
+            by_var: Vec::new(),
             roots: Vec::new(),
             trivially_unsat: false,
             full_tseitin: false,
@@ -141,11 +145,36 @@ impl<S: SatSolver> BoolFactory<S> {
     }
 
     pub fn and2(&mut self, a: BoolVal, b: BoolVal) -> BoolVal {
-        self.and(&[a, b])
+        self.connective2(GateKind::And, a, b)
     }
 
     pub fn or2(&mut self, a: BoolVal, b: BoolVal) -> BoolVal {
-        self.or(&[a, b])
+        self.connective2(GateKind::Or, a, b)
+    }
+
+    /// `connective(kind, &[a, b])` without allocating.
+    fn connective2(&mut self, kind: GateKind, a: BoolVal, b: BoolVal) -> BoolVal {
+        let (identity, absorbing) = match kind {
+            GateKind::And => (true, false),
+            _ => (false, true),
+        };
+        match (a, b) {
+            (BoolVal::Const(x), _) if x == absorbing => BoolVal::Const(absorbing),
+            (_, BoolVal::Const(y)) if y == absorbing => BoolVal::Const(absorbing),
+            (BoolVal::Const(_), BoolVal::Const(_)) => BoolVal::Const(identity),
+            (BoolVal::Const(_), l) | (l, BoolVal::Const(_)) => l,
+            (BoolVal::Lit(x), BoolVal::Lit(y)) => {
+                if x == y {
+                    BoolVal::Lit(x)
+                } else if x == -y {
+                    BoolVal::Const(absorbing)
+                } else if x < y {
+                    self.gate2(kind, x, y)
+                } else {
+                    self.gate2(kind, y, x)
+                }
+            }
+        }
     }
 
     pub fn implies(&mut self, a: BoolVal, b: BoolVal) -> BoolVal {
@@ -163,9 +192,11 @@ impl<S: SatSolver> BoolFactory<S> {
             (BoolVal::Lit(x), BoolVal::Lit(y)) if x == y => BoolVal::TRUE,
             (BoolVal::Lit(x), BoolVal::Lit(y)) if x == -y => BoolVal::FALSE,
             (BoolVal::Lit(x), BoolVal::Lit(y)) => {
-                let mut ins = vec![x, y];
-                ins.sort_unstable();
-                self.gate(GateKind::Iff, ins)
+                if x < y {
+                    self.gate2(GateKind::Iff, x, y)
+                } else {
+                    self.gate2(GateKind::Iff, y, x)
+                }
             }
         }
     }
@@ -228,33 +259,32 @@ impl<S: SatSolver> BoolFactory<S> {
                 return;
             }
             // A primary variable (not a gate output): its value is free, nothing to emit.
-            let Some(&gi) = self.by_var.get(&l.abs()) else { continue };
+            let gi = match self.by_var.get(l.unsigned_abs() as usize) {
+                Some(&g) if g != 0 => (g - 1) as usize,
+                _ => continue,
+            };
             let gate_pos = if l > 0 { p } else { !p };
             let full = self.full_tseitin;
-            let (kind, inputs, out, need_pos, need_neg) = {
+            let (kind, out, need_pos, need_neg) = {
                 let g = &self.gates[gi];
-                (
-                    g.kind,
-                    g.inputs.clone(),
-                    g.var,
-                    (gate_pos || full) && !g.pos_done,
-                    (!gate_pos || full) && !g.neg_done,
-                )
+                (g.kind, g.var, (gate_pos || full) && !g.pos_done, (!gate_pos || full) && !g.neg_done)
             };
             if !need_pos && !need_neg {
                 continue;
             }
-            {
+            let inputs = {
                 let g = &mut self.gates[gi];
                 g.pos_done |= need_pos;
                 g.neg_done |= need_neg;
-            }
+                std::mem::take(&mut g.inputs)
+            };
             match kind {
                 GateKind::And => self.encode_and(out, &inputs, need_pos, need_neg, &mut work),
                 GateKind::Or => self.encode_or(out, &inputs, need_pos, need_neg, &mut work),
                 GateKind::Iff => self.encode_iff(out, &inputs, need_pos, need_neg, &mut work),
                 GateKind::Ite => self.encode_ite(out, &inputs, need_pos, need_neg, &mut work),
             }
+            self.gates[gi].inputs = inputs;
         }
     }
 
@@ -335,20 +365,47 @@ impl<S: SatSolver> BoolFactory<S> {
 
     /// Output literal of the hash-consed gate `kind(inputs)`.
     fn gate(&mut self, kind: GateKind, inputs: Vec<i32>) -> BoolVal {
-        if let Some(&g) = self.by_key.get(&(kind, inputs.clone())) {
-            return BoolVal::Lit(self.gates[g].var);
+        if inputs.len() == 2 {
+            return self.gate2(kind, inputs[0], inputs[1]);
         }
+        let idx = self.gates.len();
+        match self.by_key.entry((kind, inputs)) {
+            std::collections::hash_map::Entry::Occupied(e) => return BoolVal::Lit(self.gates[*e.get()].var),
+            std::collections::hash_map::Entry::Vacant(e) => {
+                let inputs = e.key().1.clone();
+                e.insert(idx);
+                self.push_gate(kind, inputs)
+            }
+        }
+    }
+
+    /// Two-input gate `kind(a, b)` with `a < b` (sorted like the n-ary inputs).
+    fn gate2(&mut self, kind: GateKind, a: i32, b: i32) -> BoolVal {
+        let idx = self.gates.len();
+        match self.by_pair.entry((kind, a, b)) {
+            std::collections::hash_map::Entry::Occupied(e) => BoolVal::Lit(self.gates[*e.get()].var),
+            std::collections::hash_map::Entry::Vacant(e) => {
+                e.insert(idx);
+                self.push_gate(kind, vec![a, b])
+            }
+        }
+    }
+
+    fn push_gate(&mut self, kind: GateKind, inputs: Vec<i32>) -> BoolVal {
         let BoolVal::Lit(var) = self.new_var() else { unreachable!() };
         let idx = self.gates.len();
         self.gates.push(Gate {
             kind,
-            inputs: inputs.clone(),
+            inputs,
             var,
             pos_done: false,
             neg_done: false,
         });
-        self.by_key.insert((kind, inputs), idx);
-        self.by_var.insert(var, idx);
+        let v = var as usize;
+        if self.by_var.len() <= v {
+            self.by_var.resize(v + 1, 0);
+        }
+        self.by_var[v] = idx as u32 + 1;
         BoolVal::Lit(var)
     }
 

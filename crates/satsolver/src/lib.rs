@@ -10,6 +10,8 @@
 
 use batsat::{lbool, Lit, Solver, SolverInterface, Var};
 
+pub mod simp;
+
 pub trait SatSolver {
     /// Number of variables allocated so far.
     fn num_vars(&self) -> u32;
@@ -33,6 +35,10 @@ pub trait SatSolver {
     fn set_stop_flag(&mut self, _flag: std::sync::Arc<std::sync::atomic::AtomicBool>) {}
     /// Abort `solve()` (returning `None`) after this much wall-clock time; `None` = unlimited.
     fn set_time_limit(&mut self, _limit: Option<std::time::Duration>) {}
+    /// Preprocess the CNF (variable elimination, [`simp`]) at the first `solve()`, keeping the `frozen` variables
+    /// (1-based). Only for one-shot use: no clauses or assumptions over non-frozen variables may follow.
+    /// `value_of` stays valid for every variable. Backends may ignore it.
+    fn set_simplify(&mut self, _frozen: &[u32]) {}
     /// Value of variable `v` (1-based) in the last model. Only valid after `solve()==Some(true)`.
     fn value_of(&self, v: u32) -> bool;
 }
@@ -74,7 +80,18 @@ pub struct BatSat {
     s: Solver<Budget>,
     vars: Vec<Var>,
     clauses: u64,
+    /// `Some(frozen)`: run [`simp::simplify`] before the first solve.
+    simp_frozen: Option<Vec<u32>>,
+    elim_stack: Vec<i32>,
+    /// Model over all variables (1-based) after a satisfiable simplified solve.
+    ext_model: Option<Vec<bool>>,
+    opts: batsat::SolverOpts,
+    /// conflicts before simplification (default [`SIMP_DELAY`])
+    simp_delay: u64,
 }
+
+/// Conflicts spent on the unsimplified CNF before variable elimination is tried (easy problems never pay for it).
+const SIMP_DELAY: u64 = 2_000;
 
 impl Default for BatSat {
     fn default() -> Self {
@@ -133,6 +150,9 @@ impl BatSat {
         if let Some(v) = f("KSAT_CD") {
             o.clause_decay = v;
         }
+        if std::env::var("KSAT_NOBIN").is_ok() {
+            o.bin_watches = false;
+        }
         BatSat {
             pending: Vec::new(),
             n_vars: 0,
@@ -142,9 +162,14 @@ impl BatSat {
             init_pol,
             built: false,
             time_limit: None,
-            s: Solver::new(o, Budget::default()),
+            s: Solver::new(o.clone(), Budget::default()),
             vars: Vec::new(),
             clauses: 0,
+            simp_frozen: None,
+            elim_stack: Vec::new(),
+            ext_model: None,
+            opts: o,
+            simp_delay: SIMP_DELAY,
         }
     }
 }
@@ -152,6 +177,19 @@ impl BatSat {
 impl BatSat {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    /// Binary clauses in dedicated watch lists (default on; `KSAT_NOBIN` forces off). Call before adding clauses.
+    /// It changes the propagation order and so the search path: portfolio configurations differ in it.
+    pub fn set_binary_watches(&mut self, on: bool) {
+        self.opts.bin_watches = on && std::env::var("KSAT_NOBIN").is_err();
+        let cb = std::mem::take(self.s.cb_mut());
+        self.s = Solver::new(self.opts.clone(), cb);
+    }
+
+    /// Conflicts spent before the simplification of [`SatSolver::set_simplify`] (tests, tuning).
+    pub fn set_simplify_delay(&mut self, conflicts: u64) {
+        self.simp_delay = conflicts;
     }
 }
 
@@ -185,6 +223,11 @@ impl SatSolver for BatSat {
     fn set_priority(&mut self, vars: &[u32]) {
         self.priority = vars.to_vec();
     }
+    fn set_simplify(&mut self, frozen: &[u32]) {
+        if std::env::var("KSAT_NOSIMP").is_err() {
+            self.simp_frozen = Some(frozen.to_vec());
+        }
+    }
     fn add_clause(&mut self, lits: &[i32]) -> bool {
         self.clauses += 1;
         if lits.is_empty() {
@@ -210,52 +253,70 @@ impl SatSolver for BatSat {
             return Some(false);
         }
         if self.built {
-            return self.run();
+            return self.run(None);
         }
-        // create the solver variables: priority ones first, then the rest in id order
-        let mut order: Vec<u32> = Vec::with_capacity(self.n_vars as usize);
-        let mut seen = vec![false; self.n_vars as usize + 1];
-        for &v in &self.priority {
-            if v >= 1 && v <= self.n_vars && !seen[v as usize] {
-                seen[v as usize] = true;
-                order.push(v);
-            }
-        }
-        for v in 1..=self.n_vars {
-            if !seen[v as usize] {
-                order.push(v);
-            }
-        }
-        let mut var_of = vec![None; self.n_vars as usize + 1];
-        for v in order {
-            let sv = match self.init_pol {
-                Some(true) => self.s.new_var(lbool::TRUE, true),
-                Some(false) => self.s.new_var(lbool::FALSE, true),
-                None => self.s.new_var_default(),
-            };
-            var_of[v as usize] = Some(sv);
-        }
-        self.vars = (1..=self.n_vars).map(|v| var_of[v as usize].unwrap()).collect();
         let pending = std::mem::take(&mut self.pending);
-        let mut buf: Vec<Lit> = Vec::new();
-        for chunk in pending.split(|&l| l == 0) {
-            if chunk.is_empty() {
-                continue;
-            }
-            buf.clear();
-            buf.extend(chunk.iter().map(|&l| Lit::new(self.vars[(l.unsigned_abs() - 1) as usize], l > 0)));
-            if !self.s.add_clause_reuse(&mut buf) {
+        let Some(frozen) = self.simp_frozen.take() else {
+            if !self.build(&pending, &[]) {
                 return Some(false);
             }
+            return self.run(None);
+        };
+        // stage 1: the CNF as translated, for a few conflicts
+        let deadline = self.time_limit.map(|d| std::time::Instant::now() + d);
+        if !self.build(&pending, &[]) {
+            return Some(false);
         }
-        self.solved_vars = self.vars.clone();
-        self.built = true;
-        self.run()
+        let user_limit = self.s.cb_mut().limit;
+        let first = user_limit.map_or(self.simp_delay, |l| l.min(self.simp_delay));
+        self.s.cb_mut().limit = Some(first);
+        if let Some(r) = self.run(deadline) {
+            return Some(r);
+        }
+        let used = self.s.cb_mut().learnt;
+        let stopped = {
+            let cb = self.s.cb_mut();
+            cb.stop_flag.as_ref().map_or(false, |f| f.load(std::sync::atomic::Ordering::Relaxed))
+                || cb.deadline.map_or(false, |d| std::time::Instant::now() >= d)
+                || user_limit.map_or(false, |l| used >= l)
+        };
+        if stopped || used < first {
+            return None;
+        }
+        // stage 2: variable elimination, then a fresh solver on the smaller CNF
+        let mut mask = vec![false; self.n_vars as usize + 1];
+        for &v in frozen.iter().chain(self.priority.iter()) {
+            if v >= 1 && v <= self.n_vars {
+                mask[v as usize] = true;
+            }
+        }
+        let t0 = std::time::Instant::now();
+        let r = simp::simplify(self.n_vars, &pending, &mask);
+        drop(pending);
+        if std::env::var("KSAT_STATS").is_ok() {
+            let n_el = r.eliminated.iter().filter(|&&e| e).count();
+            let n_cl = r.clauses.iter().filter(|&&l| l == 0).count();
+            eprintln!("simp: {:?} eliminated {} vars, clauses {} -> {}", t0.elapsed(), n_el, self.clauses, n_cl);
+        }
+        if r.unsat {
+            self.unsat = true;
+            return Some(false);
+        }
+        let old = std::mem::take(self.s.cb_mut());
+        let cb = Budget { limit: user_limit.map(|l| l - used), learnt: 0, deadline: None, stop_flag: old.stop_flag };
+        self.s = Solver::new(self.opts.clone(), cb);
+        self.elim_stack = r.elim_stack;
+        if !self.build(&r.clauses, &r.eliminated) {
+            return Some(false);
+        }
+        self.run(deadline)
     }
     fn solve_assuming(&mut self, assumptions: &[i32]) -> Option<bool> {
         if self.unsat {
             return Some(false);
         }
+        // assumptions may mention any variable: no elimination
+        self.simp_frozen = None;
         if !self.built && self.solve().is_none() {
             return None;
         }
@@ -275,19 +336,104 @@ impl SatSolver for BatSat {
         }
     }
     fn value_of(&self, v: u32) -> bool {
+        if let Some(m) = &self.ext_model {
+            return m[v as usize];
+        }
         self.s.value_var(self.solved_vars[(v - 1) as usize]) == lbool::TRUE
     }
 }
 
 impl BatSat {
-    fn run(&mut self) -> Option<bool> {
+    /// Creates the solver variables (priority ones first, then the rest in id order; `eliminated` ones are not
+    /// decision variables) and loads `clauses` (flat, 0-terminated). Returns false if trivially unsatisfiable.
+    fn build(&mut self, clauses: &[i32], eliminated: &[bool]) -> bool {
+        let mut order: Vec<u32> = Vec::with_capacity(self.n_vars as usize);
+        let mut seen = vec![false; self.n_vars as usize + 1];
+        for &v in &self.priority {
+            if v >= 1 && v <= self.n_vars && !seen[v as usize] {
+                seen[v as usize] = true;
+                order.push(v);
+            }
+        }
+        for v in 1..=self.n_vars {
+            if !seen[v as usize] {
+                order.push(v);
+            }
+        }
+        let mut var_of = vec![None; self.n_vars as usize + 1];
+        for v in order {
+            // eliminated variables occur in no clause: never branch on them
+            let dvar = !eliminated.get(v as usize).copied().unwrap_or(false);
+            let sv = match self.init_pol {
+                Some(true) => self.s.new_var(lbool::TRUE, dvar),
+                Some(false) => self.s.new_var(lbool::FALSE, dvar),
+                None => self.s.new_var(lbool::UNDEF, dvar),
+            };
+            var_of[v as usize] = Some(sv);
+        }
+        self.vars = (1..=self.n_vars).map(|v| var_of[v as usize].unwrap()).collect();
+        self.solved_vars = self.vars.clone();
+        self.built = true;
+        // Debug knob: KSAT_DUMP=<file> writes the CNF (DIMACS, solver numbering) before the first solve.
+        if let Ok(path) = std::env::var("KSAT_DUMP") {
+            if eliminated.is_empty() {
+                use std::io::Write;
+                let n_cl = clauses.iter().filter(|&&l| l == 0).count();
+                let mut out = String::with_capacity(clauses.len() * 7);
+                out.push_str(&format!("p cnf {} {}\n", self.n_vars, n_cl));
+                for &l in clauses {
+                    let v = if l == 0 { 0 } else { (self.vars[(l.unsigned_abs() - 1) as usize].idx() as i32 + 1) * l.signum() };
+                    out.push_str(&v.to_string());
+                    out.push(if l == 0 { '\n' } else { ' ' });
+                }
+                if let Ok(mut f) = std::fs::File::create(&path) {
+                    let _ = f.write_all(out.as_bytes());
+                }
+            }
+        }
+        let mut buf: Vec<Lit> = Vec::new();
+        for chunk in clauses.split(|&l| l == 0) {
+            if chunk.is_empty() {
+                continue;
+            }
+            buf.clear();
+            buf.extend(chunk.iter().map(|&l| Lit::new(self.vars[(l.unsigned_abs() - 1) as usize], l > 0)));
+            if !self.s.add_clause_reuse(&mut buf) {
+                self.unsat = true;
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Search statistics of the last solve (diagnostics).
+    pub fn stats_line(&self) -> String {
+        format!(
+            "conflicts {} decisions {} propagations {} restarts {}",
+            self.s.num_conflicts(),
+            self.s.num_decisions(),
+            self.s.num_propagations(),
+            self.s.num_restarts()
+        )
+    }
+
+    /// Solves; `deadline` overrides the one derived from `set_time_limit` (measured from now).
+    fn run(&mut self, deadline: Option<std::time::Instant>) -> Option<bool> {
         let t0 = std::time::Instant::now();
-        self.s.cb_mut().deadline = self.time_limit.map(|d| t0 + d);
+        self.s.cb_mut().deadline = deadline.or_else(|| self.time_limit.map(|d| t0 + d));
         let r = self.s.solve_limited(&[]);
         if std::env::var("KSAT_STATS").is_ok() {
             eprintln!("sat: conflicts {} time {:?} vars {} clauses {}", self.s.num_conflicts(), t0.elapsed(), self.n_vars, self.clauses);
         }
         if r == lbool::TRUE {
+            if !self.elim_stack.is_empty() {
+                let mut m = vec![false; self.n_vars as usize + 1];
+                for v in 1..=self.n_vars {
+                    m[v as usize] = self.s.value_var(self.vars[(v - 1) as usize]) == lbool::TRUE;
+                }
+                simp::extend_model(&self.elim_stack, &mut m);
+                self.ext_model = Some(m);
+            }
             Some(true)
         } else if r == lbool::FALSE {
             Some(false)
@@ -312,5 +458,45 @@ mod tests {
         assert!(s.value_of(2));
         s.add_clause(&[-2]);
         assert_eq!(s.solve(), Some(false));
+    }
+
+    /// Random 2/3-CNFs around the phase transition, solved with and without the elimination stage, against brute force.
+    #[test]
+    fn random_cnfs_match_brute_force() {
+        let mut seed: u64 = 0x9e37_79b9_7f4a_7c15;
+        let mut rnd = |m: u64| {
+            seed ^= seed << 13;
+            seed ^= seed >> 7;
+            seed ^= seed << 17;
+            seed % m
+        };
+        for round in 0..300 {
+            let n = 6 + rnd(7) as u32;
+            let m = (n as f64 * (3.0 + rnd(30) as f64 / 20.0)) as usize;
+            let cls: Vec<Vec<i32>> = (0..m)
+                .map(|_| {
+                    let len = 2 + rnd(2);
+                    (0..len).map(|_| (1 + rnd(n as u64) as i32) * if rnd(2) == 0 { 1 } else { -1 }).collect()
+                })
+                .collect();
+            let holds = |val: &dyn Fn(u32) -> bool| cls.iter().all(|c| c.iter().any(|&l| val(l.unsigned_abs()) == (l > 0)));
+            let expected = (0..(1u32 << n)).any(|bits| holds(&|v| bits & (1 << (v - 1)) != 0));
+            for simp in [false, true] {
+                let mut s = BatSat::configured(round % 2 == 0, 0.0, 0, Some(round % 3 == 0));
+                s.add_variables(n);
+                for c in &cls {
+                    s.add_clause(c);
+                }
+                if simp {
+                    s.set_simplify(&[1, 2]);
+                    s.set_simplify_delay(0);
+                }
+                let r = s.solve();
+                assert_eq!(r, Some(expected), "round {round} simp {simp}: {cls:?}");
+                if expected {
+                    assert!(holds(&|v| s.value_of(v)), "round {round} simp {simp}: model violates {cls:?}");
+                }
+            }
+        }
     }
 }

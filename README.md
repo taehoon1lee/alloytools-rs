@@ -42,7 +42,7 @@ docs/JAVA_MAP.md              Java file ↔ Rust module map
 |---|---|
 | parse / commands | 199/199, 199/199 |
 | verdict | 465/465 (SAT/UNSAT/ERROR identical to Java) |
-| perf (sequential `--perf`) | 465/465; total time Rust 43.8 s vs Java 285.7 s (about 0.15×) |
+| perf (sequential `--perf`) | 465/465; total time Rust 28.5 s vs Java 285.7 s (about 0.10×; was 44.3 s before the SAT/BVE/temporal work) |
 | `--count` (symmetry=0) | 432/432 (the 34 commands Java timed out on are not scored) |
 | temporal logic (`var`, LTL, steps) | implemented; every temporal command in the corpus matches |
 
@@ -50,7 +50,8 @@ docs/JAVA_MAP.md              Java file ↔ Rust module map
   (409–465/465 observed). Check speed with the sequential `python harness/check.py --perf`.
 - In `--count` mode `check.py` prints "REGRESSIONS vs best.json". That is not a real regression: the verdict-mode
   `best.json` contains commands that Java timed out on, which count mode does not score.
-- Debug environment variables: `KTIME`, `KPROF`, `KSAT_CONFIGS`, `KSAT_STATS`, `KCOUNT`.
+- Debug environment variables: `KTIME`, `KPROF`, `KSAT_CONFIGS`, `KSAT_STATS`, `KCOUNT`, `KSAT_WHO`, `KSAT_DUMP`,
+  `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL` (see loop/NOTES.md).
 
 ## Implementation notes: temporal logic (Alloy 6)
 (`crates/alloy-translate/src/translate.rs`, `lib.rs`)
@@ -129,8 +130,9 @@ python harness/gen_golden.py --count-mode --force -j 4
   (`CompUtil.parseEverything_fromFile`, `TranslateAlloyToKodkod.execute_command`). Per-command timeout 60 s.
 - **Rust execution**: the harness runs every command in a separate process (isolating crashes and infinite loops);
   timeout = `min(60s, max(3s, 5×Java+2s))`.
-- **SAT solver**: the pure-Rust `batsat` (MiniSat family) sits behind the `satsolver` trait, standing in for Java's
-  default SAT4J. The toolchain is `x86_64-pc-windows-gnu` (no C compiler), so only pure-Rust dependencies are allowed.
+- **SAT solver**: the pure-Rust `batsat` (MiniSat family, vendored in `crates/batsat` with binary-clause watches) sits
+  behind the `satsolver` trait, standing in for Java's default SAT4J; `satsolver::simp` adds MiniSat-style variable
+  elimination. The toolchain is `x86_64-pc-windows-gnu` (no C compiler), so only pure-Rust dependencies are allowed.
 - **Anti-cheating**: Rust code must not read golden files or special-case file names (CLAUDE.md). Protected files are
   guarded twice: the deny rules in `loop/haiku-settings.json` (the driver applies them to Haiku only, via `--settings`)
   and the driver's automatic revert. The deny rules do not apply to interactive sessions (Option B), so start those

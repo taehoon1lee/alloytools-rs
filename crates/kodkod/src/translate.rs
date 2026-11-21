@@ -106,6 +106,9 @@ pub struct Translator<'a, S: SatSolver> {
     no_skolem: u32,
     /// Effectively universal quantifiers around the current formula (Kodkod's `skolemDepth = 0` stops there).
     univ_depth: u32,
+    /// `KTIME` diagnostics: count into the global profiling counters (off by default: the portfolio threads would
+    /// contend on them).
+    prof: bool,
 }
 
 impl<'a, S: SatSolver> Translator<'a, S> {
@@ -134,6 +137,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             expr_cache: HashMap::default(),
             fv_cache: HashMap::default(),
             no_cache: 0,
+            prof: std::env::var("KTIME").is_ok(),
             skolem_vars: Vec::new(),
             skolem_rels: Vec::new(),
             base_primary: primary_vars as u32,
@@ -157,7 +161,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         if self.no_cache > 0 || matches!(e, Expr::Rel(_) | Expr::Var(_) | Expr::Const(_) | Expr::Literal(_)) {
             return self.expr_uncached(e);
         }
-        N_EXPR.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if self.prof {
+            N_EXPR.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
         let ptr = e as *const Expr as usize;
         let fvs = match self.fv_cache.get(&ptr) {
             Some(v) => v.clone(),
@@ -169,17 +175,20 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 v
             }
         };
-        let key: Vec<u64> = fvs.iter().map(|v| self.env.id(*v)).collect();
-        if let Some(m) = self.expr_cache.get(&(ptr, key.clone())) {
-            N_HIT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-            N_ENTRIES.fetch_add(m.entries.len() as u64, std::sync::atomic::Ordering::Relaxed);
-            let t0 = std::time::Instant::now();
-            let r = m.clone();
-            T_CLONE.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
-            return Ok(r);
+        let key = (ptr, fvs.iter().map(|v| self.env.id(*v)).collect::<Vec<u64>>());
+        if let Some(m) = self.expr_cache.get(&key) {
+            if self.prof {
+                N_HIT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                N_ENTRIES.fetch_add(m.entries.len() as u64, std::sync::atomic::Ordering::Relaxed);
+                let t0 = std::time::Instant::now();
+                let r = m.clone();
+                T_CLONE.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+                return Ok(r);
+            }
+            return Ok(m.clone());
         }
         let m = self.expr_uncached(e)?;
-        self.expr_cache.insert((ptr, key), m.clone());
+        self.expr_cache.insert(key, m.clone());
         Ok(m)
     }
 
@@ -600,6 +609,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
 
     /// Relational join of two evaluated matrices: `a.b`.
     fn join_m(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> Result<BoolMatrix, String> {
+        if !self.prof {
+            return self.join_m2(a, b);
+        }
         let t0 = std::time::Instant::now();
         let r = self.join_m2(a, b);
         T_JOIN.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
@@ -610,7 +622,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         if a.arity + b.arity < 3 {
             return Err(format!("join needs an expression of arity 2 or more (arities {} and {})", a.arity, b.arity));
         }
-        let mut acc: BTreeMap<TKey, Vec<BoolVal>> = BTreeMap::new();
+        // (result tuple, value) pairs in generation order; a stable sort groups them by tuple like the former
+        // `BTreeMap<TKey, Vec<BoolVal>>` accumulator, so the gates are built in the same order
+        let mut acc: Vec<(TKey, BoolVal)> = Vec::new();
         let rest_bits = 8 * (b.arity as u32 - 1);
         let rest_mask: u64 = if rest_bits == 0 { 0 } else { (1u64 << rest_bits) - 1 };
         for (ta, va) in &a.entries {
@@ -622,14 +636,25 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             for (tb, vb) in b.entries.range(lo..hi) {
                 let v = self.f.and2(*va, *vb);
                 let key = TKey((prefix << rest_bits) | (tb.0 & rest_mask));
-                acc.entry(key).or_default().push(v);
+                acc.push((key, v));
             }
         }
+        acc.sort_by_key(|e| e.0);
         let mut out = BoolMatrix::empty(a.arity + b.arity - 2);
-        for (k, vals) in acc {
-            let v = self.f.or(&vals);
-            out.entries.insert(k, v);
+        let mut vals: Vec<BoolVal> = Vec::new();
+        let mut i = 0;
+        let mut sorted: Vec<(TKey, BoolVal)> = Vec::new();
+        while i < acc.len() {
+            let k = acc[i].0;
+            vals.clear();
+            while i < acc.len() && acc[i].0 == k {
+                vals.push(acc[i].1);
+                i += 1;
+            }
+            let v = if vals.len() == 1 { vals[0] } else { self.f.or(&vals) };
+            sorted.push((k, v));
         }
+        out.entries = sorted.into_iter().collect();
         Ok(out)
     }
 
@@ -689,7 +714,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
 
     /// Evaluates a formula to a boolean value.
     pub fn formula(&mut self, f: &Formula) -> Result<BoolVal, String> {
-        N_FORM.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        if self.prof {
+            N_FORM.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
         Ok(match f {
             Formula::True => BoolVal::TRUE,
             Formula::False => BoolVal::FALSE,
@@ -1315,21 +1342,30 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
         Err(_) => (0..CONFIGS.len().min(cores.max(2)).min(4)).collect(),
     };
     let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let (tx, rx) = std::sync::mpsc::channel::<Result<Solution, String>>();
+    let (tx, rx) = std::sync::mpsc::channel::<(usize, Result<Solution, String>)>();
+    let who = std::env::var("KSAT_WHO").is_ok();
+    let t_race = std::time::Instant::now();
     std::thread::scope(|scope| {
-        for &(order, luby, rnd, seed, pol) in selected.iter().map(|i| &CONFIGS[*i]) {
+        for &ci in &selected {
+            let (order, luby, rnd, seed, pol) = CONFIGS[ci];
             let tx = tx.clone();
             let stop = stop.clone();
             scope.spawn(move || {
                 let mut sat = BatSat::configured(luby, rnd, seed, pol);
+                // binary-clause watches help the symmetry-broken (UNSAT-proving) configurations; the others keep
+                // MiniSat's propagation order, which suits the satisfiable puzzles they usually win
+                sat.set_binary_watches(order != NO_SBP);
                 sat.set_stop_flag(stop);
                 let r = solve_ordered(bounds, formula, sat, order);
-                let _ = tx.send(r);
+                let _ = tx.send((ci, r));
             });
         }
         drop(tx);
         let mut answer: Option<Result<Solution, String>> = None;
-        for r in rx.iter() {
+        for (ci, r) in rx.iter() {
+            if who && answer.is_none() && matches!(&r, Ok(sol) if sol.sat.is_some()) {
+                eprintln!("portfolio: config {ci} answered after {:?}", t_race.elapsed());
+            }
             let done = match &r {
                 Ok(sol) => sol.sat.is_some(),
                 Err(_) => true,
@@ -1506,6 +1542,11 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
         prio.extend(tr.skolem_vars.iter().copied());
         tr.f.sat.set_priority(&prio);
     }
+    // variable elimination over the gate variables; primary and skolem variables stay (they are decoded and are the
+    // meaningful branching points)
+    let mut frozen: Vec<u32> = (1..=tr.primary_vars_base()).collect();
+    frozen.extend(tr.skolem_vars.iter().copied());
+    tr.f.sat.set_simplify(&frozen);
     let primary_vars = tr.primary_vars;
     let vars = tr.f.sat.num_vars();
     let clauses = tr.f.sat.num_clauses();

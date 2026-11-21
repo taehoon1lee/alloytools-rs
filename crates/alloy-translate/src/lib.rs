@@ -123,7 +123,7 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
     let mut result = None;
     let mut trace_len = 1;
     let ks: Vec<Option<usize>> = if temporal { (min_trace..=max_trace).map(|k| Some(k as usize)).collect() } else { vec![None] };
-    for k in ks {
+    let mut run = |k: Option<usize>| -> Result<(translate::Problem, kodkod::translate::Solution), AlloyError> {
         let t1 = Instant::now();
         let problem = translate::translate(&model, cmd, opt, k)?;
         translate_ms += t1.elapsed().as_secs_f64() * 1000.0;
@@ -131,6 +131,28 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
         let sol = kodkod::translate::solve(&problem.bounds, &problem.formula)
             .map_err(|e| AlloyError::new(ErrorKind::Other, None, e))?;
         solve_ms += t2.elapsed().as_secs_f64() * 1000.0;
+        Ok((problem, sol))
+    };
+    // Java (Pardinus) tries the trace lengths min..max in order and stops at the first SAT one. Traces are infinite
+    // lassos, and a lasso of k states unrolls into one of k+1 states, so SAT(k) implies SAT(k+1): once two lengths
+    // were UNSAT, the longest length is tried; if it is UNSAT, so is every shorter one (same answer, fewer solves).
+    // If it is SAT, the search continues upwards as in Java, so the reported trace is still the shortest one.
+    let mut probe: Option<(translate::Problem, kodkod::translate::Solution)> = None;
+    let mut probed = !temporal || ks.len() <= 3 || std::env::var("KTRACE_ALL").is_ok();
+    for (n, &k) in ks.iter().enumerate() {
+        if !probed && n == 2 {
+            probed = true;
+            let (problem, sol) = run(ks[ks.len() - 1])?;
+            if sol.sat == Some(false) {
+                trace_len = max_trace;
+                result = Some((problem, sol));
+                break;
+            }
+            if sol.sat == Some(true) {
+                probe = Some((problem, sol));
+            }
+        }
+        let (problem, sol) = if n + 1 == ks.len() && probe.is_some() { probe.take().unwrap() } else { run(k)? };
         let sat = sol.sat == Some(true);
         trace_len = k.unwrap_or(1) as i32;
         result = Some((problem, sol));

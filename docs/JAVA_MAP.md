@@ -64,4 +64,4 @@ Sizes are Java line counts (to plan how many iterations a port takes). Update th
 | `SymmetryBreaker.generateSBP` | `kodkod/src/translate.rs` `add_symmetry_breaking`, `symmetry_classes` |
 | `Skolemizer` (depth 0) | `kodkod/src/translate.rs` `Translator::skolemize` |
 | `FOL2BoolCache` | `kodkod/src/translate.rs` `Translator::expr` (+ `fv_expr`) |
-| SAT4J (Java solver) | `satsolver` (batsat; geometric restarts, polarity TRUE) + `kodkod::translate::solve` portfolio |
+| SAT4J (Java solver) | `satsolver` (vendored `crates/batsat` + binary watches; geometric restarts, polarity TRUE; `simp.rs` = MiniSat `SimpSolver` variable elimination) + `kodkod::translate::solve` portfolio |

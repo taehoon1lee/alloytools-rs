@@ -113,3 +113,20 @@
 - SAT: initial polarity TRUE (batsat `new_var(lbool::TRUE, true)`) is ~3-10x faster than the default on the hard UNSAT corpus models (likely SAT4J's default phase); best single config = SBP order0 + geometric restarts + pol TRUE.
 - Portfolio: after a 200ms conflict-capped SBP attempt, 4 configs race on threads (first answer sets a stop flag). Heavy-tailed SAT time makes this the practical lever; keep thread count <= 4 (gate runs -j8).
 - File-level type errors: Java type-checks the root module at load; `--no-solve` runs `sema::build` and reports only `ErrorKind::Type` errors (identical-signature overloads etc.).
+- PERF 2026-11-22 (sequential `--perf` 44.3 s -> 28.5 s, models/ 18.9 -> 14.2 s; answers, CNF and counts unchanged):
+  * hard UNSAT time was BCP over Kodkod gate chains (~2100 propagations/conflict, reduce_db never ran). `batsat` is now
+    vendored (`crates/batsat`, MIT) with binary-clause watch lists (~ -7%).
+  * `satsolver::simp`: MiniSat-style bounded variable elimination (frozen = primary + skolem vars, model extension).
+    Two-stage in `BatSat::solve` when `set_simplify` was called: 2000 conflicts on the plain CNF, then BVE + fresh
+    solver, so easy problems never pay for it (hotel4 6.0 -> 3.2 s). Carrying VSIDS activity into stage 2 hurt.
+  * temporal: SAT(k) implies SAT(k+1) (lassos unroll), so after two UNSAT trace lengths the longest one is tried
+    first; UNSAT there = UNSAT overall (leader_events#3 3.7 -> 0.75 s). SAT still reports the shortest trace.
+  * translation: 2-input gates hash-consed without allocation, join accumulates in a sorted Vec (same gate order =
+    byte-identical CNF, check with `KSAT_DUMP`), debug atomics (N_EXPR, T_JOIN...) only under `KTIME` -- 4 portfolio
+    threads were contending on them.
+  * portfolio diversity: binary watches only in the SBP configs (they win the UNSAT proofs); the NO_SBP configs keep
+    MiniSat's propagation order (handshake#3 265 -> 117 ms). Under -j8 the new binary scores perf 433-439/465 vs
+    396-457 for the old one (same machine, alternating runs), so -j8 perf misses are load noise.
+  * tools: `KSAT_DUMP=<file>` writes the CNF; `cargo run --release --example cnfbench -- <cnf>` solves it
+    (`KSAT_SIMP=<n>`); knobs `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL`, `KSAT_WHO` (portfolio winner). splr was 4x
+    slower than batsat on hotel4; plain learnt-limit sweeps gave nothing.

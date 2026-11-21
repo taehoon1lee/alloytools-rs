@@ -90,4 +90,10 @@
   (Closure assertion without the implication, plus fact LegalTrans and fact TransIfPossible; each fact alone is SAT in both).
   Suspects: Let-bound set values inside `some adjProc | let nLvl = ... | {...}`, `lo/next[nLvl]`, or `*~` in SpanTreeAtState.
 
+- PERF FINDINGS (addressBook1h cmd 3 "delUndoesAdd for 10 but 3 Book"; Java 17k clauses, Rust 168k):
+  gates are mostly binary AND/OR, but ~1.3k AND gates with fan-in >= 64 (whole-matrix subset/equality per leaf) carry most
+  clauses; single-gate IFF/ITE changes little (-5% vars). Symmetry breaking is needed (disabling it: 15 regressions).
+  batsat options: phase_saving=0 helps this command (1.6 s vs 2.7 s) but hurts dijkstra Closure (20 s vs 12 s); no global win.
+  Gate is flaky on this command (budget 3 s). Real fix: Kodkod-style simplification/sharing of whole-matrix formulas (M6).
+
 ## HARNESS ISSUES (write evidence here instead of editing harness/)

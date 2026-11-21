@@ -1343,6 +1343,122 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     })
 }
 
+/// Counts the solutions (distinct assignments of the primary variables, Kodkod's `solveAll`) up to `limit`, without
+/// symmetry breaking. Returns `(count, capped)`, `capped` iff more than `limit` solutions exist.
+pub fn count_all(bounds: &Bounds, formula: &Formula, limit: u32) -> Result<(u32, bool), String> {
+    count_projected(bounds, formula, limit, None)
+}
+
+/// First model without symmetry breaking and with false-first phase (like MiniSat), so it is deterministic.
+pub fn first_instance(bounds: &Bounds, formula: &Formula, minimize: &[usize]) -> Result<Option<Instance>, String> {
+    if bounds.universe.size() > 256 || bounds.relations.iter().any(|r| r.arity > 8) {
+        return Err("universe of more than 256 atoms or relation of arity > 8 (compact tuple keys)".into());
+    }
+    let mut tr = Translator::new(bounds, BatSat::configured(false, 0.0, 0, Some(false)));
+    let top = tr.formula(formula)?;
+    tr.f.assert_true(top);
+    tr.f.finish();
+    let prio: Vec<u32> = (1..=tr.primary_vars_base()).collect();
+    tr.f.sat.set_priority(&prio);
+    if tr.f.trivially_unsat || tr.f.sat.solve() != Some(true) {
+        return Ok(None);
+    }
+    // lexicographically smallest assignment of the listed relations' variables (stands in for MiniSat's false-first
+    // phase, which Java's first model reflects)
+    let mut vars: Vec<u32> = Vec::new();
+    for &r in minimize {
+        for v in tr.rels[r].entries.values() {
+            if let BoolVal::Lit(l) = v {
+                vars.push(l.unsigned_abs());
+            }
+        }
+    }
+    vars.sort_unstable();
+    vars.dedup();
+    let mut fixed: Vec<i32> = Vec::new();
+    for v in vars {
+        if !tr.f.sat.value_of(v) {
+            fixed.push(-(v as i32));
+            continue;
+        }
+        fixed.push(-(v as i32));
+        if tr.f.sat.solve_assuming(&fixed) != Some(true) {
+            fixed.pop();
+            fixed.push(v as i32);
+            if tr.f.sat.solve_assuming(&fixed) != Some(true) {
+                return Ok(None);
+            }
+        }
+    }
+    let mut inst = Instance::default();
+    for (id, rb) in bounds.relations.iter().enumerate() {
+        let mut ts = TupleSet::empty(rb.arity);
+        for (t, v) in &tr.rels[id].entries {
+            let val = match *v {
+                BoolVal::Const(b) => b,
+                BoolVal::Lit(l) => tr.f.sat.value_of(l.unsigned_abs()) == (l > 0),
+            };
+            if val {
+                ts.tuples.insert(t.atoms(rb.arity));
+            }
+        }
+        inst.relations.insert(rb.name.clone(), ts);
+    }
+    Ok(Some(inst))
+}
+
+/// Like [`count_all`], but only the primary variables of the listed relations are blocked (solutions that differ only
+/// elsewhere count once).
+pub fn count_projected(bounds: &Bounds, formula: &Formula, limit: u32, only: Option<&[usize]>) -> Result<(u32, bool), String> {
+    if bounds.universe.size() > 256 || bounds.relations.iter().any(|r| r.arity > 8) {
+        return Err("universe of more than 256 atoms or relation of arity > 8 (compact tuple keys)".into());
+    }
+    let mut tr = Translator::new(bounds, BatSat::configured(false, 0.0, 0, Some(true)));
+    let top = tr.formula(formula)?;
+    tr.f.assert_true(top);
+    tr.f.finish();
+    if tr.f.trivially_unsat {
+        return Ok((0, false));
+    }
+    let mut primaries: Vec<u32> = match only {
+        None => {
+            let mut p: Vec<u32> = (1..=tr.primary_vars_base()).collect();
+            p.extend(tr.skolem_vars.iter().copied());
+            p
+        }
+        Some(rels) => {
+            let mut p = Vec::new();
+            for &r in rels {
+                for v in tr.rels[r].entries.values() {
+                    if let BoolVal::Lit(l) = v {
+                        p.push(l.unsigned_abs());
+                    }
+                }
+            }
+            p
+        }
+    };
+    primaries.sort_unstable();
+    primaries.dedup();
+    let mut n = 0u32;
+    loop {
+        if tr.f.sat.solve() != Some(true) {
+            return Ok((n, false));
+        }
+        if n >= limit {
+            return Ok((n, true));
+        }
+        n += 1;
+        let block: Vec<i32> = primaries
+            .iter()
+            .map(|&v| if tr.f.sat.value_of(v) { -(v as i32) } else { v as i32 })
+            .collect();
+        if block.is_empty() || !tr.f.sat.add_clause(&block) {
+            return Ok((n, false));
+        }
+    }
+}
+
 pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> Result<Solution, String> {
     solve_ordered(bounds, formula, sat, 0)
 }

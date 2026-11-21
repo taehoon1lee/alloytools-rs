@@ -122,7 +122,7 @@ fn run_command(world: &World, idx: usize, opt: &Options, count: u32) -> Map<Stri
     let mut j = header(&world.commands()[idx], idx);
     let t0 = Instant::now();
     match execute_command(world, idx, opt) {
-        Ok(mut sol) => {
+        Ok(sol) => {
             j.insert("status".into(), json!(if sol.sat { "SAT" } else { "UNSAT" }));
             j.insert("error".into(), Value::Null);
             j.insert("temporal".into(), json!(sol.temporal));
@@ -142,27 +142,14 @@ fn run_command(world: &World, idx: usize, opt: &Options, count: u32) -> Map<Stri
             }
             if count > 0 {
                 let c0 = Instant::now();
-                let mut n = 0u32;
-                let mut more = sol.sat;
-                let mut err = None;
-                while more && n < count {
-                    n += 1;
-                    match sol.next() {
-                        Ok(b) => more = b,
-                        Err(e) => {
-                            err = Some(e);
-                            break;
-                        }
-                    }
-                }
-                match err {
-                    Some(e) => {
-                        j.insert("count_error".into(), err_json(&e));
-                    }
-                    None => {
+                match alloy_translate::count_solutions(world, idx, opt, count) {
+                    Ok((n, capped)) => {
                         j.insert("count".into(), json!(n));
-                        j.insert("count_capped".into(), json!(n >= count && more));
+                        j.insert("count_capped".into(), json!(capped));
                         j.insert("count_ms".into(), json!(ms(c0)));
+                    }
+                    Err(e) => {
+                        j.insert("count_error".into(), err_json(&e));
                     }
                 }
             }

@@ -20,6 +20,17 @@ use crate::Options;
 pub struct Problem {
     pub bounds: Bounds,
     pub formula: Formula,
+    /// Relation ids of a temporal problem (for solution counting).
+    pub trace: Option<TraceInfo>,
+}
+
+#[derive(Clone, Debug)]
+pub struct TraceInfo {
+    pub k: usize,
+    /// Relations with a time column (variable sigs/fields).
+    pub var_rels: Vec<u32>,
+    pub time_rel: Vec<u32>,
+    pub loop_rel: u32,
 }
 
 fn unsupported(msg: impl Into<String>) -> AlloyError {
@@ -218,9 +229,28 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
     tr.pol = !cmd.check;
     let command = tr.formula(&cmd.formula)?;
     conjuncts.push(if cmd.check { Formula::Not(Box::new(command)) } else { command });
+    let trace_info = temporal.as_ref().map(|t| {
+        let mut var_rels: Vec<u32> = Vec::new();
+        for (i, sg) in model.sigs.iter().enumerate() {
+            if sg.is_var {
+                if let Some(Expr::Rel(r)) = tr.sig_expr.get(i).cloned().flatten() {
+                    var_rels.push(r);
+                }
+            }
+        }
+        for (i, f) in model.fields.iter().enumerate() {
+            if f.is_var {
+                if let Some(r) = tr.field_rel[i] {
+                    var_rels.push(r);
+                }
+            }
+        }
+        TraceInfo { k: t.k, var_rels, time_rel: t.time_rel.clone(), loop_rel: t.loop_rel }
+    });
     Ok(Problem {
         bounds,
         formula: Formula::And(conjuncts),
+        trace: trace_info,
     })
 }
 

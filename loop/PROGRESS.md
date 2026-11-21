@@ -107,3 +107,9 @@ time atoms `$time$i` each in its own exact relation, free `$loop` relation (one)
 time point `Tp{level,state}` (level 1 = first pass, level 2 = loop part; past operators see level 1 then level 2); LTL operators expand into And/Or over the
 reachable points (`future_path/past_path/next_tps/prev_tps`), `e'` is an ITE chain over loop targets at the last state; facts hold at (1,0); var sig/field declaration
 constraints are emitted per state. Random differential testing against Java (240 formulas incl. laws over until/since/releases/triggered) found no mismatch.
+
+## 2026-11-22 M7 --count — count 432/432 (symmetry=0), gate green
+`alloy_translate::count_solutions` (≈ A4Solution.next loop): non-temporal = kodkod `count_all` (blocking clauses over primary+skolem vars, no SBP).
+Temporal = Pardinus `next()` semantics: first model fixes the static relations (chosen lexicographically smallest over their primary vars via
+`first_instance`+`solve_assuming`, mimicking MiniSat's false-first model that Java's count depends on); then distinct lasso traces are counted over
+k=min..max, each trace once (`canonical_lasso`: minimal prefix and primitive loop period), blocking on var-relation + $loop vars only. `KCOUNT=1` debug.

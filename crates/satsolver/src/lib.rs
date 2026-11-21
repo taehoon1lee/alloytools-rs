@@ -23,6 +23,10 @@ pub trait SatSolver {
     fn solve(&mut self) -> Option<bool>;
     /// Variables (1-based DIMACS ids) the solver should branch on first (Kodkod numbers primary variables first).
     fn set_priority(&mut self, _vars: &[u32]) {}
+    /// Solves under assumptions (literals as in `add_clause`); `None` when unsupported or interrupted.
+    fn solve_assuming(&mut self, _assumptions: &[i32]) -> Option<bool> {
+        None
+    }
     /// Abort `solve()` (returning `None`) after this many conflicts; `None` = unlimited.
     fn set_conflict_limit(&mut self, _limit: Option<u64>) {}
     /// Abort `solve()` (returning `None`) once the flag is set (portfolio races).
@@ -247,6 +251,28 @@ impl SatSolver for BatSat {
         self.solved_vars = self.vars.clone();
         self.built = true;
         self.run()
+    }
+    fn solve_assuming(&mut self, assumptions: &[i32]) -> Option<bool> {
+        if self.unsat {
+            return Some(false);
+        }
+        if !self.built && self.solve().is_none() {
+            return None;
+        }
+        if self.unsat {
+            return Some(false);
+        }
+        let lits: Vec<Lit> =
+            assumptions.iter().map(|&l| Lit::new(self.vars[(l.unsigned_abs() - 1) as usize], l > 0)).collect();
+        let r = self.s.solve_limited(&lits);
+        if r == lbool::TRUE {
+            self.solved_vars = self.vars.clone();
+            Some(true)
+        } else if r == lbool::FALSE {
+            Some(false)
+        } else {
+            None
+        }
     }
     fn value_of(&self, v: u32) -> bool {
         self.s.value_var(self.solved_vars[(v - 1) as usize]) == lbool::TRUE

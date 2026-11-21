@@ -218,6 +218,121 @@ fn to_temporal_instance(model: &Model, bounds: &kodkod::instance::Bounds, inst: 
     Instance { trace_length: k as i32, loop_state, states }
 }
 
+/// Number of solutions of command `index` (Kodkod `solveAll` semantics, no symmetry breaking), counted up to `limit`:
+/// `(count, capped)`. Temporal problems are counted at the first trace length that has a solution.
+pub fn count_solutions(world: &World, index: usize, opt: &Options, limit: u32) -> Result<(u32, bool), AlloyError> {
+    let model = sema::build(&world.modules)?;
+    let cmd: &RCommand = model
+        .commands
+        .get(index)
+        .ok_or_else(|| AlloyError::new(ErrorKind::Other, None, format!("no command {index}")))?;
+    let kerr = |e: String| AlloyError::new(ErrorKind::Other, None, e);
+    if !model.temporal {
+        let problem = translate::translate(&model, cmd, opt, None)?;
+        return kodkod::translate::count_all(&problem.bounds, &problem.formula, limit).map_err(kerr);
+    }
+    // Temporal (Pardinus `next()`): after the first solution the static part is fixed and only different traces are
+    // enumerated, over increasing trace lengths; a trace is counted once, at its minimal lasso length.
+    let (smin, smax) = cmd.steps.map_or((None, -1), |(a, b)| (a, b));
+    if smax == i32::MAX {
+        return Err(AlloyError::new(ErrorKind::Other, None, "Bounded engines do not support complete model checking."));
+    }
+    let (min_k, max_k) = (smin.unwrap_or(1).max(1), if smax > 0 { smax } else { 10 });
+    let mut statics: Option<Vec<(String, kodkod::instance::TupleSet)>> = None;
+    let mut total = 0u32;
+    for k in min_k..=max_k {
+        let mut problem = translate::translate(&model, cmd, opt, Some(k as usize))?;
+        let info = problem.trace.clone().ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace info"))?;
+        if statics.is_none() {
+            let static_ids: Vec<usize> = (0..problem.bounds.relations.len())
+                .filter(|&i| {
+                    let rb = &problem.bounds.relations[i];
+                    !rb.name.starts_with('$') && !info.var_rels.contains(&(i as u32)) && rb.upper.tuples != rb.lower.tuples
+                })
+                .collect();
+            let Some(inst) = kodkod::translate::first_instance(&problem.bounds, &problem.formula, &static_ids).map_err(kerr)? else {
+                continue;
+            };
+            let mut st = Vec::new();
+            for (id, rb) in problem.bounds.relations.iter().enumerate() {
+                let id = id as u32;
+                if rb.name.starts_with('$') || info.var_rels.contains(&id) || rb.upper.tuples == rb.lower.tuples {
+                    continue;
+                }
+                if let Some(ts) = inst.relations.get(&rb.name) {
+                    st.push((rb.name.clone(), ts.clone()));
+                }
+            }
+            if std::env::var("KCOUNT").is_ok() {
+                for (n, ts) in &st {
+                    eprintln!("static {n}: {:?}", ts.tuples);
+                }
+            }
+            statics = Some(st);
+        }
+        let mut extra: Vec<kodkod::ast::Formula> = vec![problem.formula.clone()];
+        for (name, ts) in statics.as_ref().unwrap() {
+            let Some(id) = problem.bounds.relations.iter().position(|r| &r.name == name) else { continue };
+            extra.push(kodkod::ast::Formula::Equal(
+                kodkod::ast::Expr::Rel(id as u32),
+                kodkod::ast::Expr::Literal(ts.clone()),
+            ));
+        }
+        extra.push(canonical_lasso(&info));
+        problem.formula = kodkod::ast::Formula::And(extra);
+        let mut proj: Vec<usize> = info.var_rels.iter().map(|r| *r as usize).collect();
+        proj.push(info.loop_rel as usize);
+        let (c, capped) =
+            kodkod::translate::count_projected(&problem.bounds, &problem.formula, limit - total, Some(&proj)).map_err(kerr)?;
+        if std::env::var("KCOUNT").is_ok() {
+            eprintln!("k={k} count={c} capped={capped} var_rels={:?}", info.var_rels);
+        }
+        total += c;
+        if capped {
+            return Ok((total, true));
+        }
+        if total >= limit {
+            // exactly `limit` found so far: more may exist at longer traces; probe by asking for one more later
+            continue;
+        }
+    }
+    Ok((total, false))
+}
+
+/// The loop is the minimal representation of its infinite trace: no earlier state equals the last one (the
+/// prefix cannot shrink) and the loop part is not a repetition of a shorter period.
+fn canonical_lasso(info: &translate::TraceInfo) -> kodkod::ast::Formula {
+    use kodkod::ast::{Expr, Formula};
+    let k = info.k;
+    let eq_state = |i: usize, j: usize| -> Formula {
+        let mut parts = Vec::new();
+        for &r in &info.var_rels {
+            parts.push(Formula::Equal(
+                Expr::join(Expr::Rel(r), Expr::Rel(info.time_rel[i])),
+                Expr::join(Expr::Rel(r), Expr::Rel(info.time_rel[j])),
+            ));
+        }
+        Formula::And(parts)
+    };
+    let mut cases = Vec::new();
+    for l in 0..k {
+        let is_l = Formula::Subset(Expr::Rel(info.time_rel[l]), Expr::Rel(info.loop_rel));
+        let mut conds = Vec::new();
+        if l > 0 {
+            conds.push(Formula::Not(Box::new(eq_state(l - 1, k - 1))));
+        }
+        let q = k - l;
+        for q2 in 1..q {
+            if q % q2 == 0 {
+                let rep: Vec<Formula> = (l..k - q2).map(|j| eq_state(j, j + q2)).collect();
+                conds.push(Formula::Not(Box::new(Formula::And(rep))));
+            }
+        }
+        cases.push(Formula::Implies(Box::new(is_l), Box::new(Formula::And(conds))));
+    }
+    Formula::And(cases)
+}
+
 /// Atom names of every relation of a kodkod instance, under the Java key names.
 fn to_instance(_model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod::instance::Instance) -> Instance {
     let mut st = BTreeMap::new();

@@ -55,6 +55,8 @@ pub struct Translator<'a, S: SatSolver> {
     no_cache: u32,
     /// SAT variables of skolem bits (branched on right after the primary variables).
     skolem_vars: Vec<u32>,
+    /// Skolem relations (name `$<var>`, matrix): Kodkod's symmetry breaker treats them like any other relation.
+    skolem_rels: Vec<(String, BoolMatrix)>,
     /// Number of relation (primary) variables allocated at construction: SAT variables `1..=base_primary`.
     base_primary: u32,
     /// Number of primary variables (free upper-bound tuples).
@@ -94,6 +96,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             fv_cache: HashMap::new(),
             no_cache: 0,
             skolem_vars: Vec::new(),
+            skolem_rels: Vec::new(),
             base_primary: primary_vars as u32,
             primary_vars,
             pol: true,
@@ -786,6 +789,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 cons.push(self.f.or(&bits));
                 cons.push(self.at_most_one(&bits));
             }
+            self.skolem_rels.push((format!("${:06}", d.var), m.clone()));
             saved.push((d.var, self.env.insert(d.var, m)));
         }
         let b = self.formula(body);
@@ -1110,6 +1114,7 @@ fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
         }
     }
     // non-constant relations with the classes their upper bound ranges over
+    // (source index: relations first, then skolem relations)
     let mut rels: Vec<(usize, usize, String, std::collections::BTreeSet<usize>)> = Vec::new();
     for (r, rb) in bounds.relations.iter().enumerate() {
         if rb.upper.tuples.len() == rb.lower.tuples.len() {
@@ -1125,6 +1130,19 @@ fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
             }
         }
         rels.push((r, rb.arity, rb.name.clone(), reps));
+    }
+    let n_rel = bounds.relations.len();
+    for (k, (name, m)) in tr.skolem_rels.iter().enumerate() {
+        let mut reps = std::collections::BTreeSet::new();
+        for t in m.entries.keys() {
+            for &a in t {
+                let ci = class_of[a as usize];
+                if ci != usize::MAX {
+                    reps.insert(ci);
+                }
+            }
+        }
+        rels.push((n_rel + k, m.arity, name.clone(), reps));
     }
     match order {
         // Java: by arity, then relation name
@@ -1148,7 +1166,7 @@ fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
                 if !reps.contains(&ci) {
                     continue;
                 }
-                let m = &tr.rels[*r];
+                let m = if *r < n_rel { &tr.rels[*r] } else { &tr.skolem_rels[*r - n_rel].1 };
                 for (t, v) in &m.entries {
                     if *v == BoolVal::FALSE {
                         continue;

@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use alloy_core::error::{AlloyError, ErrorKind};
 use alloy_core::sema::{FieldId, LocalId, Model, RCommand, RDecl, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_UNIV};
 use alloy_core::syntax::{BinOp, Const, Mult, Quant, UnOp};
-use kodkod::ast::{Const as KConst, Decl, Expr, Formula, Multiplicity, Quantifier};
+use kodkod::ast::{Const as KConst, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quantifier};
 use kodkod::instance::{Bounds, TupleSet, Universe};
 
 use crate::scope::{compute_scopes, Layout};
@@ -52,6 +52,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         .bound("Int", int_tuples.clone(), int_tuples)
         .map_err(other)?;
     bounds.ordered_atoms = (n_sig_atoms..n_atoms).collect();
+    bounds.int_start = n_sig_atoms;
+    bounds.int_min = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
 
     // Relations of the sigs: lower = exact atoms, upper = atoms the sig may take.
     let mut sig_rel: Vec<Option<u32>> = vec![None; model.sigs.len()];
@@ -117,6 +119,17 @@ fn int_atom_names(bitwidth: i32) -> Vec<String> {
     }
     let half = 1i64 << (bitwidth - 1);
     (-half..half).map(|v| v.to_string()).collect()
+}
+
+/// Numeric expressions (`Int` values rather than sets of atoms).
+fn is_numeric(e: &RExpr) -> bool {
+    matches!(
+        e,
+        RExpr::Num(_)
+            | RExpr::Const(Const::IntMin | Const::IntMax)
+            | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
+            | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _)
+    )
 }
 
 fn unary(atoms: Vec<u32>) -> TupleSet {
@@ -279,6 +292,7 @@ impl<'a> Tr<'a> {
             Expr::Join(a, b) => self.arity(a)? + self.arity(b)? - 2,
             Expr::Product(a, b) => self.arity(a)? + self.arity(b)?,
             Expr::Transpose(_) | Expr::Closure(_) | Expr::ReflexiveClosure(_) => 2,
+            Expr::IntToExpr(_) => 1,
             Expr::IfThenElse(_, a, _) => self.arity(a)?,
             Expr::Comprehension(decls, _) => {
                 let mut t = 0;
@@ -351,10 +365,17 @@ impl<'a> Tr<'a> {
                 .cloned()
                 .ok_or_else(|| other(format!("unbound local {l}")))?,
             RExpr::Const(Const::Iden) => Expr::Const(KConst::Iden),
+            RExpr::Const(c @ (Const::IntMin | Const::IntMax)) => Expr::IntToExpr(Box::new(self.int_of(&RExpr::Const(*c))?)),
+            RExpr::Const(Const::IntNext) => self.int_next()?,
             RExpr::Const(other_c) => {
-                return Err(unsupported(format!("constant {other_c:?} (integers/temporal)")))
+                return Err(unsupported(format!("constant {other_c:?} (temporal)")))
             }
-            RExpr::Num(_) => return Err(unsupported("integer literal (integers not ported yet)")),
+            e @ (RExpr::Num(_) | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)) => {
+                Expr::IntToExpr(Box::new(self.int_of(e)?))
+            }
+            RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul, _, _) => {
+                Expr::IntToExpr(Box::new(self.int_of(e)?))
+            }
             RExpr::Un(UnOp::Set, x) => self.expr(x)?,
             RExpr::Un(UnOp::Transpose, x) => Expr::Transpose(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Closure, x) => Expr::Closure(Box::new(self.expr(x)?)),
@@ -422,6 +443,40 @@ impl<'a> Tr<'a> {
         })
     }
 
+    /// Integer expression of a numeric Alloy expression (`Alloy.cup` implicit casts: a set of integer atoms
+    /// is summed, a number is a constant).
+    fn int_of(&mut self, e: &RExpr) -> Result<IntExpr, AlloyError> {
+        Ok(match e {
+            RExpr::Num(n) => IntExpr::Const(*n as i64),
+            RExpr::Const(Const::IntMin) => IntExpr::Const(self.int_min()),
+            RExpr::Const(Const::IntMax) => IntExpr::Const(-self.int_min() - 1),
+            RExpr::Un(UnOp::Card, x) => IntExpr::Card(Box::new(self.expr(x)?)),
+            RExpr::Un(UnOp::IntCast, x) if is_numeric(x) => self.int_of(x)?,
+            RExpr::Un(UnOp::IntCast, x) => IntExpr::Sum(Box::new(self.expr(x)?)),
+            RExpr::Un(UnOp::Neg, x) => IntExpr::Neg(Box::new(self.int_of(x)?)),
+            RExpr::Bin(BinOp::IntPlus, a, b) => IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
+            RExpr::Bin(BinOp::IntMinus, a, b) => IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
+            RExpr::Bin(BinOp::Mul, a, b) => IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
+            RExpr::Bin(op @ (BinOp::Div | BinOp::Rem), _, _) => {
+                return Err(unsupported(format!("integer {op:?} (M5.5)")))
+            }
+            other => IntExpr::Sum(Box::new(self.expr(other)?)),
+        })
+    }
+
+    /// Minimum integer of the bitwidth (`-2^(w-1)`); 0 when there are no integers.
+    fn int_min(&self) -> i64 {
+        self.bounds.int_min
+    }
+
+    /// `Int`'s successor relation `next = {(i, i+1)}` over the integer atoms (Java `Const.IntNext`).
+    fn int_next(&self) -> Result<Expr, AlloyError> {
+        let n = if self.bounds.bitwidth == 0 { 0 } else { 1u32 << self.bounds.bitwidth };
+        let start = self.bounds.int_start;
+        let ts = TupleSet::from_tuples(2, (0..n.saturating_sub(1)).map(|k| vec![start + k, start + k + 1]));
+        Ok(Expr::Literal(ts))
+    }
+
     /// Formula of an Alloy formula expression.
     fn formula(&mut self, e: &RExpr) -> Result<Formula, AlloyError> {
         Ok(match e {
@@ -430,6 +485,9 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::Or, a, b) => Formula::Or(vec![self.formula(a)?, self.formula(b)?]),
             RExpr::Bin(BinOp::Implies, a, b) => Formula::Implies(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
             RExpr::Bin(BinOp::Iff, a, b) => Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
+            RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) || is_numeric(b) => {
+                Formula::IntCompare(IntCmp::Eq, self.int_of(a)?, self.int_of(b)?)
+            }
             RExpr::Bin(BinOp::Equals, a, b) => Formula::Equal(self.expr(a)?, self.expr(b)?),
             RExpr::Bin(BinOp::In, a, b) => {
                 let lhs = self.expr(a)?;
@@ -461,9 +519,10 @@ impl<'a> Tr<'a> {
                 }
                 Formula::And(out)
             }
-            RExpr::Bin(op @ (BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge), _, _) => {
-                return Err(unsupported(format!("integer comparison {op:?} (integers not ported yet)")))
-            }
+            RExpr::Bin(BinOp::Lt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(a)?, self.int_of(b)?),
+            RExpr::Bin(BinOp::Le, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?),
+            RExpr::Bin(BinOp::Gt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(b)?, self.int_of(a)?),
+            RExpr::Bin(BinOp::Ge, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(b)?, self.int_of(a)?),
             RExpr::Un(UnOp::Not, x) => Formula::Not(Box::new(self.formula(x)?)),
             RExpr::Un(UnOp::No, x) => Formula::Multiplicity(Multiplicity::No, self.expr(x)?),
             RExpr::Un(UnOp::Some, x) => Formula::Multiplicity(Multiplicity::Some, self.expr(x)?),

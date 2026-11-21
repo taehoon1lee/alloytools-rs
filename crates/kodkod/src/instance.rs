@@ -145,6 +145,9 @@ pub struct Bounds {
     pub bitwidth: u32,
     /// Atoms with a fixed meaning (the integers): they never take part in symmetry breaking.
     pub ordered_atoms: std::collections::BTreeSet<u32>,
+    /// The integer atoms are `int_start..int_start + 2^bitwidth`; atom `int_start + k` has value `int_min + k`.
+    pub int_start: u32,
+    pub int_min: i64,
 }
 
 impl Bounds {
@@ -154,6 +157,8 @@ impl Bounds {
             relations: Vec::new(),
             bitwidth: 0,
             ordered_atoms: BTreeSet::new(),
+            int_start: 0,
+            int_min: 0,
         }
     }
 

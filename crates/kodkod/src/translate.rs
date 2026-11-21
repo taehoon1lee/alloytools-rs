@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, HashMap};
 
 use satsolver::{BatSat, SatSolver};
 
-use crate::ast::{Const, Decl, Expr, Formula, Multiplicity, Quantifier, VarId};
+use crate::ast::{Const, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quantifier, VarId};
 use crate::bool::{BoolFactory, BoolVal};
 use crate::instance::{Bounds, Instance, TupleSet};
 
@@ -238,6 +238,19 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 }
                 out
             }
+            Expr::IntToExpr(ie) => {
+                let bits = self.int_expr(ie)?;
+                let w = bits.len();
+                let mut out = BoolMatrix::empty(1);
+                for k in 0..(1u64 << w) {
+                    let value = self.bounds.int_min + k as i64;
+                    let eqv = self.bits_eq_const(&bits, value);
+                    if eqv != BoolVal::FALSE {
+                        out.entries.insert(vec![self.bounds.int_start + k as u32], eqv);
+                    }
+                }
+                out
+            }
             Expr::Comprehension(decls, body) => {
                 let body: Formula = (**body).clone();
                 let mut key = Vec::new();
@@ -259,6 +272,137 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 out
             }
         })
+    }
+
+    fn width(&self) -> Result<usize, String> {
+        match self.bounds.bitwidth {
+            0 => Err("integers are not part of this problem (bitwidth 0)".into()),
+            w => Ok(w as usize),
+        }
+    }
+
+    /// Two's-complement bits of `v` truncated to `w` bits (LSB first).
+    fn const_bits(v: i64, w: usize) -> Vec<BoolVal> {
+        (0..w).map(|i| BoolVal::Const((v >> i) & 1 == 1)).collect()
+    }
+
+    /// Evaluates an integer expression to `w` bits (wrap-around arithmetic, as Kodkod's default).
+    fn int_expr(&mut self, e: &IntExpr) -> Result<Vec<BoolVal>, String> {
+        let w = self.width()?;
+        Ok(match e {
+            IntExpr::Const(c) => Self::const_bits(*c, w),
+            IntExpr::Card(x) => {
+                let m = self.expr(x)?;
+                let mut acc = Self::const_bits(0, w);
+                for v in m.entries.values().copied().collect::<Vec<_>>() {
+                    let mut one = vec![BoolVal::FALSE; w];
+                    one[0] = v;
+                    acc = self.add_bits(&acc, &one);
+                }
+                acc
+            }
+            IntExpr::Sum(x) => {
+                let m = self.expr(x)?;
+                let (start, min) = (self.bounds.int_start, self.bounds.int_min);
+                let n = 1u64 << w;
+                let mut acc = Self::const_bits(0, w);
+                let entries: Vec<(Vec<u32>, BoolVal)> = m.entries.iter().map(|(t, v)| (t.clone(), *v)).collect();
+                for (t, v) in entries {
+                    let a = t[0] as u64;
+                    if t[0] < start || a - start as u64 >= n {
+                        continue;
+                    }
+                    let value = min + (a - start as u64) as i64;
+                    let part: Vec<BoolVal> = Self::const_bits(value, w)
+                        .into_iter()
+                        .map(|b| self.f.and2(v, b))
+                        .collect();
+                    acc = self.add_bits(&acc, &part);
+                }
+                acc
+            }
+            IntExpr::Add(a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                self.add_bits(&a, &b)
+            }
+            IntExpr::Sub(a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                let nb = self.neg_bits(&b);
+                self.add_bits(&a, &nb)
+            }
+            IntExpr::Mul(a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                self.mul_bits(&a, &b)
+            }
+            IntExpr::Neg(a) => {
+                let a = self.int_expr(a)?;
+                self.neg_bits(&a)
+            }
+        })
+    }
+
+    fn add_bits(&mut self, a: &[BoolVal], b: &[BoolVal]) -> Vec<BoolVal> {
+        let mut carry = BoolVal::FALSE;
+        let mut out = Vec::with_capacity(a.len());
+        for i in 0..a.len() {
+            let nb = self.f.not(b[i]);
+            let x = self.f.ite(a[i], nb, b[i]); // a xor b
+            let nc = self.f.not(carry);
+            let sum = self.f.ite(x, nc, carry); // x xor carry
+            let ab = self.f.and2(a[i], b[i]);
+            let aob = self.f.or2(a[i], b[i]);
+            let cab = self.f.and2(carry, aob);
+            carry = self.f.or2(ab, cab);
+            out.push(sum);
+        }
+        out
+    }
+
+    fn neg_bits(&mut self, a: &[BoolVal]) -> Vec<BoolVal> {
+        let w = a.len();
+        let inv: Vec<BoolVal> = a.iter().map(|x| self.f.not(*x)).collect();
+        self.add_bits(&inv, &Self::const_bits(1, w))
+    }
+
+    fn mul_bits(&mut self, a: &[BoolVal], b: &[BoolVal]) -> Vec<BoolVal> {
+        let w = a.len();
+        let mut acc = Self::const_bits(0, w);
+        for i in 0..w {
+            let mut part = vec![BoolVal::FALSE; w];
+            for j in i..w {
+                part[j] = self.f.and2(b[i], a[j - i]);
+            }
+            acc = self.add_bits(&acc, &part);
+        }
+        acc
+    }
+
+    fn bits_eq(&mut self, a: &[BoolVal], b: &[BoolVal]) -> BoolVal {
+        let parts: Vec<BoolVal> = a.iter().zip(b).map(|(x, y)| self.f.iff(*x, *y)).collect();
+        self.f.and(&parts)
+    }
+
+    fn bits_eq_const(&mut self, a: &[BoolVal], v: i64) -> BoolVal {
+        let c = Self::const_bits(v, a.len());
+        self.bits_eq(a, &c)
+    }
+
+    /// Signed `a < b`: flip the sign bits, then compare as unsigned from the most significant bit.
+    fn bits_lt(&mut self, a: &[BoolVal], b: &[BoolVal]) -> BoolVal {
+        let w = a.len();
+        let mut a = a.to_vec();
+        let mut b = b.to_vec();
+        a[w - 1] = self.f.not(a[w - 1]);
+        b[w - 1] = self.f.not(b[w - 1]);
+        let mut res = BoolVal::FALSE;
+        for i in 0..w {
+            let na = self.f.not(a[i]);
+            let lt = self.f.and2(na, b[i]);
+            let eq = self.f.iff(a[i], b[i]);
+            let keep = self.f.and2(eq, res);
+            res = self.f.or2(lt, keep);
+        }
+        res
     }
 
     /// Transitive closure by repeated squaring: `R := R ∪ R.R` for ceil(log2 n) rounds.
@@ -328,6 +472,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Expr::Join(a, b) => self.static_arity(a, vars)? + self.static_arity(b, vars)? - 2,
             Expr::Product(a, b) => self.static_arity(a, vars)? + self.static_arity(b, vars)?,
             Expr::Transpose(_) | Expr::Closure(_) | Expr::ReflexiveClosure(_) => 2,
+            Expr::IntToExpr(_) => 1,
             Expr::IfThenElse(_, a, _) => self.static_arity(a, vars)?,
             Expr::Comprehension(decls, _) => {
                 let mut total = 0;
@@ -404,6 +549,18 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Formula::Iff(a, b) => {
                 let (a, b) = (self.formula(a)?, self.formula(b)?);
                 self.f.iff(a, b)
+            }
+            Formula::IntCompare(cmp, a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                match cmp {
+                    IntCmp::Eq => self.bits_eq(&a, &b),
+                    IntCmp::Lt => self.bits_lt(&a, &b),
+                    IntCmp::Le => {
+                        let lt = self.bits_lt(&a, &b);
+                        let eq = self.bits_eq(&a, &b);
+                        self.f.or2(lt, eq)
+                    }
+                }
             }
             Formula::Quantified(q, decls, body) => {
                 // Duality for set declarations: all s ⊆ E. f  ==  not (some s ⊆ E. not f). The existential

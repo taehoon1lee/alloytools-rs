@@ -39,6 +39,29 @@ pub enum Expr {
     IfThenElse(Box<Formula>, Box<Expr>, Box<Expr>),
     /// `{ x: A, y: B | f }`.
     Comprehension(Vec<Decl>, Box<Formula>),
+    /// The integer `i` as a set: the atom with value `i` if it is `i` (Kodkod `IntToExprCast`).
+    IntToExpr(Box<IntExpr>),
+}
+
+/// Integer expressions over the bitwidth of the bounds (Kodkod `IntExpression`). Arithmetic wraps around.
+#[derive(Debug, Clone, PartialEq)]
+pub enum IntExpr {
+    Const(i64),
+    /// `#e`: number of tuples of `e`.
+    Card(Box<Expr>),
+    /// `int[e]`: sum of the values of the integer atoms in `e` (unary).
+    Sum(Box<Expr>),
+    Add(Box<IntExpr>, Box<IntExpr>),
+    Sub(Box<IntExpr>, Box<IntExpr>),
+    Mul(Box<IntExpr>, Box<IntExpr>),
+    Neg(Box<IntExpr>),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntCmp {
+    Eq,
+    Lt,
+    Le,
 }
 
 /// One declaration `x: e` of a quantifier or comprehension (Java `Decl`).
@@ -85,6 +108,8 @@ pub enum Formula {
     Implies(Box<Formula>, Box<Formula>),
     Iff(Box<Formula>, Box<Formula>),
     Quantified(Quantifier, Vec<Decl>, Box<Formula>),
+    /// Comparison of two integer expressions.
+    IntCompare(IntCmp, IntExpr, IntExpr),
 }
 
 impl Expr {

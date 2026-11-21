@@ -20,6 +20,12 @@
 - Anonymous command labels: `run$N` / `check$N` with N = 1 + number of commands already added (CompModule ~l.1951).
 - `Command.toString()` is at `CORE/ast/Command.java` ~l.137; scopes print like `3 Prisoner, exactly 2 X`.
 
+- Lexer (Alloy.lex): longest match, ties -> earlier rule. `1_000` is a "Name cannot start with a number" error
+  (name rule ties with decimal and wins). Hex `0x` digits come in pairs (`0xa_b` is an error, `0xab_cd` ok).
+- Lexer emits raw `!` `=` for `!=`, `!` `in` for `!in`; the parser must merge them (Java Filter class).
+- `Version.experimental = true`, so string literals are accepted. Java keeps the quote chars inside the string
+  value; our `Tok::Str` stores the content without quotes (keep this in mind when comparing string constants).
+
 ## Design decisions
 - SAT backend: `satsolver::BatSat` (pure-Rust MiniSat-like). Java baseline uses SAT4J (Java MiniSat-like).
 

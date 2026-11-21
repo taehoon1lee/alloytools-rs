@@ -13,7 +13,7 @@ Scores come from `python harness/check.py` (see CLAUDE.md). Java paths are relat
 ## M1 — Lexer + parser (crate `alloy-core`)
 Reference: `org.alloytools.alloy.core/parser/Alloy.lex`, `.../parser/Alloy.cup` (grammar + precedence),
 `CORE/parser/CompModule.java` (what each grammar action builds).
-- [ ] M1.1 Token enum + lexer (`lexer.rs`): keywords, identifiers (letters, digits, `_`, `'`, `"`, `$`, `/`
+- [x] M1.1 Token enum + lexer (`lexer.rs`): keywords, identifiers (letters, digits, `_`, `'`, `"`, `$`, `/`
       handling as in Alloy.lex), numbers (decimal, hex `0x`, binary `0b`), string literals, comments
       (`//`, `--`, `/* */`, `/** */`), all operators (`=>`, `<=>`, `->`, `<:`, `:>`, `++`, `.`, `#`, `~`, `^`, `*`,
       `!`, `!=`, `!in`, `<<`, `>>`, `>>>`, `'` prime, `;`, `@` …). Positions = (line, col) 1-based like `Pos`.

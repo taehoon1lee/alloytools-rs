@@ -8,6 +8,7 @@
 //!   * [`World::commands`]             ~ `CompModule.getAllCommands`
 
 pub mod error;
+pub mod lexer;
 pub mod stdlib;
 
 pub use error::{AlloyError, ErrorKind, Pos};

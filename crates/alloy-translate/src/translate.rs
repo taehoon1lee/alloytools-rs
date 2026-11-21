@@ -51,6 +51,7 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     let int_rel = bounds
         .bound("Int", int_tuples.clone(), int_tuples)
         .map_err(other)?;
+    bounds.ordered_atoms = (n_sig_atoms..n_atoms).collect();
 
     // Relations of the sigs: lower = exact atoms, upper = atoms the sig may take.
     let mut sig_rel: Vec<Option<u32>> = vec![None; model.sigs.len()];
@@ -82,6 +83,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         int_rel,
         field_rel,
         locals: HashMap::new(),
+        local_bound: HashMap::new(),
+        n_atoms,
         local_arity: HashMap::new(),
         next_var: 0,
         depth: 0,
@@ -230,6 +233,9 @@ struct Tr<'a> {
     field_rel: Vec<Option<u32>>,
     /// Alloy locals (quantifier variables, parameters, `let`s) -> kodkod expressions.
     locals: HashMap<LocalId, Expr>,
+    /// Declared bound of quantifier variables (for typing overloaded names).
+    local_bound: HashMap<LocalId, RExpr>,
+    n_atoms: u32,
     /// Arity of kodkod variables (their domain's arity).
     local_arity: HashMap<u32, usize>,
     next_var: u32,
@@ -284,6 +290,47 @@ impl<'a> Tr<'a> {
         })
     }
 
+    /// Java `ExprChoice` resolution by type: the candidates whose owner (first column) can be
+    /// the receiver's last column. Exactly one must remain; several are not supported yet.
+    fn choose_by_type(&mut self, receiver: &RExpr, cands: &[RExpr]) -> Result<RExpr, AlloyError> {
+        let recv = self.receiver_atoms(receiver)?;
+        let mut keep = Vec::new();
+        for c in cands {
+            let first = match c {
+                RExpr::Field(f) => {
+                    let owner = self.model.fields[*f as usize].owner;
+                    unary(sig_upper(self.model, self.lay, owner, self.n_atoms)?)
+                }
+                RExpr::Sig(s) => unary(sig_upper(self.model, self.lay, *s, self.n_atoms)?),
+                _ => return Err(unsupported("overloaded name that is not a field or sig")),
+            };
+            let overlap = first.tuples.iter().any(|t| recv.as_ref().map_or(true, |r| r.tuples.contains(t)));
+            if overlap {
+                keep.push(c.clone());
+            }
+        }
+        match keep.len() {
+            1 => Ok(keep.remove(0)),
+            0 => Err(other("no overloaded candidate matches the receiver's type")),
+            _ => Err(unsupported("overloaded name with several candidates for the receiver (M3.4)")),
+        }
+    }
+
+    /// Upper-bound atoms of a receiver expression (`None` = unknown, treated as compatible).
+    fn receiver_atoms(&self, e: &RExpr) -> Result<Option<TupleSet>, AlloyError> {
+        let bound = match e {
+            RExpr::Local(l) => match self.local_bound.get(l) {
+                Some(b) => b.clone(),
+                None => return Ok(None),
+            },
+            RExpr::Sig(_) | RExpr::Field(_) | RExpr::Const(_) => e.clone(),
+            _ => return Ok(None),
+        };
+        let mut memo = vec![None; self.model.fields.len()];
+        let ty = type_of(self.model, self.lay, self.n_atoms, &bound, &mut memo, &mut Vec::new())?;
+        Ok(Some(ty))
+    }
+
     /// `univ^k` for the k-ary complement used by domain/range restriction.
     fn univ_pow(&self, k: usize) -> Expr {
         let mut e = Expr::Const(KConst::Univ);
@@ -313,7 +360,13 @@ impl<'a> Tr<'a> {
             RExpr::Un(UnOp::Closure, x) => Expr::Closure(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::ReflClosure, x) => Expr::ReflexiveClosure(Box::new(self.expr(x)?)),
             RExpr::Un(op, _) => return Err(unsupported(format!("unary operator {op:?} in expression position"))),
-            RExpr::Bin(BinOp::Join, a, b) => Expr::join(self.expr(a)?, self.expr(b)?),
+            RExpr::Bin(BinOp::Join, a, b) => {
+                if let RExpr::Choice(cands) = &**b {
+                    let chosen = self.choose_by_type(a, cands)?;
+                    return Ok(Expr::join(self.expr(a)?, self.expr(&chosen)?));
+                }
+                Expr::join(self.expr(a)?, self.expr(b)?)
+            }
             RExpr::Bin(BinOp::Plus, a, b) => Expr::union(self.expr(a)?, self.expr(b)?),
             RExpr::Bin(BinOp::Minus, a, b) => Expr::Difference(Box::new(self.expr(a)?), Box::new(self.expr(b)?)),
             RExpr::Bin(BinOp::Intersect, a, b) => Expr::Intersection(Box::new(self.expr(a)?), Box::new(self.expr(b)?)),
@@ -490,6 +543,9 @@ impl<'a> Tr<'a> {
                 other => (other, false),
             };
             let domain = self.expr(bound)?;
+            for &l in &d.vars {
+                self.local_bound.insert(l, bound.clone());
+            }
             let mut group = Vec::new();
             for &l in &d.vars {
                 let v = self.fresh();
@@ -552,7 +608,9 @@ impl<'a> Tr<'a> {
             vals.push(self.expr(a)?);
         }
         let mut saved = Vec::new();
-        for ((l, _), v) in params.iter().zip(vals) {
+        for ((l, b), v) in params.iter().zip(vals) {
+            // Parameters keep their declared bound, so overloaded names used on them can be typed.
+            self.local_bound.insert(*l, b.clone());
             saved.push((*l, self.locals.insert(*l, v)));
         }
         self.depth += 1;
@@ -646,7 +704,8 @@ impl<'a> Tr<'a> {
                 }
                 // all this: owner, a: L | m2 (this.f).a
                 if let Some(m) = mult_of(Some(*mr)) {
-                    let img = Expr::join(Expr::join(Expr::Var(this), rel.clone()), Expr::Var(a));
+                    // a.(this.f): the domain atom joins the first column of the field (Alloy `this.f[a]`).
+                    let img = Expr::join(Expr::Var(a), Expr::join(Expr::Var(this), rel.clone()));
                     out.push(Formula::Quantified(
                         Quantifier::All,
                         vec![

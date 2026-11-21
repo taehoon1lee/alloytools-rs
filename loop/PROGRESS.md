@@ -48,3 +48,9 @@ kodkod: instance/ast/bool (hash-consed Tseitin gates)/translate (FOL2Bool, quant
 alloy-translate: scope.rs (ScopeComputer + atom creation with Java unique names), translate.rs (sig/field constraints, formulas, calls).
 Java facts learned: universe always has Int atoms (bitwidth 4, `-8..7`), Int relation exact; enum sigs scope 0; unique names append `'`.
 next: decl-type errors (61 cmds, INSLabel), arity of calls (iolus), `=` arity (file_system), closure errors, pred/totalOrder, arrow mults, then integers
+
+## 2026-11-21 M5 fixes — verdict 122/465 (gate green; 0 wrong answers in the last run)
+Fixes: set declarations (witness bits; `all` by duality), arrow-multiplicity join order (`a.(this.f)`), transitive unqualified
+name lookup + type-based choice of overloaded names (Java getRawNQS/ExprChoice), param bounds for typing.
+Kodkod: Plaisted-Greenbaum polarity encoding (BoolFactory::finish), lex-leader symmetry breaking on interchangeable atoms.
+next: integers (Card/IntNext/comparisons/sum: ~80 cmds), pred/totalOrder, arrow mults in expressions, lone/some decls, perf (M6).

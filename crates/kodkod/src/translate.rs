@@ -548,6 +548,86 @@ fn same_arity(a: &BoolMatrix, b: &BoolMatrix, op: &str) -> Result<(), String> {
     }
 }
 
+/// Interchangeable atom pairs: `(a, b)` such that swapping `a` and `b` maps every relation's lower and
+/// upper bound onto itself (Kodkod's `SymmetryDetector`, restricted to transpositions). Atoms in
+/// `ordered_atoms` are excluded.
+pub fn symmetric_pairs(bounds: &Bounds) -> Vec<(u32, u32)> {
+    let n = bounds.universe.size() as u32;
+    // signature: degree of each atom in every relation's bounds (a cheap class key; verified below)
+    let mut key: Vec<Vec<usize>> = vec![Vec::new(); n as usize];
+    for rb in &bounds.relations {
+        for a in 0..n {
+            let lo = rb.lower.tuples.iter().filter(|t| t.contains(&a)).count();
+            let up = rb.upper.tuples.iter().filter(|t| t.contains(&a)).count();
+            key[a as usize].push(lo);
+            key[a as usize].push(up);
+        }
+    }
+    let mut groups: std::collections::BTreeMap<Vec<usize>, Vec<u32>> = std::collections::BTreeMap::new();
+    for a in 0..n {
+        if bounds.ordered_atoms.contains(&a) {
+            continue;
+        }
+        groups.entry(key[a as usize].clone()).or_default().push(a);
+    }
+    let mut pairs = Vec::new();
+    for atoms in groups.values() {
+        for w in atoms.windows(2) {
+            let (a, b) = (w[0], w[1]);
+            let swap = |t: &Vec<u32>| -> Vec<u32> {
+                t.iter()
+                    .map(|&x| if x == a { b } else if x == b { a } else { x })
+                    .collect()
+            };
+            let invariant = bounds.relations.iter().all(|rb| {
+                let up: std::collections::BTreeSet<Vec<u32>> = rb.upper.tuples.iter().map(swap).collect();
+                let lo: std::collections::BTreeSet<Vec<u32>> = rb.lower.tuples.iter().map(swap).collect();
+                up == rb.upper.tuples && lo == rb.lower.tuples
+            });
+            if invariant {
+                pairs.push((a, b));
+            }
+        }
+    }
+    pairs
+}
+
+/// Lex-leader symmetry breaking (Kodkod `SymmetryBreaker`): for every symmetric pair `(a, b)` the bit
+/// vector of all relations is lexicographically at most its image under the swap of `a` and `b`.
+/// Every orbit keeps its lex-smallest member, so satisfiability is unchanged.
+fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>) {
+    let bounds = tr.bounds;
+    for (a, b) in symmetric_pairs(bounds) {
+        let swap = |t: &[u32]| -> Vec<u32> {
+            t.iter().map(|&x| if x == a { b } else if x == b { a } else { x }).collect()
+        };
+        let mut xs = Vec::new();
+        let mut ys = Vec::new();
+        for (r, rb) in bounds.relations.iter().enumerate() {
+            let m = &tr.rels[r];
+            for t in &rb.upper.tuples {
+                xs.push(m.get(t));
+                ys.push(m.get(&swap(t)));
+            }
+        }
+        let leq = lex_leq(&mut tr.f, &xs, &ys);
+        tr.f.assert_true(leq);
+    }
+}
+
+/// `xs <=lex ys` as a circuit: `leq_i = (!x_i & y_i) | ((x_i <-> y_i) & leq_{i+1})`, `leq_n = true`.
+fn lex_leq<S: SatSolver>(f: &mut BoolFactory<S>, xs: &[BoolVal], ys: &[BoolVal]) -> BoolVal {
+    let mut acc = BoolVal::TRUE;
+    for i in (0..xs.len()).rev() {
+        let nx = f.not(xs[i]);
+        let lt = f.and2(nx, ys[i]);
+        let eq = f.iff(xs[i], ys[i]);
+        let keep = f.and2(eq, acc);
+        acc = f.or2(lt, keep);
+    }
+    acc
+}
+
 /// The result of solving one bounded problem.
 #[derive(Debug, Clone)]
 pub struct Solution {
@@ -568,6 +648,8 @@ pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> R
     let mut tr = Translator::new(bounds, sat);
     let top = tr.formula(formula)?;
     tr.f.assert_true(top);
+    add_symmetry_breaking(&mut tr);
+    tr.f.finish();
     let primary_vars = tr.primary_vars;
     let vars = tr.f.sat.num_vars();
     let clauses = tr.f.sat.num_clauses();
@@ -709,5 +791,52 @@ mod tests {
         let tr = Translator::new(&b, BatSat::new());
         assert_eq!(tr.static_arity(&comp, &mut vars).unwrap(), 1);
         let _ = r;
+    }
+}
+
+#[cfg(test)]
+mod one_arrow_tests {
+    use super::*;
+    use crate::ast::{Decl, Expr, Formula, Multiplicity, Quantifier};
+    use crate::instance::{Bounds, TupleSet, Universe};
+
+    /// States S (unary), styles A (unary), values V (unary); field F: S -> A -> one V (arity 3).
+    /// "all s: S, a: A | one s.F.a" and "some s: S | some s.F" must be SAT.
+    #[test]
+    fn one_arrow_field_with_some_is_sat() {
+        let names = ["s0", "s1", "a0", "a1", "v0", "v1"];
+        let u = Universe::new(names.iter().map(|x| x.to_string()).collect()).unwrap();
+        let mut b = Bounds::new(u);
+        let st = b.bound("S", TupleSet::empty(1), TupleSet::from_tuples(1, [vec![0], vec![1]])).unwrap();
+        let sty = b.bound("A", TupleSet::from_tuples(1, [vec![2], vec![3]]), TupleSet::from_tuples(1, [vec![2], vec![3]])).unwrap();
+        let _val = b.bound("V", TupleSet::empty(1), TupleSet::from_tuples(1, [vec![4], vec![5]])).unwrap();
+        let mut up = TupleSet::empty(3);
+        for s in [0u32, 1] {
+            for a in [2u32, 3] {
+                for v in [4u32, 5] {
+                    up.tuples.insert(vec![s, a, v]);
+                }
+            }
+        }
+        let f = b.bound("F", TupleSet::empty(3), up).unwrap();
+        let (s, a) = (0, 1);
+        let one_each = Formula::Quantified(
+            Quantifier::All,
+            vec![
+                Decl { var: s, domain: Expr::Rel(st), disjoint: false, set: false },
+                Decl { var: a, domain: Expr::Rel(sty), disjoint: false, set: false },
+            ],
+            Box::new(Formula::Multiplicity(
+                Multiplicity::One,
+                Expr::join(Expr::Var(a), Expr::join(Expr::Var(s), Expr::Rel(f))),
+            )),
+        );
+        let some_f = Formula::Quantified(
+            Quantifier::Some,
+            vec![Decl { var: 2, domain: Expr::Rel(st), disjoint: false, set: false }],
+            Box::new(Formula::Multiplicity(Multiplicity::Some, Expr::join(Expr::Var(2), Expr::Rel(f)))),
+        );
+        let sol = solve(&b, &Formula::And(vec![one_each, some_f])).unwrap();
+        assert_eq!(sol.sat, Some(true));
     }
 }

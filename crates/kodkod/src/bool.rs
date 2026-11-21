@@ -1,8 +1,10 @@
-//! Port of `kodkod/engine/bool/BooleanFactory` + the Tseitin part of `engine/fol2sat/Bool2CNFTranslator`.
+//! Port of `kodkod/engine/bool/BooleanFactory` + `engine/fol2sat/Bool2CNFTranslator`.
 //!
-//! Gates are hash-consed on their (sorted) inputs, so structurally equal formulas share one SAT
-//! variable, as in Kodkod's `CBCFactory`. Each new gate is encoded at creation time with the
-//! full Tseitin clauses; constants are folded away so no clause contains a constant.
+//! Gates are hash-consed on their (sorted) inputs, so structurally equal formulas share one node, as in
+//! Kodkod's `CBCFactory`. The circuit is built first; [`BoolFactory::finish`] then encodes the asserted
+//! roots to CNF with Plaisted–Greenbaum polarity: a gate used only positively gets just the clauses
+//! `g -> input`, a gate used only negatively gets `inputs -> g`, and both directions are emitted only
+//! when both polarities occur. Constants are folded away, so no clause contains a constant.
 
 use std::collections::HashMap;
 
@@ -26,10 +28,26 @@ enum GateKind {
     Or,
 }
 
+struct Gate {
+    kind: GateKind,
+    /// Sorted, deduplicated, non-constant inputs.
+    inputs: Vec<i32>,
+    /// SAT variable of the gate output.
+    var: i32,
+    /// Which directions were already emitted: `g -> inputs` (positive) and `inputs -> g` (negative).
+    pos_done: bool,
+    neg_done: bool,
+}
+
 pub struct BoolFactory<S: SatSolver> {
     pub sat: S,
-    gates: HashMap<(GateKind, Vec<i32>), i32>,
-    /// Set when a clause made the problem trivially unsatisfiable.
+    gates: Vec<Gate>,
+    by_key: HashMap<(GateKind, Vec<i32>), usize>,
+    /// Gate index of every gate output variable.
+    by_var: HashMap<i32, usize>,
+    /// Literals that must be true (encoded by [`BoolFactory::finish`]).
+    roots: Vec<i32>,
+    /// Set when a constant made the problem trivially unsatisfiable.
     pub trivially_unsat: bool,
 }
 
@@ -37,7 +55,10 @@ impl<S: SatSolver> BoolFactory<S> {
     pub fn new(sat: S) -> Self {
         BoolFactory {
             sat,
-            gates: HashMap::new(),
+            gates: Vec::new(),
+            by_key: HashMap::new(),
+            by_var: HashMap::new(),
+            roots: Vec::new(),
             trivially_unsat: false,
         }
     }
@@ -103,12 +124,106 @@ impl<S: SatSolver> BoolFactory<S> {
         }
     }
 
-    /// Requires the value to hold (adds it as a unit clause).
+    /// Requires the value to hold (encoded by [`BoolFactory::finish`]).
     pub fn assert_true(&mut self, b: BoolVal) {
         match b {
             BoolVal::Const(true) => {}
             BoolVal::Const(false) => self.trivially_unsat = true,
-            BoolVal::Lit(l) => self.clause(&[l]),
+            BoolVal::Lit(l) => self.roots.push(l),
+        }
+    }
+
+    /// Encodes every asserted root to CNF (polarity-aware, see the module docs).
+    pub fn finish(&mut self) {
+        let roots = std::mem::take(&mut self.roots);
+        for r in roots {
+            if self.trivially_unsat {
+                break;
+            }
+            // The root itself must hold; a gate root also needs its defining clauses.
+            self.clause(&[r]);
+            self.encode(r, true);
+        }
+    }
+
+    /// Emits the clauses needed for literal `lit` to be true (`pos`) or false (`!pos`) under its gate.
+    fn encode(&mut self, lit: i32, pos: bool) {
+        // Iterative worklist: (literal, polarity) pairs still to be encoded.
+        let mut work = vec![(lit, pos)];
+        while let Some((l, p)) = work.pop() {
+            let var = l.abs();
+            // A primary variable (not a gate output): its value is free, nothing to emit.
+            let Some(&gi) = self.by_var.get(&var) else { continue };
+            // literal polarity relative to the gate output
+            let gate_pos = if l > 0 { p } else { !p };
+            let (kind, inputs, var_out, need_pos, need_neg) = {
+                let g = &self.gates[gi];
+                let need_pos = gate_pos && !g.pos_done;
+                let need_neg = !gate_pos && !g.neg_done;
+                (g.kind, g.inputs.clone(), g.var, need_pos, need_neg)
+            };
+            if !need_pos && !need_neg {
+                continue;
+            }
+            {
+                let g = &mut self.gates[gi];
+                if need_pos {
+                    g.pos_done = true;
+                }
+                if need_neg {
+                    g.neg_done = true;
+                }
+            }
+            match kind {
+                GateKind::And => {
+                    if need_pos {
+                        // g -> l_i
+                        for &x in &inputs {
+                            self.clause(&[-var_out, x]);
+                            if self.trivially_unsat {
+                                return;
+                            }
+                            work.push((x, true));
+                        }
+                    }
+                    if need_neg {
+                        // l_1 & ... & l_n -> g
+                        let mut c: Vec<i32> = inputs.iter().map(|&x| -x).collect();
+                        c.push(var_out);
+                        self.clause(&c);
+                        if self.trivially_unsat {
+                            return;
+                        }
+                        for &x in &inputs {
+                            work.push((x, false));
+                        }
+                    }
+                }
+                GateKind::Or => {
+                    if need_pos {
+                        // g -> (l_1 | ... | l_n)
+                        let mut c = vec![-var_out];
+                        c.extend(inputs.iter().copied());
+                        self.clause(&c);
+                        if self.trivially_unsat {
+                            return;
+                        }
+                        for &x in &inputs {
+                            work.push((x, true));
+                        }
+                    }
+                    if need_neg {
+                        // l_i -> g
+                        for &x in &inputs {
+                            self.clause(&[var_out, -x]);
+                            if self.trivially_unsat {
+                                return;
+                            }
+                            work.push((x, false));
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -140,33 +255,21 @@ impl<S: SatSolver> BoolFactory<S> {
             1 => return BoolVal::Lit(lits[0]),
             _ => {}
         }
-        if let Some(&g) = self.gates.get(&(kind, lits.clone())) {
-            return BoolVal::Lit(g);
+        if let Some(&g) = self.by_key.get(&(kind, lits.clone())) {
+            return BoolVal::Lit(self.gates[g].var);
         }
-        let g = self.new_var();
-        let BoolVal::Lit(g) = g else { unreachable!() };
-        match kind {
-            // g <-> AND(l_i):  (-g | l_i) for each i, and (g | -l_1 | ... | -l_n)
-            GateKind::And => {
-                for &l in &lits {
-                    self.clause(&[-g, l]);
-                }
-                let mut long: Vec<i32> = lits.iter().map(|&l| -l).collect();
-                long.push(g);
-                self.clause(&long);
-            }
-            // g <-> OR(l_i):  (g | -l_i) for each i, and (-g | l_1 | ... | l_n)
-            GateKind::Or => {
-                for &l in &lits {
-                    self.clause(&[g, -l]);
-                }
-                let mut long = lits.clone();
-                long.push(-g);
-                self.clause(&long);
-            }
-        }
-        self.gates.insert((kind, lits), g);
-        BoolVal::Lit(g)
+        let BoolVal::Lit(var) = self.new_var() else { unreachable!() };
+        let idx = self.gates.len();
+        self.gates.push(Gate {
+            kind,
+            inputs: lits.clone(),
+            var,
+            pos_done: false,
+            neg_done: false,
+        });
+        self.by_key.insert((kind, lits), idx);
+        self.by_var.insert(var, idx);
+        BoolVal::Lit(var)
     }
 }
 
@@ -199,21 +302,38 @@ mod tests {
         f.assert_true(a);
         let nb = f.not(b);
         f.assert_true(nb);
+        f.finish();
         assert!(f.trivially_unsat || f.sat.solve() == Some(false));
     }
 
     #[test]
     fn ite_semantics() {
+        // c & !t & r  with r = ite(c, t, e) is UNSAT.
         let mut f = BoolFactory::new(BatSat::new());
         let c = f.new_var();
         let t = f.new_var();
         let e = f.new_var();
         let r = f.ite(c, t, e);
-        // r must equal t when c holds: assert c, not t, r  -> UNSAT
         f.assert_true(c);
         let nt = f.not(t);
         f.assert_true(nt);
         f.assert_true(r);
+        f.finish();
+        assert!(f.trivially_unsat || f.sat.solve() == Some(false));
+    }
+
+    #[test]
+    fn negative_polarity_gates_are_encoded() {
+        // not(a & b) asserted, with a and b forced true: must be UNSAT.
+        let mut f = BoolFactory::new(BatSat::new());
+        let a = f.new_var();
+        let b = f.new_var();
+        let ab = f.and2(a, b);
+        let n = f.not(ab);
+        f.assert_true(n);
+        f.assert_true(a);
+        f.assert_true(b);
+        f.finish();
         assert!(f.trivially_unsat || f.sat.solve() == Some(false));
     }
 }

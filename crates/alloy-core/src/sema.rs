@@ -742,6 +742,49 @@ impl<'a> Builder<'a> {
         None
     }
 
+    /// Unqualified name (Java `getRawQS` then `getRawNQS`): the module's own names first; otherwise the
+    /// public names of every module reachable through `open` (transitively). Several candidates form a choice.
+    fn lookup_unqualified(&self, i: usize, name: &str) -> Option<Vec<Sym>> {
+        if let Some(v) = self.scopes[i].names.get(name) {
+            return Some(v.clone());
+        }
+        if let Some(s) = self.scopes[i].params.get(name) {
+            return Some(vec![s.clone()]);
+        }
+        let mut out: Vec<Sym> = Vec::new();
+        let mut visited = vec![i];
+        for (_, t) in &self.scopes[i].opens {
+            self.collect_public(*t, name, &mut visited, &mut out);
+        }
+        if out.is_empty() {
+            None
+        } else {
+            Some(out)
+        }
+    }
+
+    fn collect_public(&self, t: usize, name: &str, visited: &mut Vec<usize>, out: &mut Vec<Sym>) {
+        if visited.contains(&t) {
+            return;
+        }
+        visited.push(t);
+        let sc = &self.scopes[t];
+        if !sc.private.get(name).copied().unwrap_or(false) {
+            let mut found: Vec<Sym> = sc.names.get(name).cloned().unwrap_or_default();
+            if let Some(s) = sc.params.get(name) {
+                found.push(s.clone());
+            }
+            for f in found {
+                if !out.iter().any(|o| same_sym(o, &f)) {
+                    out.push(f);
+                }
+            }
+        }
+        for (_, t2) in &sc.opens {
+            self.collect_public(*t2, name, visited, out);
+        }
+    }
+
     fn lookup_public(&self, target: usize, name: &str) -> Option<Vec<Sym>> {
         let sc = &self.scopes[target];
         if let Some(v) = sc.names.get(name) {
@@ -936,7 +979,12 @@ impl<'a> Builder<'a> {
             "seq/Int" => return Ok(RExpr::Sig(SIG_SEQINT)),
             _ => {}
         }
-        match self.lookup(i, n) {
+        let found = if n.contains('/') {
+            self.lookup(i, n)
+        } else {
+            self.lookup_unqualified(i, n)
+        };
+        match found {
             Some(v) if v.len() == 1 => match &v[0] {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
                 Sym::Field(id) => Ok(RExpr::Field(*id)),
@@ -1004,6 +1052,17 @@ impl<'a> Builder<'a> {
         }
     }
 
+}
+
+fn same_sym(a: &Sym, b: &Sym) -> bool {
+    match (a, b) {
+        (Sym::Sig(x), Sym::Sig(y)) => x == y,
+        (Sym::Field(x), Sym::Field(y)) => x == y,
+        (Sym::Func(x), Sym::Func(y)) => x == y,
+        (Sym::Assert(x), Sym::Assert(y)) => x == y,
+        (Sym::Macro(x), Sym::Macro(y)) => x == y,
+        _ => false,
+    }
 }
 
 /// Splits `Sig.name` (sig-local function names are kept as written).

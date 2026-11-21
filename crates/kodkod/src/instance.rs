@@ -143,6 +143,8 @@ pub struct Bounds {
     pub relations: Vec<RelBound>,
     /// Bitwidth of the integers (`0` = no integers in the problem).
     pub bitwidth: u32,
+    /// Atoms with a fixed meaning (the integers): they never take part in symmetry breaking.
+    pub ordered_atoms: std::collections::BTreeSet<u32>,
 }
 
 impl Bounds {
@@ -151,6 +153,7 @@ impl Bounds {
             universe,
             relations: Vec::new(),
             bitwidth: 0,
+            ordered_atoms: BTreeSet::new(),
         }
     }
 

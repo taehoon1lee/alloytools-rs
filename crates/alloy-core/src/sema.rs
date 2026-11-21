@@ -264,6 +264,7 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     for i in 0..mods.len() {
         b.resolve(i)?;
     }
+    b.check_identical_overloads()?;
     // Commands last: their formulas inline predicates, whose bodies are resolved above.
     // Only the root module's commands are run (Java `World::commands`).
     if let Some(root) = mods.first() {
@@ -505,6 +506,88 @@ impl<'a> Builder<'a> {
             Some(syms) if syms.len() == 1 && matches!(syms[0], Sym::Sig(_)) => Ok(syms[0].clone()),
             _ => err(i, self.mods, a.loc.line, a.loc.col, format!("The name \"{n}\" cannot be found.")),
         }
+    }
+
+    /// Java type-checks every body of the root module: a bare name that denotes several parameterless functions
+    /// with the same declared type can never be resolved (`This name is ambiguous due to multiple matches`).
+    fn check_identical_overloads(&self) -> Result<(), AlloyError> {
+        fn walk(e: &RExpr, found: &mut Option<Vec<FuncId>>, funcs: &[Func]) {
+            if found.is_some() {
+                return;
+            }
+            match e {
+                RExpr::Choice(c) if c.len() > 1 => {
+                    let calls: Vec<FuncId> = c
+                        .iter()
+                        .filter_map(|x| match x {
+                            RExpr::Call(f, a) if a.is_empty() => Some(*f),
+                            _ => None,
+                        })
+                        .collect();
+                    if calls.len() == c.len() {
+                        let first = &funcs[calls[0] as usize];
+                        if first.ret.is_some()
+                            && calls.iter().all(|f| funcs[*f as usize].ret == first.ret && funcs[*f as usize].is_pred == first.is_pred)
+                        {
+                            *found = Some(calls);
+                            return;
+                        }
+                    }
+                    for x in c {
+                        walk(x, found, funcs);
+                    }
+                }
+                RExpr::Un(_, a) => walk(a, found, funcs),
+                RExpr::Bin(_, a, b) => {
+                    walk(a, found, funcs);
+                    walk(b, found, funcs);
+                }
+                RExpr::Quant(_, ds, b) | RExpr::Compr(ds, b) => {
+                    for d in ds {
+                        walk(&d.bound, found, funcs);
+                    }
+                    walk(b, found, funcs);
+                }
+                RExpr::Ite(a, b, c) => {
+                    walk(a, found, funcs);
+                    walk(b, found, funcs);
+                    walk(c, found, funcs);
+                }
+                RExpr::Let(bs, b) => {
+                    for (_, x) in bs {
+                        walk(x, found, funcs);
+                    }
+                    walk(b, found, funcs);
+                }
+                RExpr::Call(_, args) | RExpr::Block(args) | RExpr::Disj(args) | RExpr::TotalOrder(args) => {
+                    for x in args {
+                        walk(x, found, funcs);
+                    }
+                }
+                _ => {}
+            }
+        }
+        let mut found: Option<Vec<FuncId>> = None;
+        for f in self.model.funcs.iter().filter(|f| f.module == 0) {
+            walk(&f.body, &mut found, &self.model.funcs);
+        }
+        for f in self.model.facts.iter().filter(|f| f.module == 0) {
+            walk(&f.body, &mut found, &self.model.funcs);
+        }
+        if let Some(calls) = found {
+            let names: Vec<String> = calls
+                .iter()
+                .map(|f| format!("{} {}", if self.model.funcs[*f as usize].is_pred { "pred" } else { "fun" }, self.model.funcs[*f as usize].label))
+                .collect();
+            return Err(AlloyError::new(
+                ErrorKind::Type,
+                None,
+                format!("This name is ambiguous due to multiple matches:
+{}", names.join("
+")),
+            ));
+        }
+        Ok(())
     }
 
     /// Resolves `extends` / `in` / `=` of every sig of instance `i` (the sig hierarchy).

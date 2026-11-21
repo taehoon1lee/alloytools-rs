@@ -243,7 +243,8 @@ fn load_one(
         .collect();
     let opens: Vec<Open> = open_at.iter().map(|(_, o)| o.clone()).collect();
     // Java: an explicit `open ... as integer` clashes with the implicit integer library.
-    let implicit = name != "util/integer";
+    // Java `Alloy.cup`: the implicit open is skipped only for a file whose path ends with util/integer.als.
+    let implicit = !path.replace('\\', "/").ends_with("util/integer.als");
     if implicit {
         if let Some((_, o)) = open_at.iter().find(|(_, o)| o.alias.as_deref() == Some(IMPLICIT_INTEGER_ALIAS)) {
             return Err(AlloyError::syntax(
@@ -268,7 +269,10 @@ fn load_one(
 
     let mut resolved = Vec::new();
     if implicit {
-        let (child_path, child_src) = find_module("util/integer", &name, path)?;
+        // Java's implicit open uses the platform separator (`util\integer`), which never matches a module-relative
+        // file, so it always loads the library resource.
+        let child_src = stdlib::lookup("util/integer").expect("embedded util/integer").to_string();
+        let child_path = "models/util/integer.als".to_string();
         chain.push(child_path.clone());
         let target = load_one(&child_path, &child_src, chain, out)?;
         chain.pop();
@@ -282,7 +286,8 @@ fn load_one(
     }
     // Java `CompModule.addSeq`: using the `seq` keyword implicitly opens util/sequniv as `seq`.
     if uses_seq {
-        let (child_path, child_src) = find_module("util/sequniv", &name, path)?;
+        let child_src = stdlib::lookup("util/sequniv").expect("embedded util/sequniv").to_string();
+        let child_path = "models/util/sequniv.als".to_string();
         chain.push(child_path.clone());
         let target = load_one(&child_path, &child_src, chain, out)?;
         chain.pop();

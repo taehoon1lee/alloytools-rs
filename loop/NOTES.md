@@ -71,4 +71,23 @@
 - Root module parameters (`module m[Addr]` as root) become free sigs.
 - Corpus survey (`cargo test corpus_resolution_survey -- --nocapture`): 113 resolved, 2 unsupported (string constants, overloads with args), 1 expected Java error.
 
+- Java name resolution: own names first; otherwise every public name of every reachable module (transitively through opens).
+  Several candidates form ExprChoice, resolved by type (here: the receiver's atoms vs each candidate's owner). `sema::lookup_unqualified`.
+- Inside a sig body (field decls, appended facts, sig-local funs) a field name of that sig (or an ancestor) means `this.f`.
+  The right operand of an explicit `x.f` is never implicitly re-joined (`explicit_field`).
+- Calls: `f[a,b]` is a call only if `f` has exactly that many parameters (`nparams`, known at declaration); otherwise a join.
+  `x.f[a]` with `f` taking a receiver is a call with `x` first. Commands are resolved after all function bodies.
+- `all disj x,y | f` is `(x != y) => f`; `some disj` is `(x != y) and f`.
+- Set declarations (`x: set E`): existential = witness bits; universal = dual (not some not). A set-declaration quantifier under an
+  effective universal quantifier is Java's "higher-order quantification that could not be skolemized" ERROR (polarity tracked).
+- pred/totalOrder[elem, first, next] (native in Java): one first in elem, first in no predecessor, next inside elem x elem,
+  every element except first has one predecessor, except last one successor, no cycles, all reachable from first.
+- Integers: Int atoms are always in the universe (bitwidth 4 default); numbers in set position are singleton atoms.
+  Arithmetic wraps; comparisons are signed bit-vector circuits.
+- Encoding: polarity-aware (Plaisted-Greenbaum) CNF; lex-leader symmetry breaking on interchangeable atom pairs.
+
+- OPEN (opt_spantree, 4 cmds Java UNSAT / Rust SAT): reduced repro is `tmp/ost2/algorithms/spanning-tree/v2.als`
+  (Closure assertion without the implication, plus fact LegalTrans and fact TransIfPossible; each fact alone is SAT in both).
+  Suspects: Let-bound set values inside `some adjProc | let nLvl = ... | {...}`, `lo/next[nLvl]`, or `*~` in SpanTreeAtState.
+
 ## HARNESS ISSUES (write evidence here instead of editing harness/)

@@ -1,0 +1,85 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter2/addressBook2c",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 94.894,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3 but 1 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 83.932,
+   "solve_ms": 4.781,
+   "total_ms": 88.713,
+   "stats": {
+    "primary_vars": 20,
+    "vars": 238,
+    "clauses": 332
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$show_b": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Alias": [
+       [
+        "Alias$0"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Alias$0",
+        "Addr$0"
+       ]
+      ],
+      "this/Group": [],
+      "this/Name": [
+       [
+        "Alias$0"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Alias$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

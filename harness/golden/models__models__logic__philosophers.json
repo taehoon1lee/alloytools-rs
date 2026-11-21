@@ -1,0 +1,592 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/logic/philosophers",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 117.768,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 162.509,
+   "solve_ms": 23.466,
+   "total_ms": 185.975,
+   "stats": {
+    "primary_vars": 120,
+    "vars": 2964,
+    "clauses": 6861
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Table$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Table$0",
+        "Table$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$1",
+        "Table$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$2",
+        "Table$3"
+       ]
+      ],
+      "this/Fork": [
+       [
+        "Fork$0"
+       ],
+       [
+        "Fork$1"
+       ],
+       [
+        "Fork$2"
+       ],
+       [
+        "Fork$3"
+       ]
+      ],
+      "this/P": [
+       [
+        "P$0"
+       ],
+       [
+        "P$1"
+       ],
+       [
+        "P$2"
+       ],
+       [
+        "P$3"
+       ]
+      ],
+      "this/P.left": [
+       [
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "P$1",
+        "Fork$2"
+       ],
+       [
+        "P$2",
+        "Fork$1"
+       ],
+       [
+        "P$3",
+        "Fork$0"
+       ]
+      ],
+      "this/P.next": [
+       [
+        "P$0",
+        "P$3"
+       ],
+       [
+        "P$1",
+        "P$0"
+       ],
+       [
+        "P$2",
+        "P$1"
+       ],
+       [
+        "P$3",
+        "P$2"
+       ]
+      ],
+      "this/P.right": [
+       [
+        "P$0",
+        "Fork$0"
+       ],
+       [
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "P$2",
+        "Fork$2"
+       ],
+       [
+        "P$3",
+        "Fork$1"
+       ]
+      ],
+      "this/Table": [
+       [
+        "Table$0"
+       ],
+       [
+        "Table$1"
+       ],
+       [
+        "Table$2"
+       ],
+       [
+        "Table$3"
+       ]
+      ],
+      "this/Table.setting": [
+       [
+        "Table$1",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$2",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$2",
+        "P$2",
+        "Fork$2"
+       ],
+       [
+        "Table$3",
+        "P$0",
+        "Fork$0"
+       ],
+       [
+        "Table$3",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$3",
+        "P$2",
+        "Fork$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "Liveliness",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Liveliness for 15 but 4 int, exactly 4 P, 4 Fork",
+   "overall": 15,
+   "bitwidth": 4,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 133.905,
+   "solve_ms": 67.539,
+   "total_ms": 201.443,
+   "stats": {
+    "primary_vars": 307,
+    "vars": 9271,
+    "clauses": 22257
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Table$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Table$0",
+        "Table$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$1",
+        "Table$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$10",
+        "Table$11"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$11",
+        "Table$12"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$12",
+        "Table$13"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$13",
+        "Table$14"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$2",
+        "Table$3"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$3",
+        "Table$4"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$4",
+        "Table$5"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$5",
+        "Table$6"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$6",
+        "Table$7"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$7",
+        "Table$8"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$8",
+        "Table$9"
+       ],
+       [
+        "ordering/Ord$0",
+        "Table$9",
+        "Table$10"
+       ]
+      ],
+      "skolem:$Liveliness_table": [
+       [
+        "Table$14"
+       ]
+      ],
+      "this/Fork": [
+       [
+        "Fork$0"
+       ],
+       [
+        "Fork$1"
+       ],
+       [
+        "Fork$2"
+       ],
+       [
+        "Fork$3"
+       ]
+      ],
+      "this/P": [
+       [
+        "P$0"
+       ],
+       [
+        "P$1"
+       ],
+       [
+        "P$2"
+       ],
+       [
+        "P$3"
+       ]
+      ],
+      "this/P.left": [
+       [
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "P$1",
+        "Fork$2"
+       ],
+       [
+        "P$2",
+        "Fork$1"
+       ],
+       [
+        "P$3",
+        "Fork$0"
+       ]
+      ],
+      "this/P.next": [
+       [
+        "P$0",
+        "P$2"
+       ],
+       [
+        "P$1",
+        "P$0"
+       ],
+       [
+        "P$2",
+        "P$3"
+       ],
+       [
+        "P$3",
+        "P$1"
+       ]
+      ],
+      "this/P.right": [
+       [
+        "P$0",
+        "Fork$1"
+       ],
+       [
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "P$3",
+        "Fork$2"
+       ]
+      ],
+      "this/Table": [
+       [
+        "Table$0"
+       ],
+       [
+        "Table$1"
+       ],
+       [
+        "Table$10"
+       ],
+       [
+        "Table$11"
+       ],
+       [
+        "Table$12"
+       ],
+       [
+        "Table$13"
+       ],
+       [
+        "Table$14"
+       ],
+       [
+        "Table$2"
+       ],
+       [
+        "Table$3"
+       ],
+       [
+        "Table$4"
+       ],
+       [
+        "Table$5"
+       ],
+       [
+        "Table$6"
+       ],
+       [
+        "Table$7"
+       ],
+       [
+        "Table$8"
+       ],
+       [
+        "Table$9"
+       ]
+      ],
+      "this/Table.setting": [
+       [
+        "Table$1",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$10",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$11",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$11",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$12",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$12",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$12",
+        "P$3",
+        "Fork$2"
+       ],
+       [
+        "Table$13",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$13",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$13",
+        "P$3",
+        "Fork$2"
+       ],
+       [
+        "Table$14",
+        "P$0",
+        "Fork$1"
+       ],
+       [
+        "Table$14",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$14",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$14",
+        "P$3",
+        "Fork$2"
+       ],
+       [
+        "Table$2",
+        "P$0",
+        "Fork$1"
+       ],
+       [
+        "Table$2",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$4",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$5",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$5",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$6",
+        "P$0",
+        "Fork$1"
+       ],
+       [
+        "Table$6",
+        "P$0",
+        "Fork$3"
+       ],
+       [
+        "Table$6",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$7",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$8",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$8",
+        "P$2",
+        "Fork$1"
+       ],
+       [
+        "Table$9",
+        "P$1",
+        "Fork$3"
+       ],
+       [
+        "Table$9",
+        "P$2",
+        "Fork$0"
+       ],
+       [
+        "Table$9",
+        "P$2",
+        "Fork$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

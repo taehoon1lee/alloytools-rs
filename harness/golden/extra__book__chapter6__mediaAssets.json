@@ -1,0 +1,420 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/mediaAssets",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 130.915,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "HidePreservesInv",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check HidePreservesInv",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 134.141,
+   "solve_ms": 3.36,
+   "total_ms": 137.502,
+   "stats": {
+    "primary_vars": 111,
+    "vars": 1489,
+    "clauses": 2572
+   }
+  },
+  {
+   "index": 1,
+   "label": "CutPaste",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check CutPaste",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 27.69,
+   "solve_ms": 33.013,
+   "total_ms": 60.704,
+   "stats": {
+    "primary_vars": 120,
+    "vars": 2423,
+    "clauses": 5034
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$CutPaste_xs": [
+       [
+        "ApplicationState$2"
+       ]
+      ],
+      "skolem:$CutPaste_xs\"": [
+       [
+        "ApplicationState$1"
+       ]
+      ],
+      "skolem:$CutPaste_xs\"\"": [
+       [
+        "ApplicationState$0"
+       ]
+      ],
+      "skolem:$cut_cs\"": [
+       [
+        "CatalogState$1"
+       ]
+      ],
+      "skolem:$paste_cs\"": [
+       [
+        "CatalogState$0"
+       ]
+      ],
+      "this/ApplicationState": [
+       [
+        "ApplicationState$0"
+       ],
+       [
+        "ApplicationState$1"
+       ],
+       [
+        "ApplicationState$2"
+       ]
+      ],
+      "this/ApplicationState.buffer": [
+       [
+        "ApplicationState$0",
+        "Asset$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Asset$0"
+       ]
+      ],
+      "this/ApplicationState.catalogState": [
+       [
+        "ApplicationState$0",
+        "Catalog$0",
+        "CatalogState$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0",
+        "CatalogState$1"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0",
+        "CatalogState$0"
+       ]
+      ],
+      "this/ApplicationState.catalogs": [
+       [
+        "ApplicationState$0",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0"
+       ]
+      ],
+      "this/ApplicationState.currentCatalog": [
+       [
+        "ApplicationState$0",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0"
+       ]
+      ],
+      "this/Asset": [
+       [
+        "Asset$0"
+       ]
+      ],
+      "this/Catalog": [
+       [
+        "Catalog$0"
+       ]
+      ],
+      "this/CatalogState": [
+       [
+        "CatalogState$0"
+       ],
+       [
+        "CatalogState$1"
+       ]
+      ],
+      "this/CatalogState.assets": [
+       [
+        "CatalogState$0",
+        "Asset$0"
+       ]
+      ],
+      "this/CatalogState.hidden": [],
+      "this/CatalogState.selection": [
+       [
+        "CatalogState$0",
+        "Asset$0"
+       ],
+       [
+        "CatalogState$1",
+        "Undefined$0"
+       ]
+      ],
+      "this/CatalogState.showing": [
+       [
+        "CatalogState$0",
+        "Asset$0"
+       ]
+      ],
+      "this/Undefined": [
+       [
+        "Undefined$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "PasteCut",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check PasteCut",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 31.951,
+   "solve_ms": 10.401,
+   "total_ms": 42.352,
+   "stats": {
+    "primary_vars": 120,
+    "vars": 2423,
+    "clauses": 5034
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$PasteCut_xs": [
+       [
+        "ApplicationState$2"
+       ]
+      ],
+      "skolem:$PasteCut_xs\"": [
+       [
+        "ApplicationState$1"
+       ]
+      ],
+      "skolem:$PasteCut_xs\"\"": [
+       [
+        "ApplicationState$0"
+       ]
+      ],
+      "skolem:$cut_cs\"": [
+       [
+        "CatalogState$2"
+       ]
+      ],
+      "skolem:$paste_cs\"": [
+       [
+        "CatalogState$1"
+       ]
+      ],
+      "this/ApplicationState": [
+       [
+        "ApplicationState$0"
+       ],
+       [
+        "ApplicationState$1"
+       ],
+       [
+        "ApplicationState$2"
+       ]
+      ],
+      "this/ApplicationState.buffer": [
+       [
+        "ApplicationState$1",
+        "Asset$0"
+       ],
+       [
+        "ApplicationState$2",
+        "Asset$0"
+       ]
+      ],
+      "this/ApplicationState.catalogState": [
+       [
+        "ApplicationState$0",
+        "Catalog$0",
+        "CatalogState$2"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0",
+        "CatalogState$1"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0",
+        "CatalogState$0"
+       ]
+      ],
+      "this/ApplicationState.catalogs": [
+       [
+        "ApplicationState$0",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0"
+       ]
+      ],
+      "this/ApplicationState.currentCatalog": [
+       [
+        "ApplicationState$0",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$1",
+        "Catalog$0"
+       ],
+       [
+        "ApplicationState$2",
+        "Catalog$0"
+       ]
+      ],
+      "this/Asset": [
+       [
+        "Asset$0"
+       ]
+      ],
+      "this/Catalog": [
+       [
+        "Catalog$0"
+       ]
+      ],
+      "this/CatalogState": [
+       [
+        "CatalogState$0"
+       ],
+       [
+        "CatalogState$1"
+       ],
+       [
+        "CatalogState$2"
+       ]
+      ],
+      "this/CatalogState.assets": [
+       [
+        "CatalogState$0",
+        "Asset$0"
+       ],
+       [
+        "CatalogState$1",
+        "Asset$0"
+       ],
+       [
+        "CatalogState$2",
+        "Asset$0"
+       ]
+      ],
+      "this/CatalogState.hidden": [
+       [
+        "CatalogState$0",
+        "Asset$0"
+       ],
+       [
+        "CatalogState$1",
+        "Asset$0"
+       ],
+       [
+        "CatalogState$2",
+        "Asset$0"
+       ]
+      ],
+      "this/CatalogState.selection": [
+       [
+        "CatalogState$0",
+        "Undefined$0"
+       ],
+       [
+        "CatalogState$2",
+        "Undefined$0"
+       ]
+      ],
+      "this/CatalogState.showing": [],
+      "this/Undefined": [
+       [
+        "Undefined$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 3,
+   "label": "PasteNotAffectHidden",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check PasteNotAffectHidden",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 23.173,
+   "solve_ms": 6.292,
+   "total_ms": 29.464,
+   "stats": {
+    "primary_vars": 114,
+    "vars": 1865,
+    "clauses": 3591
+   }
+  }
+ ]
+}

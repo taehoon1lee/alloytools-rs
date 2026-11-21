@@ -1,0 +1,343 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/paper-examples/jackson-cacm-2019/origin-tracking",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 105.331,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 112.032,
+   "solve_ms": 11.822,
+   "total_ms": 123.855,
+   "stats": {
+    "primary_vars": 69,
+    "vars": 1221,
+    "clauses": 2159
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Client": [
+       [
+        "Client$0"
+       ]
+      ],
+      "this/EndPoint": [
+       [
+        "Client$0"
+       ],
+       [
+        "Server$0"
+       ]
+      ],
+      "this/HTTPEvent": [
+       [
+        "Request$0"
+       ],
+       [
+        "Response$0"
+       ]
+      ],
+      "this/HTTPEvent.from": [
+       [
+        "Request$0",
+        "Client$0"
+       ],
+       [
+        "Response$0",
+        "Server$0"
+       ]
+      ],
+      "this/HTTPEvent.origin": [
+       [
+        "Request$0",
+        "Client$0"
+       ],
+       [
+        "Response$0",
+        "Server$0"
+       ]
+      ],
+      "this/HTTPEvent.to": [
+       [
+        "Request$0",
+        "Server$0"
+       ],
+       [
+        "Response$0",
+        "Client$0"
+       ]
+      ],
+      "this/Redirect": [],
+      "this/Request": [
+       [
+        "Request$0"
+       ]
+      ],
+      "this/Request.response": [
+       [
+        "Request$0",
+        "Response$0"
+       ]
+      ],
+      "this/Response": [
+       [
+        "Response$0"
+       ]
+      ],
+      "this/Response.embeds": [],
+      "this/Server": [
+       [
+        "Server$0"
+       ]
+      ],
+      "this/Server.causes": [
+       [
+        "Server$0",
+        "Response$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "check$2",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check check$2 for 5",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 34.549,
+   "solve_ms": 27.296,
+   "total_ms": 61.846,
+   "stats": {
+    "primary_vars": 190,
+    "vars": 4265,
+    "clauses": 8122
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$bad": [
+       [
+        "Server$1"
+       ]
+      ],
+      "skolem:$good": [
+       [
+        "Server$0"
+       ]
+      ],
+      "skolem:$r": [
+       [
+        "Request$2"
+       ]
+      ],
+      "this/Client": [
+       [
+        "Client$0"
+       ],
+       [
+        "Client$1"
+       ]
+      ],
+      "this/EndPoint": [
+       [
+        "Client$0"
+       ],
+       [
+        "Client$1"
+       ],
+       [
+        "Server$0"
+       ],
+       [
+        "Server$1"
+       ]
+      ],
+      "this/HTTPEvent": [
+       [
+        "Redirect$0"
+       ],
+       [
+        "Request$0"
+       ],
+       [
+        "Request$1"
+       ],
+       [
+        "Request$2"
+       ],
+       [
+        "Response$0"
+       ]
+      ],
+      "this/HTTPEvent.from": [
+       [
+        "Redirect$0",
+        "Server$1"
+       ],
+       [
+        "Request$0",
+        "Client$1"
+       ],
+       [
+        "Request$1",
+        "Client$0"
+       ],
+       [
+        "Request$2",
+        "Client$1"
+       ],
+       [
+        "Response$0",
+        "Server$0"
+       ]
+      ],
+      "this/HTTPEvent.origin": [
+       [
+        "Redirect$0",
+        "Server$0"
+       ],
+       [
+        "Request$0",
+        "Client$1"
+       ],
+       [
+        "Request$1",
+        "Server$0"
+       ],
+       [
+        "Request$2",
+        "Server$0"
+       ],
+       [
+        "Response$0",
+        "Server$0"
+       ]
+      ],
+      "this/HTTPEvent.to": [
+       [
+        "Redirect$0",
+        "Client$0"
+       ],
+       [
+        "Request$0",
+        "Server$0"
+       ],
+       [
+        "Request$1",
+        "Server$1"
+       ],
+       [
+        "Request$2",
+        "Server$0"
+       ],
+       [
+        "Response$0",
+        "Client$1"
+       ]
+      ],
+      "this/Redirect": [
+       [
+        "Redirect$0"
+       ]
+      ],
+      "this/Request": [
+       [
+        "Request$0"
+       ],
+       [
+        "Request$1"
+       ],
+       [
+        "Request$2"
+       ]
+      ],
+      "this/Request.response": [
+       [
+        "Request$0",
+        "Response$0"
+       ],
+       [
+        "Request$1",
+        "Redirect$0"
+       ]
+      ],
+      "this/Response": [
+       [
+        "Redirect$0"
+       ],
+       [
+        "Response$0"
+       ]
+      ],
+      "this/Response.embeds": [
+       [
+        "Redirect$0",
+        "Request$2"
+       ],
+       [
+        "Response$0",
+        "Request$1"
+       ]
+      ],
+      "this/Server": [
+       [
+        "Server$0"
+       ],
+       [
+        "Server$1"
+       ]
+      ],
+      "this/Server.causes": [
+       [
+        "Server$0",
+        "Response$0"
+       ],
+       [
+        "Server$1",
+        "Redirect$0"
+       ],
+       [
+        "Server$1",
+        "Request$2"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

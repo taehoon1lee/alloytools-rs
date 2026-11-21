@@ -1,0 +1,125 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/8-queens/queens",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 96.291,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 1 Board, exactly 8 Queen",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 340.234,
+   "solve_ms": 437.131,
+   "total_ms": 777.365,
+   "stats": {
+    "primary_vars": 2048,
+    "vars": 31010,
+    "clauses": 82925
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Board": [
+       [
+        "Board$0"
+       ]
+      ],
+      "this/Board.queens": [
+       [
+        "Board$0",
+        "0",
+        "6",
+        "Queen$7"
+       ],
+       [
+        "Board$0",
+        "1",
+        "4",
+        "Queen$6"
+       ],
+       [
+        "Board$0",
+        "2",
+        "2",
+        "Queen$5"
+       ],
+       [
+        "Board$0",
+        "3",
+        "0",
+        "Queen$4"
+       ],
+       [
+        "Board$0",
+        "4",
+        "5",
+        "Queen$3"
+       ],
+       [
+        "Board$0",
+        "5",
+        "7",
+        "Queen$2"
+       ],
+       [
+        "Board$0",
+        "6",
+        "1",
+        "Queen$1"
+       ],
+       [
+        "Board$0",
+        "7",
+        "3",
+        "Queen$0"
+       ]
+      ],
+      "this/Queen": [
+       [
+        "Queen$0"
+       ],
+       [
+        "Queen$1"
+       ],
+       [
+        "Queen$2"
+       ],
+       [
+        "Queen$3"
+       ],
+       [
+        "Queen$4"
+       ],
+       [
+        "Queen$5"
+       ],
+       [
+        "Queen$6"
+       ],
+       [
+        "Queen$7"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

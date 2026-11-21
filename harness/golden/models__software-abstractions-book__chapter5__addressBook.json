@@ -1,0 +1,212 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter5/addressBook",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 95.397,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "add",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run add for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 89.856,
+   "solve_ms": 6.332,
+   "total_ms": 96.189,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 545,
+    "clauses": 877
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$add_b": [
+       [
+        "Book$0"
+       ]
+      ],
+      "skolem:$add_b\"": [
+       [
+        "Book$0"
+       ]
+      ],
+      "skolem:$add_n": [
+       [
+        "Name$0"
+       ]
+      ],
+      "skolem:$add_t": [
+       [
+        "Addr$1"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Name$0",
+        "Addr$0"
+       ],
+       [
+        "Book$0",
+        "Name$0",
+        "Addr$1"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ],
+       [
+        "Name$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "addLocal",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addLocal for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 9.189,
+   "solve_ms": 2.911,
+   "total_ms": 12.101,
+   "stats": {
+    "primary_vars": 39,
+    "vars": 759,
+    "clauses": 1506
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$addLocal_b": [
+       [
+        "Book$1"
+       ]
+      ],
+      "skolem:$addLocal_b\"": [
+       [
+        "Book$0"
+       ]
+      ],
+      "skolem:$addLocal_n": [
+       [
+        "Name$1"
+       ]
+      ],
+      "skolem:$addLocal_n\"": [
+       [
+        "Name$0"
+       ]
+      ],
+      "skolem:$addLocal_t": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ],
+       [
+        "Book$1"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Name$0",
+        "Name$1"
+       ],
+       [
+        "Book$0",
+        "Name$1",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$0",
+        "Name$1"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

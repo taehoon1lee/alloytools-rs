@@ -1,0 +1,78 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/time",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 122.943,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 86.743,
+   "solve_ms": 1.051,
+   "total_ms": 87.794,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Time$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Time$0",
+        "Time$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Time$1",
+        "Time$2"
+       ]
+      ],
+      "this/Time": [
+       [
+        "Time$0"
+       ],
+       [
+        "Time$1"
+       ],
+       [
+        "Time$2"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

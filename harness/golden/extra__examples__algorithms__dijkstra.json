@@ -1,0 +1,180 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/algorithms/dijkstra",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 269.831,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Deadlock",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Deadlock for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 129.658,
+   "solve_ms": 5.205,
+   "total_ms": 134.863,
+   "stats": {
+    "primary_vars": 60,
+    "vars": 201,
+    "clauses": 260
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "mo/Ord": [
+       [
+        "mo/Ord$0"
+       ]
+      ],
+      "mo/Ord.First": [
+       [
+        "mo/Ord$0",
+        "Mutex$0"
+       ]
+      ],
+      "mo/Ord.Next": [
+       [
+        "mo/Ord$0",
+        "Mutex$0",
+        "Mutex$1"
+       ],
+       [
+        "mo/Ord$0",
+        "Mutex$1",
+        "Mutex$2"
+       ]
+      ],
+      "skolem:$Deadlock_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ]
+      ],
+      "this/Mutex": [
+       [
+        "Mutex$0"
+       ],
+       [
+        "Mutex$1"
+       ],
+       [
+        "Mutex$2"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ]
+      ],
+      "this/State.holds": [],
+      "this/State.waits": [
+       [
+        "State$0",
+        "Process$0",
+        "Mutex$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "ShowDijkstra",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowDijkstra for 5 State, 2 Process, 2 Mutex expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 45.699,
+   "solve_ms": 16.059,
+   "total_ms": 61.757,
+   "stats": {
+    "primary_vars": 47,
+    "vars": 887,
+    "clauses": 1564
+   }
+  },
+  {
+   "index": 2,
+   "label": "DijkstraPreventsDeadlocks",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check DijkstraPreventsDeadlocks for 5 State, 5 Process, 4 Mutex expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 78.667,
+   "solve_ms": 134.996,
+   "total_ms": 213.663,
+   "stats": {
+    "primary_vars": 210,
+    "vars": 4300,
+    "clauses": 9702
+   }
+  }
+ ]
+}

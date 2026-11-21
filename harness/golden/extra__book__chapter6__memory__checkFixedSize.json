@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/memory/checkFixedSize",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 157.952,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "initOk",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check initOk",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 119.705,
+   "solve_ms": 9.858,
+   "total_ms": 129.563,
+   "stats": {
+    "primary_vars": 84,
+    "vars": 1452,
+    "clauses": 2609
+   }
+  },
+  {
+   "index": 1,
+   "label": "readOk",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check readOk",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 18.001,
+   "solve_ms": 5.097,
+   "total_ms": 23.098,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 1526,
+    "clauses": 2766
+   }
+  },
+  {
+   "index": 2,
+   "label": "writeOk",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check writeOk",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 15.736,
+   "solve_ms": 2.767,
+   "total_ms": 18.503,
+   "stats": {
+    "primary_vars": 96,
+    "vars": 1749,
+    "clauses": 3334
+   }
+  }
+ ]
+}

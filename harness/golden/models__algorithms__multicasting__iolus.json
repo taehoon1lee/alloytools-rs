@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/multicasting/iolus",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 223.481,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "OutsiderCantRead",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check OutsiderCantRead for 5 but 3 Member expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 918.628,
+   "solve_ms": 1515.532,
+   "total_ms": 2434.16,
+   "stats": {
+    "primary_vars": 596,
+    "vars": 53354,
+    "clauses": 130429
+   }
+  }
+ ]
+}

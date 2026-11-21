@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/alloy-core",
+    "crates/kodkod",
+    "crates/satsolver",
+    "crates/alloy-translate",
+    "crates/alloy-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+# RULE: pure-Rust crates only (toolchain is x86_64-pc-windows-gnu without a C compiler).
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+batsat = "0.6"
+
+[profile.release]
+opt-level = 3
+debug = 1            # keep symbols for profiling
+codegen-units = 4
+lto = "thin"
+panic = "unwind"     # the CLI catches panics and reports CRASH
+
+[profile.dev]
+opt-level = 1

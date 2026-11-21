@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/systems/marksweepgc",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 139.999,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Soundness1",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Soundness1 for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 158.66,
+   "solve_ms": 15.434,
+   "total_ms": 174.095,
+   "stats": {
+    "primary_vars": 96,
+    "vars": 1893,
+    "clauses": 3926
+   }
+  },
+  {
+   "index": 1,
+   "label": "Soundness2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Soundness2 for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 25.995,
+   "solve_ms": 8.266,
+   "total_ms": 34.261,
+   "stats": {
+    "primary_vars": 93,
+    "vars": 1823,
+    "clauses": 3737
+   }
+  },
+  {
+   "index": 2,
+   "label": "Completeness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Completeness for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 24.618,
+   "solve_ms": 4.52,
+   "total_ms": 29.138,
+   "stats": {
+    "primary_vars": 93,
+    "vars": 1826,
+    "clauses": 3758
+   }
+  }
+ ]
+}

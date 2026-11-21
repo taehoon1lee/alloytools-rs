@@ -1,0 +1,146 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter4/filesystem",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 91.59,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "SomeDir",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check SomeDir",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 90.061,
+   "solve_ms": 2.557,
+   "total_ms": 92.619,
+   "stats": {
+    "primary_vars": 16,
+    "vars": 178,
+    "clauses": 207
+   }
+  },
+  {
+   "index": 1,
+   "label": "RootTop",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check RootTop",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.4,
+   "solve_ms": 2.557,
+   "total_ms": 9.958,
+   "stats": {
+    "primary_vars": 16,
+    "vars": 177,
+    "clauses": 192
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$RootTop_o": [
+       [
+        "Dir$0"
+       ]
+      ],
+      "this/Dir": [
+       [
+        "Dir$0"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Dir.contents": [
+       [
+        "Dir$0",
+        "Dir$0"
+       ],
+       [
+        "Dir$0",
+        "File$0"
+       ],
+       [
+        "Dir$0",
+        "Root$0"
+       ],
+       [
+        "Root$0",
+        "Dir$0"
+       ]
+      ],
+      "this/File": [
+       [
+        "File$0"
+       ]
+      ],
+      "this/Object": [
+       [
+        "Dir$0"
+       ],
+       [
+        "File$0"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "FileInDir",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check FileInDir",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 4.522,
+   "solve_ms": 0.683,
+   "total_ms": 5.205,
+   "stats": {
+    "primary_vars": 15,
+    "vars": 172,
+    "clauses": 195
+   }
+  }
+ ]
+}

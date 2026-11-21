@@ -1,0 +1,140 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/tube",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 94.918,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 150.331,
+   "solve_ms": 1.193,
+   "total_ms": 151.524,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/BakerStreet": [
+       [
+        "BakerStreet$0"
+       ]
+      ],
+      "this/BondStreet": [
+       [
+        "BondStreet$0"
+       ]
+      ],
+      "this/Central": [],
+      "this/Circle": [],
+      "this/EalingBroadway": [
+       [
+        "EalingBroadway$0"
+       ]
+      ],
+      "this/Epping": [
+       [
+        "Epping$0"
+       ]
+      ],
+      "this/Jubilee": [],
+      "this/LiverpoolStreet": [
+       [
+        "LiverpoolStreet$0"
+       ]
+      ],
+      "this/NorthActon": [
+       [
+        "NorthActon$0"
+       ]
+      ],
+      "this/NottingHillGate": [
+       [
+        "NottingHillGate$0"
+       ]
+      ],
+      "this/Stanmore": [
+       [
+        "Stanmore$0"
+       ]
+      ],
+      "this/Station": [
+       [
+        "BakerStreet$0"
+       ],
+       [
+        "BondStreet$0"
+       ],
+       [
+        "EalingBroadway$0"
+       ],
+       [
+        "Epping$0"
+       ],
+       [
+        "LiverpoolStreet$0"
+       ],
+       [
+        "NorthActon$0"
+       ],
+       [
+        "NottingHillGate$0"
+       ],
+       [
+        "Stanmore$0"
+       ],
+       [
+        "Waterloo$0"
+       ],
+       [
+        "WestRuislip$0"
+       ],
+       [
+        "Westminster$0"
+       ]
+      ],
+      "this/Station.central": [],
+      "this/Station.circle": [],
+      "this/Station.jubilee": [],
+      "this/Waterloo": [
+       [
+        "Waterloo$0"
+       ]
+      ],
+      "this/WestRuislip": [
+       [
+        "WestRuislip$0"
+       ]
+      ],
+      "this/Westminster": [
+       [
+        "Westminster$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

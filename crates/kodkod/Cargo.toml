@@ -1,0 +1,8 @@
+[package]
+name = "kodkod"
+version.workspace = true
+edition.workspace = true
+description = "Relational model finder: port of Kodkod/Pardinus (kodkod.ast, kodkod.instance, kodkod.engine.*)"
+
+[dependencies]
+satsolver = { path = "../satsolver" }

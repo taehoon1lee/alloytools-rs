@@ -1,0 +1,178 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/addressBook2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 131.751,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 154.227,
+   "solve_ms": 10.784,
+   "total_ms": 165.011,
+   "stats": {
+    "primary_vars": 63,
+    "vars": 658,
+    "clauses": 1095
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ],
+       [
+        "Book$1"
+       ],
+       [
+        "Book$2"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Name$0",
+        "Addr$0"
+       ],
+       [
+        "Book$0",
+        "Name$0",
+        "Name$2"
+       ],
+       [
+        "Book$0",
+        "Name$1",
+        "Addr$0"
+       ],
+       [
+        "Book$0",
+        "Name$1",
+        "Name$0"
+       ],
+       [
+        "Book$0",
+        "Name$1",
+        "Name$1"
+       ],
+       [
+        "Book$0",
+        "Name$2",
+        "Addr$0"
+       ],
+       [
+        "Book$0",
+        "Name$2",
+        "Name$1"
+       ],
+       [
+        "Book$1",
+        "Name$0",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$0",
+        "Name$1"
+       ],
+       [
+        "Book$1",
+        "Name$1",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$1",
+        "Name$1"
+       ],
+       [
+        "Book$1",
+        "Name$1",
+        "Name$2"
+       ],
+       [
+        "Book$1",
+        "Name$2",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$2",
+        "Name$0"
+       ],
+       [
+        "Book$2",
+        "Name$0",
+        "Addr$0"
+       ],
+       [
+        "Book$2",
+        "Name$0",
+        "Name$0"
+       ],
+       [
+        "Book$2",
+        "Name$0",
+        "Name$2"
+       ],
+       [
+        "Book$2",
+        "Name$1",
+        "Addr$0"
+       ],
+       [
+        "Book$2",
+        "Name$1",
+        "Name$0"
+       ],
+       [
+        "Book$2",
+        "Name$2",
+        "Name$1"
+       ],
+       [
+        "Book$2",
+        "Name$2",
+        "Name$2"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ],
+       [
+        "Name$2"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

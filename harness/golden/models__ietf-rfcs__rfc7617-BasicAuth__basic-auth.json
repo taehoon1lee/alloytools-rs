@@ -1,0 +1,720 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/ietf-rfcs/rfc7617-BasicAuth/basic-auth",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 252.955,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 252.991,
+   "solve_ms": 31.201,
+   "total_ms": 284.192,
+   "stats": {
+    "primary_vars": 485,
+    "vars": 4627,
+    "clauses": 8597
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "open$4/Ord": [
+       [
+        "open$4/Ord$0"
+       ]
+      ],
+      "open$4/Ord.First": [
+       [
+        "open$4/Ord$0",
+        "SC_UNAUTHORIZED_401$0"
+       ]
+      ],
+      "open$4/Ord.Next": [
+       [
+        "open$4/Ord$0",
+        "SC_NOT_FOUND_404$0",
+        "SC_TEMP_REDIRECT_302$0"
+       ],
+       [
+        "open$4/Ord$0",
+        "SC_OK_200$0",
+        "SC_NOT_FOUND_404$0"
+       ],
+       [
+        "open$4/Ord$0",
+        "SC_UNAUTHORIZED_401$0",
+        "SC_OK_200$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "GET$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "DELETE$0",
+        "PATCH$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "GET$0",
+        "POST$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "OPTIONS$0",
+        "HEAD$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "PATCH$0",
+        "OPTIONS$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "POST$0",
+        "PUT$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "PUT$0",
+        "DELETE$0"
+       ]
+      ],
+      "this/ASCII": [
+       [
+        "ASCII$0"
+       ]
+      ],
+      "this/AuthParam": [
+       [
+        "CharsetParameter$0"
+       ],
+       [
+        "RealmParameter$0"
+       ]
+      ],
+      "this/AuthParam.name": [
+       [
+        "CharsetParameter$0",
+        "\"charset\""
+       ],
+       [
+        "RealmParameter$0",
+        "\"realm\""
+       ]
+      ],
+      "this/AuthScheme": [
+       [
+        "BasicChallenge$0"
+       ]
+      ],
+      "this/AuthScheme.name": [
+       [
+        "BasicChallenge$0",
+        "\"Basic\""
+       ]
+      ],
+      "this/AuthScheme.parameters": [
+       [
+        "BasicChallenge$0",
+        "CharsetParameter$0"
+       ],
+       [
+        "BasicChallenge$0",
+        "RealmParameter$0"
+       ]
+      ],
+      "this/Authorization": [],
+      "this/Authorization.credentials": [],
+      "this/AuthorizationServer": [
+       [
+        "AuthorizationServer$0"
+       ],
+       [
+        "AuthorizationServer$1"
+       ],
+       [
+        "AuthorizationServer$2"
+       ]
+      ],
+      "this/AuthorizationServer.protectionSpaces": [
+       [
+        "AuthorizationServer$0",
+        "Realm$0"
+       ],
+       [
+        "AuthorizationServer$1",
+        "Realm$0"
+       ],
+       [
+        "AuthorizationServer$2",
+        "Realm$0"
+       ]
+      ],
+      "this/BasicChallenge": [
+       [
+        "BasicChallenge$0"
+       ]
+      ],
+      "this/BasicChallenge.charset": [
+       [
+        "BasicChallenge$0",
+        "OTHER_CHARSET$0"
+       ]
+      ],
+      "this/BasicChallenge.realm": [
+       [
+        "BasicChallenge$0",
+        "Realm$0"
+       ]
+      ],
+      "this/BasicCredentials": [],
+      "this/BasicCredentials.charset": [],
+      "this/BasicCredentials.password": [],
+      "this/BasicCredentials.user_id": [],
+      "this/Binary": [
+       [
+        "Binary$0"
+       ]
+      ],
+      "this/Body": [
+       [
+        "Body$0"
+       ],
+       [
+        "Body$1"
+       ],
+       [
+        "Body$2"
+       ]
+      ],
+      "this/Challenge": [
+       [
+        "BasicChallenge$0"
+       ]
+      ],
+      "this/Charset": [
+       [
+        "ASCII$0"
+       ],
+       [
+        "ISO8859$0"
+       ],
+       [
+        "OTHER_CHARSET$0"
+       ],
+       [
+        "UTF16$0"
+       ],
+       [
+        "UTF8$0"
+       ]
+      ],
+      "this/Charset.maps": [
+       [
+        "ASCII$0",
+        "\":\"",
+        "Binary$0"
+       ],
+       [
+        "ASCII$0",
+        "\"Authorization\"",
+        "Binary$0"
+       ],
+       [
+        "ASCII$0",
+        "\"Basic\"",
+        "Binary$0"
+       ],
+       [
+        "ASCII$0",
+        "\"WWW-Authenticate\"",
+        "Binary$0"
+       ],
+       [
+        "ASCII$0",
+        "\"charset\"",
+        "Binary$0"
+       ],
+       [
+        "ASCII$0",
+        "\"realm\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\":\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\"Authorization\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\"Basic\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\"WWW-Authenticate\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\"charset\"",
+        "Binary$0"
+       ],
+       [
+        "ISO8859$0",
+        "\"realm\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\":\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\"Authorization\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\"Basic\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\"WWW-Authenticate\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\"charset\"",
+        "Binary$0"
+       ],
+       [
+        "UTF16$0",
+        "\"realm\"",
+        "Binary$0"
+       ],
+       [
+        "UTF8$0",
+        "\":\"",
+        "Binary$0"
+       ],
+       [
+        "UTF8$0",
+        "\"Authorization\"",
+        "Binary$0"
+       ],
+       [
+        "UTF8$0",
+        "\"Basic\"",
+        "Binary$0"
+       ],
+       [
+        "UTF8$0",
+        "\"WWW-Authenticate\"",
+        "Binary$0"
+       ],
+       [
+        "UTF8$0",
+        "\"realm\"",
+        "Binary$0"
+       ]
+      ],
+      "this/CharsetParameter": [
+       [
+        "CharsetParameter$0"
+       ]
+      ],
+      "this/CharsetParameter.charset": [
+       [
+        "CharsetParameter$0",
+        "OTHER_CHARSET$0"
+       ]
+      ],
+      "this/Credentials": [],
+      "this/DELETE": [
+       [
+        "DELETE$0"
+       ]
+      ],
+      "this/EmptyPath": [
+       [
+        "EmptyPath$0"
+       ]
+      ],
+      "this/GET": [
+       [
+        "GET$0"
+       ]
+      ],
+      "this/HEAD": [
+       [
+        "HEAD$0"
+       ]
+      ],
+      "this/Header": [
+       [
+        "WWWAuthenticate$0"
+       ]
+      ],
+      "this/Header.name": [
+       [
+        "WWWAuthenticate$0",
+        "\"WWW-Authenticate\""
+       ]
+      ],
+      "this/HttpRequest": [
+       [
+        "HttpRequest$0"
+       ],
+       [
+        "HttpRequest$1"
+       ],
+       [
+        "HttpRequest$2"
+       ]
+      ],
+      "this/HttpRequest.body": [
+       [
+        "HttpRequest$0",
+        "Body$2"
+       ],
+       [
+        "HttpRequest$1",
+        "Body$1"
+       ],
+       [
+        "HttpRequest$2",
+        "Body$0"
+       ]
+      ],
+      "this/HttpRequest.headers": [
+       [
+        "HttpRequest$1",
+        "0",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpRequest$1",
+        "1",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpRequest$1",
+        "2",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpRequest$2",
+        "0",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpRequest$2",
+        "1",
+        "WWWAuthenticate$0"
+       ]
+      ],
+      "this/HttpRequest.method": [
+       [
+        "HttpRequest$0",
+        "OPTIONS$0"
+       ],
+       [
+        "HttpRequest$1",
+        "HEAD$0"
+       ],
+       [
+        "HttpRequest$2",
+        "HEAD$0"
+       ]
+      ],
+      "this/HttpRequest.url": [
+       [
+        "HttpRequest$0",
+        "URI$0"
+       ],
+       [
+        "HttpRequest$1",
+        "URI$0"
+       ],
+       [
+        "HttpRequest$2",
+        "URI$0"
+       ]
+      ],
+      "this/HttpResponse": [
+       [
+        "HttpResponse$0"
+       ],
+       [
+        "HttpResponse$1"
+       ],
+       [
+        "HttpResponse$2"
+       ]
+      ],
+      "this/HttpResponse.headers": [
+       [
+        "HttpResponse$0",
+        "0",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpResponse$0",
+        "1",
+        "WWWAuthenticate$0"
+       ],
+       [
+        "HttpResponse$2",
+        "0",
+        "WWWAuthenticate$0"
+       ]
+      ],
+      "this/HttpResponse.payload": [
+       [
+        "HttpResponse$1",
+        "Body$1"
+       ],
+       [
+        "HttpResponse$2",
+        "Body$0"
+       ]
+      ],
+      "this/HttpResponse.response": [
+       [
+        "HttpResponse$0",
+        "SC_UNAUTHORIZED_401$0"
+       ],
+       [
+        "HttpResponse$1",
+        "SC_NOT_FOUND_404$0"
+       ],
+       [
+        "HttpResponse$2",
+        "SC_UNAUTHORIZED_401$0"
+       ]
+      ],
+      "this/ISO8859": [
+       [
+        "ISO8859$0"
+       ]
+      ],
+      "this/Method": [
+       [
+        "DELETE$0"
+       ],
+       [
+        "GET$0"
+       ],
+       [
+        "HEAD$0"
+       ],
+       [
+        "OPTIONS$0"
+       ],
+       [
+        "PATCH$0"
+       ],
+       [
+        "POST$0"
+       ],
+       [
+        "PUT$0"
+       ]
+      ],
+      "this/OPTIONS": [
+       [
+        "OPTIONS$0"
+       ]
+      ],
+      "this/OTHER_CHARSET": [
+       [
+        "OTHER_CHARSET$0"
+       ]
+      ],
+      "this/PATCH": [
+       [
+        "PATCH$0"
+       ]
+      ],
+      "this/POST": [
+       [
+        "POST$0"
+       ]
+      ],
+      "this/PUT": [
+       [
+        "PUT$0"
+       ]
+      ],
+      "this/Parameter": [
+       [
+        "CharsetParameter$0"
+       ],
+       [
+        "RealmParameter$0"
+       ],
+       [
+        "Token68Parameter$0"
+       ]
+      ],
+      "this/Path": [
+       [
+        "EmptyPath$0"
+       ],
+       [
+        "Path$0"
+       ]
+      ],
+      "this/Realm": [
+       [
+        "Realm$0"
+       ]
+      ],
+      "this/RealmParameter": [
+       [
+        "RealmParameter$0"
+       ]
+      ],
+      "this/RealmParameter.realm": [
+       [
+        "RealmParameter$0",
+        "Realm$0"
+       ]
+      ],
+      "this/ResponseCode": [
+       [
+        "SC_NOT_FOUND_404$0"
+       ],
+       [
+        "SC_OK_200$0"
+       ],
+       [
+        "SC_TEMP_REDIRECT_302$0"
+       ],
+       [
+        "SC_UNAUTHORIZED_401$0"
+       ]
+      ],
+      "this/SC_NOT_FOUND_404": [
+       [
+        "SC_NOT_FOUND_404$0"
+       ]
+      ],
+      "this/SC_OK_200": [
+       [
+        "SC_OK_200$0"
+       ]
+      ],
+      "this/SC_TEMP_REDIRECT_302": [
+       [
+        "SC_TEMP_REDIRECT_302$0"
+       ]
+      ],
+      "this/SC_UNAUTHORIZED_401": [
+       [
+        "SC_UNAUTHORIZED_401$0"
+       ]
+      ],
+      "this/Server": [
+       [
+        "AuthorizationServer$0"
+       ],
+       [
+        "AuthorizationServer$1"
+       ],
+       [
+        "AuthorizationServer$2"
+       ]
+      ],
+      "this/Token68Parameter": [
+       [
+        "Token68Parameter$0"
+       ]
+      ],
+      "this/Token68Parameter.value": [
+       [
+        "Token68Parameter$0",
+        "Binary$0"
+       ]
+      ],
+      "this/URI": [
+       [
+        "URI$0"
+       ]
+      ],
+      "this/URI.host": [
+       [
+        "URI$0",
+        "AuthorizationServer$1"
+       ]
+      ],
+      "this/URI.path": [
+       [
+        "URI$0",
+        "EmptyPath$0"
+       ]
+      ],
+      "this/UTF16": [
+       [
+        "UTF16$0"
+       ]
+      ],
+      "this/UTF8": [
+       [
+        "UTF8$0"
+       ]
+      ],
+      "this/WWWAuthenticate": [
+       [
+        "WWWAuthenticate$0"
+       ]
+      ],
+      "this/WWWAuthenticate.challenges": [
+       [
+        "WWWAuthenticate$0",
+        "0",
+        "BasicChallenge$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

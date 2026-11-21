@@ -1,0 +1,111 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter6/memory/checkCache",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 122.965,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "ReadOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check ReadOK",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 105.636,
+   "solve_ms": 7.558,
+   "total_ms": 113.193,
+   "stats": {
+    "primary_vars": 105,
+    "vars": 1767,
+    "clauses": 3239
+   }
+  },
+  {
+   "index": 1,
+   "label": "WriteOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check WriteOK",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 20.146,
+   "solve_ms": 9.84,
+   "total_ms": 29.985,
+   "stats": {
+    "primary_vars": 111,
+    "vars": 2079,
+    "clauses": 4126
+   }
+  },
+  {
+   "index": 2,
+   "label": "LoadOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check LoadOK",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 27.266,
+   "solve_ms": 20.697,
+   "total_ms": 47.963,
+   "stats": {
+    "primary_vars": 108,
+    "vars": 2052,
+    "clauses": 3945
+   }
+  },
+  {
+   "index": 3,
+   "label": "FlushOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check FlushOK",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 36.377,
+   "solve_ms": 13.598,
+   "total_ms": 49.976,
+   "stats": {
+    "primary_vars": 108,
+    "vars": 2057,
+    "clauses": 3978
+   }
+  }
+ ]
+}

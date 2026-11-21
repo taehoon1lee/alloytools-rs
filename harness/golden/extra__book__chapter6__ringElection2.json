@@ -1,0 +1,596 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/ringElection2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 180.575,
+ "command_count": 5,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3 Process, 4 Time",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 165.945,
+   "solve_ms": 18.789,
+   "total_ms": 184.734,
+   "stats": {
+    "primary_vars": 57,
+    "vars": 1463,
+    "clauses": 3131
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "PO/Ord": [
+       [
+        "PO/Ord$0"
+       ]
+      ],
+      "PO/Ord.First": [
+       [
+        "PO/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "PO/Ord.Next": [
+       [
+        "PO/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "PO/Ord$0",
+        "Process$1",
+        "Process$2"
+       ]
+      ],
+      "TO/Ord": [
+       [
+        "TO/Ord$0"
+       ]
+      ],
+      "TO/Ord.First": [
+       [
+        "TO/Ord$0",
+        "Time$0"
+       ]
+      ],
+      "TO/Ord.Next": [
+       [
+        "TO/Ord$0",
+        "Time$0",
+        "Time$1"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$1",
+        "Time$2"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$2",
+        "Time$3"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.elected": [
+       [
+        "Process$2",
+        "Time$3"
+       ]
+      ],
+      "this/Process.succ": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Process.toSend": [
+       [
+        "Process$0",
+        "Process$0",
+        "Time$0"
+       ],
+       [
+        "Process$0",
+        "Process$0",
+        "Time$1"
+       ],
+       [
+        "Process$0",
+        "Process$0",
+        "Time$2"
+       ],
+       [
+        "Process$0",
+        "Process$0",
+        "Time$3"
+       ],
+       [
+        "Process$0",
+        "Process$2",
+        "Time$1"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$0"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$1"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$2"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$3"
+       ],
+       [
+        "Process$1",
+        "Process$2",
+        "Time$2"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$0"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$3"
+       ]
+      ],
+      "this/Time": [
+       [
+        "Time$0"
+       ],
+       [
+        "Time$1"
+       ],
+       [
+        "Time$2"
+       ],
+       [
+        "Time$3"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "AtMostOneElected",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check AtMostOneElected for 3 Process, 7 Time",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 48.263,
+   "solve_ms": 22.325,
+   "total_ms": 70.588,
+   "stats": {
+    "primary_vars": 93,
+    "vars": 2676,
+    "clauses": 5707
+   }
+  },
+  {
+   "index": 2,
+   "label": "AtLeastOneElected",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check AtLeastOneElected for 3 Process, 7 Time",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 55.664,
+   "solve_ms": 26.932,
+   "total_ms": 82.596,
+   "stats": {
+    "primary_vars": 93,
+    "vars": 2713,
+    "clauses": 6084
+   }
+  },
+  {
+   "index": 3,
+   "label": "looplessPath",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run looplessPath for 3 Process, 12 Time",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 82.757,
+   "solve_ms": 56.846,
+   "total_ms": 139.603,
+   "stats": {
+    "primary_vars": 153,
+    "vars": 5875,
+    "clauses": 12618
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "PO/Ord": [
+       [
+        "PO/Ord$0"
+       ]
+      ],
+      "PO/Ord.First": [
+       [
+        "PO/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "PO/Ord.Next": [
+       [
+        "PO/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "PO/Ord$0",
+        "Process$1",
+        "Process$2"
+       ]
+      ],
+      "TO/Ord": [
+       [
+        "TO/Ord$0"
+       ]
+      ],
+      "TO/Ord.First": [
+       [
+        "TO/Ord$0",
+        "Time$0"
+       ]
+      ],
+      "TO/Ord.Next": [
+       [
+        "TO/Ord$0",
+        "Time$0",
+        "Time$1"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$1",
+        "Time$2"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$10",
+        "Time$11"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$2",
+        "Time$3"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$3",
+        "Time$4"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$4",
+        "Time$5"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$5",
+        "Time$6"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$6",
+        "Time$7"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$7",
+        "Time$8"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$8",
+        "Time$9"
+       ],
+       [
+        "TO/Ord$0",
+        "Time$9",
+        "Time$10"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.elected": [
+       [
+        "Process$2",
+        "Time$4"
+       ],
+       [
+        "Process$2",
+        "Time$8"
+       ]
+      ],
+      "this/Process.succ": [
+       [
+        "Process$0",
+        "Process$2"
+       ],
+       [
+        "Process$1",
+        "Process$0"
+       ],
+       [
+        "Process$2",
+        "Process$1"
+       ]
+      ],
+      "this/Process.toSend": [
+       [
+        "Process$0",
+        "Process$0",
+        "Time$0"
+       ],
+       [
+        "Process$0",
+        "Process$0",
+        "Time$1"
+       ],
+       [
+        "Process$0",
+        "Process$0",
+        "Time$2"
+       ],
+       [
+        "Process$0",
+        "Process$1",
+        "Time$6"
+       ],
+       [
+        "Process$0",
+        "Process$1",
+        "Time$7"
+       ],
+       [
+        "Process$0",
+        "Process$1",
+        "Time$8"
+       ],
+       [
+        "Process$0",
+        "Process$2",
+        "Time$11"
+       ],
+       [
+        "Process$0",
+        "Process$2",
+        "Time$2"
+       ],
+       [
+        "Process$0",
+        "Process$2",
+        "Time$3"
+       ],
+       [
+        "Process$0",
+        "Process$2",
+        "Time$7"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$0"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$1"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$2"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$3"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$4"
+       ],
+       [
+        "Process$1",
+        "Process$1",
+        "Time$5"
+       ],
+       [
+        "Process$1",
+        "Process$2",
+        "Time$1"
+       ],
+       [
+        "Process$1",
+        "Process$2",
+        "Time$10"
+       ],
+       [
+        "Process$1",
+        "Process$2",
+        "Time$5"
+       ],
+       [
+        "Process$1",
+        "Process$2",
+        "Time$6"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$0"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$4"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$8"
+       ],
+       [
+        "Process$2",
+        "Process$2",
+        "Time$9"
+       ]
+      ],
+      "this/Time": [
+       [
+        "Time$0"
+       ],
+       [
+        "Time$1"
+       ],
+       [
+        "Time$10"
+       ],
+       [
+        "Time$11"
+       ],
+       [
+        "Time$2"
+       ],
+       [
+        "Time$3"
+       ],
+       [
+        "Time$4"
+       ],
+       [
+        "Time$5"
+       ],
+       [
+        "Time$6"
+       ],
+       [
+        "Time$7"
+       ],
+       [
+        "Time$8"
+       ],
+       [
+        "Time$9"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "looplessPath",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run looplessPath for 3 Process, 13 Time",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 57.825,
+   "solve_ms": 64.229,
+   "total_ms": 122.053,
+   "stats": {
+    "primary_vars": 165,
+    "vars": 6512,
+    "clauses": 13954
+   }
+  }
+ ]
+}

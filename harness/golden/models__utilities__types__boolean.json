@@ -1,0 +1,62 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/boolean",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 84.805,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 70.633,
+   "solve_ms": 3.301,
+   "total_ms": 73.933,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Bool": [
+       [
+        "False$0"
+       ],
+       [
+        "True$0"
+       ]
+      ],
+      "this/False": [
+       [
+        "False$0"
+       ]
+      ],
+      "this/True": [
+       [
+        "True$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

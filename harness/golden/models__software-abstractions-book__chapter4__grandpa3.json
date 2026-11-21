@@ -1,0 +1,160 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter4/grandpa3",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 100.338,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoSelfFather",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoSelfFather",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 97.464,
+   "solve_ms": 4.271,
+   "total_ms": 101.735,
+   "stats": {
+    "primary_vars": 45,
+    "vars": 568,
+    "clauses": 930
+   }
+  },
+  {
+   "index": 1,
+   "label": "ownGrandpa",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run ownGrandpa for 4 Person",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 17.358,
+   "solve_ms": 7.258,
+   "total_ms": 24.616,
+   "stats": {
+    "primary_vars": 76,
+    "vars": 1191,
+    "clauses": 1987
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$ownGrandpa_p": [
+       [
+        "Man$1"
+       ]
+      ],
+      "this/Man": [
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ]
+      ],
+      "this/Man.wife": [
+       [
+        "Man$0",
+        "Woman$1"
+       ],
+       [
+        "Man$1",
+        "Woman$0"
+       ]
+      ],
+      "this/Person": [
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ],
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ],
+      "this/Person.father": [],
+      "this/Person.mother": [
+       [
+        "Man$0",
+        "Woman$0"
+       ],
+       [
+        "Man$1",
+        "Woman$1"
+       ]
+      ],
+      "this/Woman": [
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ],
+      "this/Woman.husband": [
+       [
+        "Woman$0",
+        "Man$1"
+       ],
+       [
+        "Woman$1",
+        "Man$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "Same",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Same",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 15.995,
+   "solve_ms": 2.551,
+   "total_ms": 18.546,
+   "stats": {
+    "primary_vars": 42,
+    "vars": 640,
+    "clauses": 1378
+   }
+  }
+ ]
+}

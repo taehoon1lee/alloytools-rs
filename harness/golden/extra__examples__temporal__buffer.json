@@ -1,0 +1,195 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/temporal/buffer",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 139.173,
+ "command_count": 5,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 251.09,
+   "solve_ms": 11.564,
+   "total_ms": 262.654,
+   "stats": {
+    "primary_vars": 31,
+    "vars": 576,
+    "clauses": 1060
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "this/Buffer": [
+       [
+        "Buffer$0"
+       ]
+      ],
+      "this/Buffer.content": [],
+      "this/Buffer.succ": [
+       [
+        "Buffer$0",
+        "Buffer$0"
+       ]
+      ],
+      "this/Value": [
+       [
+        "Value$0"
+       ]
+      ],
+      "this/read": [
+       [
+        "Buffer$0"
+       ]
+      ],
+      "this/write": [
+       [
+        "Buffer$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "everyReceivedValueWasSent",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check everyReceivedValueWasSent for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 11638.315,
+   "solve_ms": 9819.375,
+   "total_ms": 21457.691,
+   "stats": {
+    "primary_vars": 326,
+    "vars": 16911,
+    "clauses": 42600
+   }
+  },
+  {
+   "index": 2,
+   "label": "orderIsPreserved",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check orderIsPreserved for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 60000
+  },
+  {
+   "index": 3,
+   "label": "receiveWeakFairness",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run receiveWeakFairness",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 144.656,
+   "solve_ms": 8.893,
+   "total_ms": 153.549,
+   "stats": {
+    "primary_vars": 31,
+    "vars": 584,
+    "clauses": 1080
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "this/Buffer": [
+       [
+        "Buffer$0"
+       ]
+      ],
+      "this/Buffer.content": [],
+      "this/Buffer.succ": [
+       [
+        "Buffer$0",
+        "Buffer$0"
+       ]
+      ],
+      "this/Value": [
+       [
+        "Value$0"
+       ]
+      ],
+      "this/read": [
+       [
+        "Buffer$0"
+       ]
+      ],
+      "this/write": [
+       [
+        "Buffer$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "everySentValueWillBeReceived",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check everySentValueWillBeReceived for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 10968.412,
+   "solve_ms": 13307.957,
+   "total_ms": 24276.369,
+   "stats": {
+    "primary_vars": 188,
+    "vars": 5583,
+    "clauses": 13589
+   }
+  }
+ ]
+}

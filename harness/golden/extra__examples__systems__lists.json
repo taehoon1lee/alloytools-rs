@@ -1,0 +1,210 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/systems/lists",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 221.271,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "reflexive",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check reflexive for 6 expect 0",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 211.282,
+   "solve_ms": 117.45,
+   "total_ms": 328.732,
+   "stats": {
+    "primary_vars": 168,
+    "vars": 4693,
+    "clauses": 13880
+   }
+  },
+  {
+   "index": 1,
+   "label": "symmetric",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check symmetric for 6 expect 0",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 73.445,
+   "solve_ms": 201.45,
+   "total_ms": 274.895,
+   "stats": {
+    "primary_vars": 174,
+    "vars": 4787,
+    "clauses": 14221
+   }
+  },
+  {
+   "index": 2,
+   "label": "empties",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check empties for 6 expect 0",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 31.64,
+   "solve_ms": 3.722,
+   "total_ms": 35.362,
+   "stats": {
+    "primary_vars": 174,
+    "vars": 4737,
+    "clauses": 13953
+   }
+  },
+  {
+   "index": 3,
+   "label": "show",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run show for 4 expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 17.811,
+   "solve_ms": 3.374,
+   "total_ms": 21.184,
+   "stats": {
+    "primary_vars": 84,
+    "vars": 1436,
+    "clauses": 3974
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$show_a": [
+       [
+        "NonEmptyList$0"
+       ]
+      ],
+      "skolem:$show_b": [
+       [
+        "NonEmptyList$1"
+       ]
+      ],
+      "this/EmptyList": [
+       [
+        "EmptyList$0"
+       ]
+      ],
+      "this/List": [
+       [
+        "EmptyList$0"
+       ],
+       [
+        "NonEmptyList$0"
+       ],
+       [
+        "NonEmptyList$1"
+       ]
+      ],
+      "this/List.equivTo": [
+       [
+        "EmptyList$0",
+        "EmptyList$0"
+       ],
+       [
+        "NonEmptyList$0",
+        "NonEmptyList$0"
+       ],
+       [
+        "NonEmptyList$1",
+        "NonEmptyList$1"
+       ]
+      ],
+      "this/List.prefixes": [
+       [
+        "EmptyList$0",
+        "EmptyList$0"
+       ],
+       [
+        "NonEmptyList$0",
+        "EmptyList$0"
+       ],
+       [
+        "NonEmptyList$0",
+        "NonEmptyList$1"
+       ],
+       [
+        "NonEmptyList$1",
+        "EmptyList$0"
+       ]
+      ],
+      "this/NonEmptyList": [
+       [
+        "NonEmptyList$0"
+       ],
+       [
+        "NonEmptyList$1"
+       ]
+      ],
+      "this/NonEmptyList.car": [
+       [
+        "NonEmptyList$0",
+        "Thing$0"
+       ],
+       [
+        "NonEmptyList$1",
+        "Thing$0"
+       ]
+      ],
+      "this/NonEmptyList.cdr": [
+       [
+        "NonEmptyList$0",
+        "NonEmptyList$1"
+       ],
+       [
+        "NonEmptyList$1",
+        "EmptyList$0"
+       ]
+      ],
+      "this/Thing": [
+       [
+        "Thing$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

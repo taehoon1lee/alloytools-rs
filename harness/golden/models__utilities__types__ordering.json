@@ -1,0 +1,437 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/ordering",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 123.334,
+ "command_count": 11,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run run$1 for exactly 0 elem expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 75.565,
+   "solve_ms": 0.124,
+   "total_ms": 75.689,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 1,
+   "label": "run$2",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run run$2 for exactly 1 elem expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 16.043,
+   "solve_ms": 0.93,
+   "total_ms": 16.972,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Ord": [
+       [
+        "Ord$0"
+       ]
+      ],
+      "this/Ord.First": [
+       [
+        "Ord$0",
+        "elem$0"
+       ]
+      ],
+      "this/Ord.Next": [],
+      "this/elem": [
+       [
+        "elem$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "run$3",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run run$3 for exactly 2 elem expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.073,
+   "solve_ms": 0.825,
+   "total_ms": 7.897,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Ord": [
+       [
+        "Ord$0"
+       ]
+      ],
+      "this/Ord.First": [
+       [
+        "Ord$0",
+        "elem$0"
+       ]
+      ],
+      "this/Ord.Next": [
+       [
+        "Ord$0",
+        "elem$0",
+        "elem$1"
+       ]
+      ],
+      "this/elem": [
+       [
+        "elem$0"
+       ],
+       [
+        "elem$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 3,
+   "label": "run$4",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run run$4 for exactly 3 elem expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.535,
+   "solve_ms": 0.631,
+   "total_ms": 8.166,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Ord": [
+       [
+        "Ord$0"
+       ]
+      ],
+      "this/Ord.First": [
+       [
+        "Ord$0",
+        "elem$0"
+       ]
+      ],
+      "this/Ord.Next": [
+       [
+        "Ord$0",
+        "elem$0",
+        "elem$1"
+       ],
+       [
+        "Ord$0",
+        "elem$1",
+        "elem$2"
+       ]
+      ],
+      "this/elem": [
+       [
+        "elem$0"
+       ],
+       [
+        "elem$1"
+       ],
+       [
+        "elem$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "run$5",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run run$5 for exactly 4 elem expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.436,
+   "solve_ms": 0.573,
+   "total_ms": 8.009,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Ord": [
+       [
+        "Ord$0"
+       ]
+      ],
+      "this/Ord.First": [
+       [
+        "Ord$0",
+        "elem$0"
+       ]
+      ],
+      "this/Ord.Next": [
+       [
+        "Ord$0",
+        "elem$0",
+        "elem$1"
+       ],
+       [
+        "Ord$0",
+        "elem$1",
+        "elem$2"
+       ],
+       [
+        "Ord$0",
+        "elem$2",
+        "elem$3"
+       ]
+      ],
+      "this/elem": [
+       [
+        "elem$0"
+       ],
+       [
+        "elem$1"
+       ],
+       [
+        "elem$2"
+       ],
+       [
+        "elem$3"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 5,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 0 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 3.956,
+   "solve_ms": 0.033,
+   "total_ms": 3.989,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 6,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 1 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 8.854,
+   "solve_ms": 0.027,
+   "total_ms": 8.881,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 7,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 2 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.324,
+   "solve_ms": 0.051,
+   "total_ms": 7.375,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 8,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 3 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 8.193,
+   "solve_ms": 0.037,
+   "total_ms": 8.23,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 9,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 4 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 9.093,
+   "solve_ms": 0.029,
+   "total_ms": 9.123,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 10,
+   "label": "correct",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check correct for exactly 5 elem",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 6.473,
+   "solve_ms": 0.025,
+   "total_ms": 6.497,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

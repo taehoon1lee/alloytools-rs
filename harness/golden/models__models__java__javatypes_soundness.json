@@ -1,0 +1,419 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/java/javatypes_soundness",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 167.283,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TypeSoundness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check TypeSoundness for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 227.181,
+   "solve_ms": 60.801,
+   "total_ms": 287.983,
+   "stats": {
+    "primary_vars": 308,
+    "vars": 7499,
+    "clauses": 13509
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$TypeSoundness_s": [
+       [
+        "State$1"
+       ]
+      ],
+      "skolem:$TypeSoundness_s\"": [
+       [
+        "State$0"
+       ]
+      ],
+      "skolem:$TypeSoundness_stmt": [
+       [
+        "Setter$1"
+       ]
+      ],
+      "this/Assignment": [
+       [
+        "Assignment$0"
+       ]
+      ],
+      "this/Assignment.expr": [
+       [
+        "Assignment$0",
+        "Variable$1"
+       ]
+      ],
+      "this/Assignment.v": [
+       [
+        "Assignment$0",
+        "Variable$1"
+       ]
+      ],
+      "this/Class": [
+       [
+        "Class$0"
+       ]
+      ],
+      "this/Class.fields": [
+       [
+        "Class$0",
+        "Field$0"
+       ],
+       [
+        "Class$0",
+        "Field$1"
+       ],
+       [
+        "Class$0",
+        "Field$2"
+       ]
+      ],
+      "this/Class.implements": [],
+      "this/Constructor": [],
+      "this/Constructor.class": [],
+      "this/Expr": [
+       [
+        "Variable$0"
+       ],
+       [
+        "Variable$1"
+       ]
+      ],
+      "this/Expr.subexprs": [
+       [
+        "Variable$0",
+        "Variable$0"
+       ],
+       [
+        "Variable$1",
+        "Variable$1"
+       ]
+      ],
+      "this/Expr.type": [
+       [
+        "Variable$0",
+        "Class$0"
+       ],
+       [
+        "Variable$1",
+        "Interface$0"
+       ]
+      ],
+      "this/Field": [
+       [
+        "Field$0"
+       ],
+       [
+        "Field$1"
+       ],
+       [
+        "Field$2"
+       ]
+      ],
+      "this/Field.declType": [
+       [
+        "Field$0",
+        "Class$0"
+       ],
+       [
+        "Field$1",
+        "Interface$0"
+       ],
+       [
+        "Field$2",
+        "Interface$0"
+       ]
+      ],
+      "this/Getter": [],
+      "this/Getter.expr": [],
+      "this/Getter.field": [],
+      "this/Interface": [
+       [
+        "Interface$0"
+       ]
+      ],
+      "this/Null": [
+       [
+        "Null$0"
+       ]
+      ],
+      "this/Object": [
+       [
+        "Object$0"
+       ]
+      ],
+      "this/Object.slot": [
+       [
+        "Object$0",
+        "Field$0",
+        "Slot$2"
+       ],
+       [
+        "Object$0",
+        "Field$1",
+        "Slot$1"
+       ],
+       [
+        "Object$0",
+        "Field$2",
+        "Slot$0"
+       ]
+      ],
+      "this/Object.type": [
+       [
+        "Object$0",
+        "Class$0"
+       ]
+      ],
+      "this/Setter": [
+       [
+        "Setter$0"
+       ],
+       [
+        "Setter$1"
+       ]
+      ],
+      "this/Setter.field": [
+       [
+        "Setter$0",
+        "Field$2"
+       ],
+       [
+        "Setter$1",
+        "Field$1"
+       ]
+      ],
+      "this/Setter.lexpr": [
+       [
+        "Setter$0",
+        "Variable$0"
+       ],
+       [
+        "Setter$1",
+        "Variable$0"
+       ]
+      ],
+      "this/Setter.rexpr": [
+       [
+        "Setter$0",
+        "Variable$0"
+       ],
+       [
+        "Setter$1",
+        "Variable$1"
+       ]
+      ],
+      "this/Slot": [
+       [
+        "Slot$0"
+       ],
+       [
+        "Slot$1"
+       ],
+       [
+        "Slot$2"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ]
+      ],
+      "this/State.holds": [
+       [
+        "State$0",
+        "Slot$1",
+        "Object$0"
+       ],
+       [
+        "State$0",
+        "Slot$2",
+        "Object$0"
+       ],
+       [
+        "State$0",
+        "Variable$0",
+        "Object$0"
+       ],
+       [
+        "State$0",
+        "Variable$1",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Slot$2",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Variable$0",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Variable$1",
+        "Object$0"
+       ]
+      ],
+      "this/State.objects": [
+       [
+        "State$0",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Object$0"
+       ]
+      ],
+      "this/State.reaches": [
+       [
+        "State$0",
+        "Object$0",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Object$0",
+        "Object$0"
+       ]
+      ],
+      "this/State.val": [
+       [
+        "State$0",
+        "Variable$0",
+        "Object$0"
+       ],
+       [
+        "State$0",
+        "Variable$1",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Variable$0",
+        "Object$0"
+       ],
+       [
+        "State$1",
+        "Variable$1",
+        "Object$0"
+       ]
+      ],
+      "this/State.vars": [
+       [
+        "State$0",
+        "Variable$0"
+       ],
+       [
+        "State$0",
+        "Variable$1"
+       ],
+       [
+        "State$1",
+        "Variable$0"
+       ],
+       [
+        "State$1",
+        "Variable$1"
+       ]
+      ],
+      "this/Statement": [
+       [
+        "Assignment$0"
+       ],
+       [
+        "Setter$0"
+       ],
+       [
+        "Setter$1"
+       ]
+      ],
+      "this/Type": [
+       [
+        "Class$0"
+       ],
+       [
+        "Interface$0"
+       ]
+      ],
+      "this/Type.xtends": [],
+      "this/Value": [
+       [
+        "Null$0"
+       ],
+       [
+        "Object$0"
+       ]
+      ],
+      "this/Variable": [
+       [
+        "Variable$0"
+       ],
+       [
+        "Variable$1"
+       ]
+      ],
+      "this/Variable.declType": [
+       [
+        "Variable$0",
+        "Class$0"
+       ],
+       [
+        "Variable$1",
+        "Interface$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "TypeSoundness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check TypeSoundness for 2 State, 1 Assignment, 1 Statement, 5 Interface, 5 Class, 1 Null, 7 Object, 12 Expr, 3 Field, 3 Slot expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 903.876,
+   "solve_ms": 0.116,
+   "total_ms": 903.992,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

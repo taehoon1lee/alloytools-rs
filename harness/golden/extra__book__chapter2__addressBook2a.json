@@ -1,0 +1,105 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook2a",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 86.732,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3 but 1 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 82.311,
+   "solve_ms": 4.905,
+   "total_ms": 87.216,
+   "stats": {
+    "primary_vars": 20,
+    "vars": 149,
+    "clauses": 231
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$show_b": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Alias": [
+       [
+        "Alias$0"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Alias$0",
+        "Alias$0"
+       ],
+       [
+        "Book$0",
+        "Alias$0",
+        "Group$0"
+       ],
+       [
+        "Book$0",
+        "Group$0",
+        "Alias$0"
+       ]
+      ],
+      "this/Group": [
+       [
+        "Group$0"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Group$0"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Alias$0"
+       ],
+       [
+        "Group$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,93 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/memory/fixedSizeMemory",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 109.065,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 107.331,
+   "solve_ms": 7.799,
+   "total_ms": 115.13,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 596,
+    "clauses": 1015
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ]
+      ],
+      "this/Data": [
+       [
+        "Data$0"
+       ],
+       [
+        "Data$1"
+       ],
+       [
+        "Data$2"
+       ]
+      ],
+      "this/Memory": [
+       [
+        "Memory$0"
+       ],
+       [
+        "Memory$1"
+       ]
+      ],
+      "this/Memory.data": [
+       [
+        "Memory$0",
+        "Addr$0",
+        "Data$2"
+       ],
+       [
+        "Memory$0",
+        "Addr$1",
+        "Data$1"
+       ],
+       [
+        "Memory$1",
+        "Addr$0",
+        "Data$0"
+       ],
+       [
+        "Memory$1",
+        "Addr$1",
+        "Data$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

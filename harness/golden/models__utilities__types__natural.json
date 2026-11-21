@@ -1,0 +1,15 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/natural",
+ "status": "syntax_error",
+ "error": {
+  "kind": "syntax_error",
+  "line": 21,
+  "col": 9,
+  "in_file": "natural.als",
+  "msg": "You cannot import two different modules\nusing the same alias."
+ },
+ "parse_ms": 61.167,
+ "commands": []
+}

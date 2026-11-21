@@ -1,0 +1,17 @@
+# Smoke set for `python harness/check.py --quick` (fast, diverse). One corpus id per line.
+models/simple-models/no-solution/trivial
+models/software-abstractions-book/appendixA/phones
+models/software-abstractions-book/appendixA/barbers
+models/software-abstractions-book/appendixA/ring
+models/software-abstractions-book/appendixA/closure
+models/software-abstractions-book/chapter2/addressBook1a
+models/software-abstractions-book/chapter4/filesystem
+models/software-abstractions-book/chapter6/memory/checkFixedSize
+models/puzzles/money
+models/puzzles/einstein/einstein-wikipedia
+models/puzzles/farmer-chicken-fox/farmer
+models/puzzles/8-queens/queens
+models/utilities/types/natural
+models/utilities/types/integer
+models/algorithms/election/s_ringlead
+extra/examples/temporal/trash

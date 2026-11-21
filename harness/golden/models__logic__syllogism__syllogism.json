@@ -1,0 +1,92 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/logic/syllogism/syllogism",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 87.29,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "check$1",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check check$1 for 5 Men",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 77.807,
+   "solve_ms": 2.11,
+   "total_ms": 79.917,
+   "stats": {
+    "primary_vars": 17,
+    "vars": 88,
+    "clauses": 110
+   }
+  },
+  {
+   "index": 1,
+   "label": "check$2",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check check$2 for 5 Men",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 4.641,
+   "solve_ms": 6.388,
+   "total_ms": 11.03,
+   "stats": {
+    "primary_vars": 17,
+    "vars": 88,
+    "clauses": 110
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$men": [
+       [
+        "Men$0"
+       ]
+      ],
+      "skolem:$mortal": [
+       [
+        "Men$0"
+       ],
+       [
+        "Socrates$0"
+       ]
+      ],
+      "this/Men": [
+       [
+        "Men$0"
+       ]
+      ],
+      "this/Socrates": [
+       [
+        "Socrates$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

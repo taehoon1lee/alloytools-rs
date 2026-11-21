@@ -1,0 +1,1042 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/temporal/leader_events",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 167.285,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 4 but 10 steps, exactly 4 Node",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 10,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 192.929,
+   "solve_ms": 12.52,
+   "total_ms": 205.449,
+   "stats": {
+    "primary_vars": 70,
+    "vars": 1714,
+    "clauses": 3705
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$2",
+        "Id$3"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ],
+       [
+        "Id$3"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ],
+       [
+        "Node$3"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$3"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ],
+       [
+        "Node$3",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$0",
+        "Id$3"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ],
+       [
+        "Node$3",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$3"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ],
+       [
+        "Node$3",
+        "Node$0"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "example",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run example for 3 but 6 steps, exactly 3 Node",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 6,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 6,
+   "translate_ms": 352.264,
+   "solve_ms": 18.794,
+   "total_ms": 371.059,
+   "stats": {
+    "primary_vars": 178,
+    "vars": 6613,
+    "clauses": 14296
+   },
+   "instance": {
+    "trace_length": 6,
+    "loop": 5,
+    "states": [
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     },
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$2",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     },
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ],
+       [
+        "Node$2",
+        "Id$2"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     },
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$1",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     },
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": []
+     },
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "Send$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "Send$0",
+        "Compute$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Compute": [
+       [
+        "Compute$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Compute$0"
+       ],
+       [
+        "Send$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$0",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$0"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ]
+      ],
+      "this/Send": [
+       [
+        "Send$0"
+       ]
+      ],
+      "this/elected": [
+       [
+        "Node$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "safety",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check safety for 3 but 15 steps",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 15,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 15,
+   "translate_ms": 1574.402,
+   "solve_ms": 118.166,
+   "total_ms": 1692.568,
+   "stats": {
+    "primary_vars": 424,
+    "vars": 30351,
+    "clauses": 66877
+   }
+  },
+  {
+   "index": 3,
+   "label": "liveness",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check liveness for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 3556.666,
+   "solve_ms": 1649.991,
+   "total_ms": 5206.657,
+   "stats": {
+    "primary_vars": 269,
+    "vars": 18603,
+    "clauses": 45996
+   }
+  }
+ ]
+}

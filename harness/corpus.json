@@ -1,0 +1,1395 @@
+[
+ {
+  "id": "models/algorithms/discovery/ins",
+  "path": "reference/models/algorithms/discovery/ins.als",
+  "lines": 115,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/algorithms/discovery/INSLabel",
+  "path": "reference/models/algorithms/discovery/INSLabel.als",
+  "lines": 149,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/distributed-hashtable/chord",
+  "path": "reference/models/algorithms/distributed-hashtable/chord.als",
+  "lines": 262,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/distributed-hashtable/chord2",
+  "path": "reference/models/algorithms/distributed-hashtable/chord2.als",
+  "lines": 277,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/distributed-hashtable/chordbugmodel",
+  "path": "reference/models/algorithms/distributed-hashtable/chordbugmodel.als",
+  "lines": 235,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/election/ringlead",
+  "path": "reference/models/algorithms/election/ringlead.als",
+  "lines": 149,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/election/s_ringlead",
+  "path": "reference/models/algorithms/election/s_ringlead.als",
+  "lines": 153,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/election/stable_ringlead",
+  "path": "reference/models/algorithms/election/stable_ringlead.als",
+  "lines": 180,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/gc/marksweepgc",
+  "path": "reference/models/algorithms/gc/marksweepgc.als",
+  "lines": 82,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/mapping/view-backing",
+  "path": "reference/models/algorithms/mapping/view-backing.als",
+  "lines": 216,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/multicasting/iolus",
+  "path": "reference/models/algorithms/multicasting/iolus.als",
+  "lines": 318,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/mutex/dijkstra-2-process",
+  "path": "reference/models/algorithms/mutex/dijkstra-2-process.als",
+  "lines": 120,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/mutex/dijkstra-K-state",
+  "path": "reference/models/algorithms/mutex/dijkstra-K-state.als",
+  "lines": 202,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/mutex/peterson",
+  "path": "reference/models/algorithms/mutex/peterson.als",
+  "lines": 206,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/ring-orientation/stable-orient-ring",
+  "path": "reference/models/algorithms/ring-orientation/stable-orient-ring.als",
+  "lines": 90,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/spanning-tree/opt_spantree",
+  "path": "reference/models/algorithms/spanning-tree/opt_spantree.als",
+  "lines": 220,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/synchronisation/sync",
+  "path": "reference/models/algorithms/synchronisation/sync.als",
+  "lines": 130,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/algorithms/synchronisation/syncimpl",
+  "path": "reference/models/algorithms/synchronisation/syncimpl.als",
+  "lines": 103,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/ietf-rfcs/rfc7617-BasicAuth/basic-auth",
+  "path": "reference/models/ietf-rfcs/rfc7617-BasicAuth/basic-auth.als",
+  "lines": 169,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/logic/syllogism/syllogism",
+  "path": "reference/models/logic/syllogism/syllogism.als",
+  "lines": 59,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/file-system/file_system",
+  "path": "reference/models/models/file-system/file_system.als",
+  "lines": 59,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/firewire/firewire",
+  "path": "reference/models/models/firewire/firewire.als",
+  "lines": 384,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/java/java-map",
+  "path": "reference/models/models/java/java-map.als",
+  "lines": 177,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/java/javatypes",
+  "path": "reference/models/models/java/javatypes.als",
+  "lines": 47,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/java/javatypes_soundness",
+  "path": "reference/models/models/java/javatypes_soundness.als",
+  "lines": 140,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/logic/philosophers",
+  "path": "reference/models/models/logic/philosophers.als",
+  "lines": 71,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/microsoft-com/com",
+  "path": "reference/models/models/microsoft-com/com.als",
+  "lines": 96,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/transport/railway",
+  "path": "reference/models/models/transport/railway.als",
+  "lines": 64,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/models/typography/paragraph-numbering",
+  "path": "reference/models/models/typography/paragraph-numbering.als",
+  "lines": 128,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/paper-examples/jackson-cacm-2019/origin-tracking",
+  "path": "reference/models/paper-examples/jackson-cacm-2019/origin-tracking.als",
+  "lines": 73,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/8-queens/queens",
+  "path": "reference/models/puzzles/8-queens/queens.als",
+  "lines": 38,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/coloring/color-australia",
+  "path": "reference/models/puzzles/coloring/color-australia.als",
+  "lines": 28,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/einstein/einstein-wikipedia",
+  "path": "reference/models/puzzles/einstein/einstein-wikipedia.als",
+  "lines": 92,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/farmer-chicken-fox/farmer",
+  "path": "reference/models/puzzles/farmer-chicken-fox/farmer.als",
+  "lines": 92,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/halmos-handshake/handshake",
+  "path": "reference/models/puzzles/halmos-handshake/handshake.als",
+  "lines": 63,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/money",
+  "path": "reference/models/puzzles/money.als",
+  "lines": 53,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/prisoner-room-visit/prisoner",
+  "path": "reference/models/puzzles/prisoner-room-visit/prisoner.als",
+  "lines": 172,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/puzzles/tower-hanoi/hanoi",
+  "path": "reference/models/puzzles/tower-hanoi/hanoi.als",
+  "lines": 139,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/4-bit-adder/4-bit-adder",
+  "path": "reference/models/simple-models/4-bit-adder/4-bit-adder.als",
+  "lines": 58,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/books/birthday",
+  "path": "reference/models/simple-models/books/birthday.als",
+  "lines": 69,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/games/life",
+  "path": "reference/models/simple-models/games/life.als",
+  "lines": 95,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/genealogy/genealogy",
+  "path": "reference/models/simple-models/genealogy/genealogy.als",
+  "lines": 75,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/genealogy/grandpa",
+  "path": "reference/models/simple-models/genealogy/grandpa.als",
+  "lines": 89,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/lists/lists",
+  "path": "reference/models/simple-models/lists/lists.als",
+  "lines": 47,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/no-solution/trivial",
+  "path": "reference/models/simple-models/no-solution/trivial.als",
+  "lines": 9,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/state-machine/flip-flop",
+  "path": "reference/models/simple-models/state-machine/flip-flop.als",
+  "lines": 39,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/simple-models/state-machine/reset-flipflop-with-enable",
+  "path": "reference/models/simple-models/state-machine/reset-flipflop-with-enable.als",
+  "lines": 36,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/addressBook1",
+  "path": "reference/models/software-abstractions-book/appendixA/addressBook1.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/addressBook2",
+  "path": "reference/models/software-abstractions-book/appendixA/addressBook2.als",
+  "lines": 28,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/barbers",
+  "path": "reference/models/software-abstractions-book/appendixA/barbers.als",
+  "lines": 10,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/closure",
+  "path": "reference/models/software-abstractions-book/appendixA/closure.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/distribution",
+  "path": "reference/models/software-abstractions-book/appendixA/distribution.als",
+  "lines": 8,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/phones",
+  "path": "reference/models/software-abstractions-book/appendixA/phones.als",
+  "lines": 7,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/prison",
+  "path": "reference/models/software-abstractions-book/appendixA/prison.als",
+  "lines": 18,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/properties",
+  "path": "reference/models/software-abstractions-book/appendixA/properties.als",
+  "lines": 24,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/ring",
+  "path": "reference/models/software-abstractions-book/appendixA/ring.als",
+  "lines": 10,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/spanning",
+  "path": "reference/models/software-abstractions-book/appendixA/spanning.als",
+  "lines": 18,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/tree",
+  "path": "reference/models/software-abstractions-book/appendixA/tree.als",
+  "lines": 8,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/tube",
+  "path": "reference/models/software-abstractions-book/appendixA/tube.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixA/undirected",
+  "path": "reference/models/software-abstractions-book/appendixA/undirected.als",
+  "lines": 12,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixE/p300-hotel",
+  "path": "reference/models/software-abstractions-book/appendixE/p300-hotel.als",
+  "lines": 67,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixE/p303-hotel",
+  "path": "reference/models/software-abstractions-book/appendixE/p303-hotel.als",
+  "lines": 71,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/appendixE/p306-hotel",
+  "path": "reference/models/software-abstractions-book/appendixE/p306-hotel.als",
+  "lines": 74,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1a",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1a.als",
+  "lines": 13,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1b",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1b.als",
+  "lines": 15,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1c",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1c.als",
+  "lines": 16,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1d",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1d.als",
+  "lines": 16,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1e",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1e.als",
+  "lines": 15,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1f",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1f.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1g",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1g.als",
+  "lines": 30,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook1h",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook1h.als",
+  "lines": 65,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook2a",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook2a.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook2b",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook2b.als",
+  "lines": 19,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook2c",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook2c.als",
+  "lines": 19,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook2d",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook2d.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook2e",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook2e.als",
+  "lines": 57,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook3a",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook3a.als",
+  "lines": 39,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook3b",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook3b.als",
+  "lines": 77,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook3c",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook3c.als",
+  "lines": 82,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter2/addressBook3d",
+  "path": "reference/models/software-abstractions-book/chapter2/addressBook3d.als",
+  "lines": 88,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter4/filesystem",
+  "path": "reference/models/software-abstractions-book/chapter4/filesystem.als",
+  "lines": 29,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter4/grandpa1",
+  "path": "reference/models/software-abstractions-book/chapter4/grandpa1.als",
+  "lines": 45,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter4/grandpa2",
+  "path": "reference/models/software-abstractions-book/chapter4/grandpa2.als",
+  "lines": 39,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter4/grandpa3",
+  "path": "reference/models/software-abstractions-book/chapter4/grandpa3.als",
+  "lines": 71,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter4/lights",
+  "path": "reference/models/software-abstractions-book/chapter4/lights.als",
+  "lines": 42,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter5/addressBook",
+  "path": "reference/models/software-abstractions-book/chapter5/addressBook.als",
+  "lines": 27,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter5/lists",
+  "path": "reference/models/software-abstractions-book/chapter5/lists.als",
+  "lines": 24,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter5/sets1",
+  "path": "reference/models/software-abstractions-book/chapter5/sets1.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter5/sets2",
+  "path": "reference/models/software-abstractions-book/chapter5/sets2.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/hotel1",
+  "path": "reference/models/software-abstractions-book/chapter6/hotel1.als",
+  "lines": 102,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/hotel2",
+  "path": "reference/models/software-abstractions-book/chapter6/hotel2.als",
+  "lines": 111,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/hotel3",
+  "path": "reference/models/software-abstractions-book/chapter6/hotel3.als",
+  "lines": 93,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/hotel4",
+  "path": "reference/models/software-abstractions-book/chapter6/hotel4.als",
+  "lines": 104,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/mediaAssets",
+  "path": "reference/models/software-abstractions-book/chapter6/mediaAssets.als",
+  "lines": 118,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/abstractMemory",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/abstractMemory.als",
+  "lines": 34,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/cacheMemory",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/cacheMemory.als",
+  "lines": 44,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/checkCache",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/checkCache.als",
+  "lines": 35,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/checkFixedSize",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/checkFixedSize.als",
+  "lines": 29,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/fixedSizeMemory",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/fixedSizeMemory.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/memory/fixedSizeMemory_H",
+  "path": "reference/models/software-abstractions-book/chapter6/memory/fixedSizeMemory_H.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/ringElection1",
+  "path": "reference/models/software-abstractions-book/chapter6/ringElection1.als",
+  "lines": 58,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/software-abstractions-book/chapter6/ringElection2",
+  "path": "reference/models/software-abstractions-book/chapter6/ringElection2.als",
+  "lines": 75,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/utilities/messaging/messaging",
+  "path": "reference/models/utilities/messaging/messaging.als",
+  "lines": 229,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/utilities/time/overlapping-ranges",
+  "path": "reference/models/utilities/time/overlapping-ranges.als",
+  "lines": 33,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/utilities/trace/trace",
+  "path": "reference/models/utilities/trace/trace.als",
+  "lines": 44,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/utilities/types/boolean",
+  "path": "reference/models/utilities/types/boolean.als",
+  "lines": 44,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/graph",
+  "path": "reference/models/utilities/types/graph.als",
+  "lines": 79,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/integer",
+  "path": "reference/models/utilities/types/integer.als",
+  "lines": 113,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/natural",
+  "path": "reference/models/utilities/types/natural.als",
+  "lines": 79,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/ordering",
+  "path": "reference/models/utilities/types/ordering.als",
+  "lines": 107,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "models/utilities/types/relation",
+  "path": "reference/models/utilities/types/relation.als",
+  "lines": 102,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/seqrel",
+  "path": "reference/models/utilities/types/seqrel.als",
+  "lines": 108,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/sequence",
+  "path": "reference/models/utilities/types/sequence.als",
+  "lines": 167,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/sequniv",
+  "path": "reference/models/utilities/types/sequniv.als",
+  "lines": 138,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/ternary",
+  "path": "reference/models/utilities/types/ternary.als",
+  "lines": 51,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "models/utilities/types/time",
+  "path": "reference/models/utilities/types/time.als",
+  "lines": 54,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/appendixA/addressBook1",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/addressBook1.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/addressBook2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/addressBook2.als",
+  "lines": 28,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/appendixA/barbers",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/barbers.als",
+  "lines": 10,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/appendixA/closure",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/closure.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/distribution",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/distribution.als",
+  "lines": 8,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/phones",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/phones.als",
+  "lines": 7,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/appendixA/prison",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/prison.als",
+  "lines": 18,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/properties",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/properties.als",
+  "lines": 24,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/ring",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/ring.als",
+  "lines": 10,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/spanning",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/spanning.als",
+  "lines": 18,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/tree",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/tree.als",
+  "lines": 8,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/tube",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/tube.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixA/undirected",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixA/undirected.als",
+  "lines": 12,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixE/p300-hotel",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixE/p300-hotel.als",
+  "lines": 67,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixE/p303-hotel",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixE/p303-hotel.als",
+  "lines": 71,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/appendixE/p306-hotel",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/appendixE/p306-hotel.als",
+  "lines": 74,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1a",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1a.als",
+  "lines": 13,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1b",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1b.als",
+  "lines": 15,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1c",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1c.als",
+  "lines": 16,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1d",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1d.als",
+  "lines": 16,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1e",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1e.als",
+  "lines": 15,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1f",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1f.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1g",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1g.als",
+  "lines": 30,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook1h",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook1h.als",
+  "lines": 65,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook2a",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook2a.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook2b",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook2b.als",
+  "lines": 19,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook2c",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook2c.als",
+  "lines": 19,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook2d",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook2d.als",
+  "lines": 20,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook2e",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook2e.als",
+  "lines": 57,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook3a",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3a.als",
+  "lines": 39,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook3b",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3b.als",
+  "lines": 77,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook3c",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3c.als",
+  "lines": 82,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter2/addressBook3d",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter2/addressBook3d.als",
+  "lines": 88,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter4/filesystem",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter4/filesystem.als",
+  "lines": 29,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter4/grandpa1",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter4/grandpa1.als",
+  "lines": 45,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter4/grandpa2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter4/grandpa2.als",
+  "lines": 39,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter4/grandpa3",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter4/grandpa3.als",
+  "lines": 71,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter4/lights",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter4/lights.als",
+  "lines": 42,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter5/addressBook",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter5/addressBook.als",
+  "lines": 27,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter5/lists",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter5/lists.als",
+  "lines": 24,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter5/sets1",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter5/sets1.als",
+  "lines": 17,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter5/sets2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter5/sets2.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/hotel1",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/hotel1.als",
+  "lines": 102,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/hotel2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/hotel2.als",
+  "lines": 111,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/hotel3",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/hotel3.als",
+  "lines": 93,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/hotel4",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/hotel4.als",
+  "lines": 104,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/mediaAssets",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/mediaAssets.als",
+  "lines": 118,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/memory/abstractMemory",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/abstractMemory.als",
+  "lines": 34,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/memory/cacheMemory",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/cacheMemory.als",
+  "lines": 44,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/memory/checkCache",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/checkCache.als",
+  "lines": 35,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/memory/checkFixedSize",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/checkFixedSize.als",
+  "lines": 29,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/memory/fixedSizeMemory",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/fixedSizeMemory.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/chapter6/memory/fixedSizeMemory_H",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/memory/fixedSizeMemory_H.als",
+  "lines": 22,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/book/chapter6/ringElection1",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/ringElection1.als",
+  "lines": 58,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/book/chapter6/ringElection2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/book/chapter6/ringElection2.als",
+  "lines": 75,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/dijkstra",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/dijkstra.als",
+  "lines": 119,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/messaging",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/messaging.als",
+  "lines": 214,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/opt_spantree",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/opt_spantree.als",
+  "lines": 191,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/peterson",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/peterson.als",
+  "lines": 207,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/ringlead",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/ringlead.als",
+  "lines": 149,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/s_ringlead",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/s_ringlead.als",
+  "lines": 154,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/stable_mutex_ring",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/stable_mutex_ring.als",
+  "lines": 197,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/stable_orient_ring",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/stable_orient_ring.als",
+  "lines": 91,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/algorithms/stable_ringlead",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/algorithms/stable_ringlead.als",
+  "lines": 181,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/chord",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/chord.als",
+  "lines": 262,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/chord2",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/chord2.als",
+  "lines": 275,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/chordbugmodel",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/chordbugmodel.als",
+  "lines": 233,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/com",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/com.als",
+  "lines": 97,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/firewire",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/firewire.als",
+  "lines": 385,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/case_studies/ins",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/case_studies/ins.als",
+  "lines": 116,
+  "temporal_hint": false,
+  "has_commands_hint": false
+ },
+ {
+  "id": "extra/examples/puzzles/handshake",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/puzzles/handshake.als",
+  "lines": 65,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/systems/file_system",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/systems/file_system.als",
+  "lines": 60,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/systems/javatypes_soundness",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/systems/javatypes_soundness.als",
+  "lines": 141,
+  "temporal_hint": true,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/systems/lists",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/systems/lists.als",
+  "lines": 49,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/systems/marksweepgc",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/systems/marksweepgc.als",
+  "lines": 84,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/systems/views",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/systems/views.als",
+  "lines": 218,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/temporal/buffer",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/temporal/buffer.als",
+  "lines": 76,
+  "temporal_hint": true,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/temporal/leader",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/temporal/leader.als",
+  "lines": 83,
+  "temporal_hint": true,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/temporal/leader_events",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/temporal/leader_events.als",
+  "lines": 100,
+  "temporal_hint": true,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/temporal/trash",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/temporal/trash.als",
+  "lines": 83,
+  "temporal_hint": true,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/toys/ceilingsAndFloors",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/toys/ceilingsAndFloors.als",
+  "lines": 47,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/toys/numbering",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/toys/numbering.als",
+  "lines": 130,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ },
+ {
+  "id": "extra/examples/tutorial/farmer",
+  "path": "reference/alloy-java/org.alloytools.alloy.extra/extra/models/examples/tutorial/farmer.als",
+  "lines": 92,
+  "temporal_hint": false,
+  "has_commands_hint": true
+ }
+]

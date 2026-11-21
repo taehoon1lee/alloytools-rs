@@ -1,0 +1,87 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter5/sets1",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 90.266,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Closed",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Closed",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 82.355,
+   "solve_ms": 6.33,
+   "total_ms": 88.685,
+   "stats": {
+    "primary_vars": 21,
+    "vars": 221,
+    "clauses": 376
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$Closed_s0": [
+       [
+        "Set$1"
+       ]
+      ],
+      "skolem:$Closed_s1": [
+       [
+        "Set$0"
+       ]
+      ],
+      "this/Element": [
+       [
+        "Element$0"
+       ],
+       [
+        "Element$1"
+       ],
+       [
+        "Element$2"
+       ]
+      ],
+      "this/Set": [
+       [
+        "Set$0"
+       ],
+       [
+        "Set$1"
+       ]
+      ],
+      "this/Set.elements": [
+       [
+        "Set$0",
+        "Element$1"
+       ],
+       [
+        "Set$0",
+        "Element$2"
+       ],
+       [
+        "Set$1",
+        "Element$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

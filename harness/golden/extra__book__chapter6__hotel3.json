@@ -1,0 +1,479 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/hotel3",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 137.182,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoBadEntry",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoBadEntry for 5 but 3 Room, 3 Guest, 5 Time, 4 Event",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 276.943,
+   "solve_ms": 205.609,
+   "total_ms": 482.552,
+   "stats": {
+    "primary_vars": 391,
+    "vars": 8852,
+    "clauses": 22119
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ko/Ord": [
+       [
+        "ko/Ord$0"
+       ]
+      ],
+      "ko/Ord.First": [
+       [
+        "ko/Ord$0",
+        "Key$0"
+       ]
+      ],
+      "ko/Ord.Next": [
+       [
+        "ko/Ord$0",
+        "Key$0",
+        "Key$1"
+       ],
+       [
+        "ko/Ord$0",
+        "Key$1",
+        "Key$2"
+       ],
+       [
+        "ko/Ord$0",
+        "Key$2",
+        "Key$3"
+       ],
+       [
+        "ko/Ord$0",
+        "Key$3",
+        "Key$4"
+       ]
+      ],
+      "skolem:$NoBadEntry_e": [
+       [
+        "Entry$0"
+       ]
+      ],
+      "this/Checkin": [
+       [
+        "Checkin$0"
+       ],
+       [
+        "Checkin$1"
+       ]
+      ],
+      "this/Checkout": [
+       [
+        "Checkout$0"
+       ]
+      ],
+      "this/Entry": [
+       [
+        "Entry$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "Checkin$0"
+       ],
+       [
+        "Checkin$1"
+       ],
+       [
+        "Checkout$0"
+       ],
+       [
+        "Entry$0"
+       ]
+      ],
+      "this/Event.guest": [
+       [
+        "Checkin$0",
+        "Guest$1"
+       ],
+       [
+        "Checkin$1",
+        "Guest$0"
+       ],
+       [
+        "Checkout$0",
+        "Guest$1"
+       ],
+       [
+        "Entry$0",
+        "Guest$1"
+       ]
+      ],
+      "this/Event.post": [
+       [
+        "Checkin$0",
+        "Time$1"
+       ],
+       [
+        "Checkin$1",
+        "Time$3"
+       ],
+       [
+        "Checkout$0",
+        "Time$2"
+       ],
+       [
+        "Entry$0",
+        "Time$4"
+       ]
+      ],
+      "this/Event.pre": [
+       [
+        "Checkin$0",
+        "Time$0"
+       ],
+       [
+        "Checkin$1",
+        "Time$2"
+       ],
+       [
+        "Checkout$0",
+        "Time$1"
+       ],
+       [
+        "Entry$0",
+        "Time$3"
+       ]
+      ],
+      "this/FrontDesk": [
+       [
+        "FrontDesk$0"
+       ]
+      ],
+      "this/FrontDesk.lastKey": [
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Key$1",
+        "Time$0"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Key$3",
+        "Time$1"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Key$3",
+        "Time$2"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Key$4",
+        "Time$3"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Key$4",
+        "Time$4"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$1",
+        "Key$0",
+        "Time$0"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$1",
+        "Key$0",
+        "Time$1"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$1",
+        "Key$0",
+        "Time$2"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$1",
+        "Key$0",
+        "Time$3"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$1",
+        "Key$0",
+        "Time$4"
+       ]
+      ],
+      "this/FrontDesk.occupant": [
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Guest$0",
+        "Time$3"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Guest$0",
+        "Time$4"
+       ],
+       [
+        "FrontDesk$0",
+        "Room$0",
+        "Guest$1",
+        "Time$1"
+       ]
+      ],
+      "this/Guest": [
+       [
+        "Guest$0"
+       ],
+       [
+        "Guest$1"
+       ]
+      ],
+      "this/Guest.keys": [
+       [
+        "Guest$0",
+        "Key$4",
+        "Time$3"
+       ],
+       [
+        "Guest$0",
+        "Key$4",
+        "Time$4"
+       ],
+       [
+        "Guest$1",
+        "Key$3",
+        "Time$1"
+       ],
+       [
+        "Guest$1",
+        "Key$3",
+        "Time$2"
+       ],
+       [
+        "Guest$1",
+        "Key$3",
+        "Time$3"
+       ],
+       [
+        "Guest$1",
+        "Key$3",
+        "Time$4"
+       ]
+      ],
+      "this/Key": [
+       [
+        "Key$0"
+       ],
+       [
+        "Key$1"
+       ],
+       [
+        "Key$2"
+       ],
+       [
+        "Key$3"
+       ],
+       [
+        "Key$4"
+       ]
+      ],
+      "this/Room": [
+       [
+        "Room$0"
+       ],
+       [
+        "Room$1"
+       ]
+      ],
+      "this/Room.currentKey": [
+       [
+        "Room$0",
+        "Key$1",
+        "Time$0"
+       ],
+       [
+        "Room$0",
+        "Key$1",
+        "Time$1"
+       ],
+       [
+        "Room$0",
+        "Key$1",
+        "Time$2"
+       ],
+       [
+        "Room$0",
+        "Key$1",
+        "Time$3"
+       ],
+       [
+        "Room$0",
+        "Key$3",
+        "Time$4"
+       ],
+       [
+        "Room$1",
+        "Key$0",
+        "Time$0"
+       ],
+       [
+        "Room$1",
+        "Key$0",
+        "Time$1"
+       ],
+       [
+        "Room$1",
+        "Key$0",
+        "Time$2"
+       ],
+       [
+        "Room$1",
+        "Key$0",
+        "Time$3"
+       ],
+       [
+        "Room$1",
+        "Key$0",
+        "Time$4"
+       ]
+      ],
+      "this/Room.keys": [
+       [
+        "Room$0",
+        "Key$1"
+       ],
+       [
+        "Room$0",
+        "Key$3"
+       ],
+       [
+        "Room$0",
+        "Key$4"
+       ],
+       [
+        "Room$1",
+        "Key$0"
+       ]
+      ],
+      "this/RoomKeyEvent": [
+       [
+        "Checkin$0"
+       ],
+       [
+        "Checkin$1"
+       ],
+       [
+        "Entry$0"
+       ]
+      ],
+      "this/RoomKeyEvent.key": [
+       [
+        "Checkin$0",
+        "Key$3"
+       ],
+       [
+        "Checkin$1",
+        "Key$4"
+       ],
+       [
+        "Entry$0",
+        "Key$3"
+       ]
+      ],
+      "this/RoomKeyEvent.room": [
+       [
+        "Checkin$0",
+        "Room$0"
+       ],
+       [
+        "Checkin$1",
+        "Room$0"
+       ],
+       [
+        "Entry$0",
+        "Room$0"
+       ]
+      ],
+      "this/Time": [
+       [
+        "Time$0"
+       ],
+       [
+        "Time$1"
+       ],
+       [
+        "Time$2"
+       ],
+       [
+        "Time$3"
+       ],
+       [
+        "Time$4"
+       ]
+      ],
+      "to/Ord": [
+       [
+        "to/Ord$0"
+       ]
+      ],
+      "to/Ord.First": [
+       [
+        "to/Ord$0",
+        "Time$0"
+       ]
+      ],
+      "to/Ord.Next": [
+       [
+        "to/Ord$0",
+        "Time$0",
+        "Time$1"
+       ],
+       [
+        "to/Ord$0",
+        "Time$1",
+        "Time$2"
+       ],
+       [
+        "to/Ord$0",
+        "Time$2",
+        "Time$3"
+       ],
+       [
+        "to/Ord$0",
+        "Time$3",
+        "Time$4"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,105 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook1e",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 87.868,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "add",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run add for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 95.559,
+   "solve_ms": 6.91,
+   "total_ms": 102.469,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 520,
+    "clauses": 916
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$add_a": [
+       [
+        "Addr$1"
+       ]
+      ],
+      "skolem:$add_b": [
+       [
+        "Book$1"
+       ]
+      ],
+      "skolem:$add_b\"": [
+       [
+        "Book$1"
+       ]
+      ],
+      "skolem:$add_n": [
+       [
+        "Name$1"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ],
+       [
+        "Book$1"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Name$1",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$0",
+        "Addr$0"
+       ],
+       [
+        "Book$1",
+        "Name$1",
+        "Addr$1"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

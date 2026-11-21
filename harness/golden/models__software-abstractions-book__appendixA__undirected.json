@@ -1,0 +1,80 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/appendixA/undirected",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 90.019,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "acyclic",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run acyclic for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 88.091,
+   "solve_ms": 4.451,
+   "total_ms": 92.542,
+   "stats": {
+    "primary_vars": 20,
+    "vars": 168,
+    "clauses": 264
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ],
+       [
+        "Node$3"
+       ]
+      ],
+      "this/Node.adjs": [
+       [
+        "Node$0",
+        "Node$3"
+       ],
+       [
+        "Node$1",
+        "Node$3"
+       ],
+       [
+        "Node$2",
+        "Node$2"
+       ],
+       [
+        "Node$3",
+        "Node$0"
+       ],
+       [
+        "Node$3",
+        "Node$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

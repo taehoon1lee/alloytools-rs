@@ -1,0 +1,149 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/file-system/file_system",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 90.779,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "check$1",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check check$1 for 5 expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 114.579,
+   "solve_ms": 9.525,
+   "total_ms": 124.104,
+   "stats": {
+    "primary_vars": 127,
+    "vars": 1695,
+    "clauses": 3439
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$NoDirAliases_o": [
+       [
+        "Dir$0"
+       ]
+      ],
+      "this/Cur": [],
+      "this/Dir": [
+       [
+        "Dir$0"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Dir.entries": [
+       [
+        "Root$0",
+        "DirEntry$0"
+       ],
+       [
+        "Root$0",
+        "DirEntry$1"
+       ]
+      ],
+      "this/Dir.parent": [
+       [
+        "Dir$0",
+        "Root$0"
+       ]
+      ],
+      "this/DirEntry": [
+       [
+        "DirEntry$0"
+       ],
+       [
+        "DirEntry$1"
+       ]
+      ],
+      "this/DirEntry.contents": [
+       [
+        "DirEntry$0",
+        "Dir$0"
+       ],
+       [
+        "DirEntry$1",
+        "Dir$0"
+       ]
+      ],
+      "this/DirEntry.name": [
+       [
+        "DirEntry$0",
+        "Name$0"
+       ],
+       [
+        "DirEntry$1",
+        "Name$1"
+       ]
+      ],
+      "this/File": [],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ],
+      "this/Object": [
+       [
+        "Dir$0"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "check$2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check check$2 for 5 expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 26.64,
+   "solve_ms": 9.485,
+   "total_ms": 36.125,
+   "stats": {
+    "primary_vars": 127,
+    "vars": 2322,
+    "clauses": 4548
+   }
+  }
+ ]
+}

@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/no-solution/trivial",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 87.755,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run run$1 expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 68.733,
+   "solve_ms": 0.074,
+   "total_ms": 68.808,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

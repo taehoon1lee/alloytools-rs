@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/memory/cacheMemory",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 97.039,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "LoadNotObservable",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check LoadNotObservable",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 115.197,
+   "solve_ms": 6.507,
+   "total_ms": 121.704,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 1649,
+    "clauses": 3160
+   }
+  }
+ ]
+}

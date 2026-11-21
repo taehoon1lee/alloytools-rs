@@ -1,0 +1,1041 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/distributed-hashtable/chordbugmodel",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 109.195,
+ "command_count": 6,
+ "commands": [
+  {
+   "index": 0,
+   "label": "ShowMe1Node",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMe1Node for 2 but 1 State, 1 Node expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 114.272,
+   "solve_ms": 5.387,
+   "total_ms": 119.659,
+   "stats": {
+    "primary_vars": 29,
+    "vars": 384,
+    "clauses": 576
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "ShowMeGood",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMeGood for 4 but 1 State, 2 Node expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 45.484,
+   "solve_ms": 8.512,
+   "total_ms": 53.996,
+   "stats": {
+    "primary_vars": 149,
+    "vars": 3428,
+    "clauses": 6006
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ],
+       [
+        "Id$3"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$3"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ],
+       [
+        "Id$2",
+        "Id$1"
+       ],
+       [
+        "Id$3",
+        "Id$2"
+       ]
+      ],
+      "this/Node": [],
+      "this/Node.id": [],
+      "this/NodeData": [],
+      "this/NodeData.closest_preceding_finger": [],
+      "this/NodeData.find_successor": [],
+      "this/NodeData.finger": [],
+      "this/NodeData.next": [],
+      "this/State": [],
+      "this/State.active": [],
+      "this/State.data": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "ShowMeCorrectSuccessorEg",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMeCorrectSuccessorEg for 3 but 1 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 28.597,
+   "solve_ms": 28.057,
+   "total_ms": 56.653,
+   "stats": {
+    "primary_vars": 130,
+    "vars": 2586,
+    "clauses": 4748
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$2"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ],
+       [
+        "Id$2",
+        "Id$1"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$0"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ],
+       [
+        "NodeData$2"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Node$2"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ],
+       [
+        "State$0",
+        "Node$2"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$2"
+       ],
+       [
+        "State$0",
+        "Node$1",
+        "NodeData$0"
+       ],
+       [
+        "State$0",
+        "Node$2",
+        "NodeData$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 3,
+   "label": "ShowMe3",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMe3 for 5 but 1 State expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 64.486,
+   "solve_ms": 27.985,
+   "total_ms": 92.471,
+   "stats": {
+    "primary_vars": 496,
+    "vars": 14284,
+    "clauses": 26634
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ],
+       [
+        "Id$3"
+       ],
+       [
+        "Id$4"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$4"
+       ],
+       [
+        "Id$1",
+        "Id$2"
+       ],
+       [
+        "Id$2",
+        "Id$0"
+       ],
+       [
+        "Id$3",
+        "Id$1"
+       ],
+       [
+        "Id$4",
+        "Id$3"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ],
+       [
+        "NodeData$2"
+       ],
+       [
+        "NodeData$3"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$3",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$4",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$3",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$4",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$3",
+        "Node$2"
+       ],
+       [
+        "NodeData$0",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$4",
+        "Node$2"
+       ],
+       [
+        "NodeData$3",
+        "Id$4",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$3",
+        "Node$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ],
+       [
+        "State$0",
+        "Node$2"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ],
+       [
+        "State$0",
+        "Node$1",
+        "NodeData$2"
+       ],
+       [
+        "State$0",
+        "Node$2",
+        "NodeData$3"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "FindSuccessorWorks",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run FindSuccessorWorks for 4 but 1 State expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 47.625,
+   "solve_ms": 583.66,
+   "total_ms": 631.285,
+   "stats": {
+    "primary_vars": 282,
+    "vars": 14938,
+    "clauses": 25856
+   }
+  },
+  {
+   "index": 5,
+   "label": "StrongerFindSuccessorWorks",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check StrongerFindSuccessorWorks for 4 but 1 State expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 10.858,
+   "solve_ms": 3.249,
+   "total_ms": 14.107,
+   "stats": {
+    "primary_vars": 282,
+    "vars": 4949,
+    "clauses": 9557
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$FindSuccessorIsCorrect_i": [
+       [
+        "Id$0"
+       ]
+      ],
+      "skolem:$FindSuccessorIsCorrect_n": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$StrongerFindSuccessorWorks_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$1"
+       ],
+       [
+        "Node$1",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/sequence",
+ "status": "type_error",
+ "error": {
+  "kind": "type_error",
+  "line": 125,
+  "col": 18,
+  "in_file": "sequence.als",
+  "msg": "Name cannot be resolved; possible incorrect function/predicate call; perhaps you used ( ) when you should have used [ ]\n\nThis cannot be a correct call to pred this/add.\nThe parameters are\n  s: {this/Seq}\n  e: {this/elem}\n  added: {this/Seq}\nso the arguments cannot be\n  this/inds[s] (type = {this/SeqIdx})\n  Int[1] (type = {Int})\n\nThis cannot be a correct call to fun integer/add.\nThe parameters are\n  n1: {Int}\n  n2: {Int}\nso the arguments cannot be\n  this/inds[s] (type = {this/SeqIdx})\n  Int[1] (type = {Int})"
+ },
+ "parse_ms": 120.473,
+ "commands": []
+}

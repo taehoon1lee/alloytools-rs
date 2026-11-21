@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/trace/trace",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 116.576,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "total",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check total",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 91.924,
+   "solve_ms": 1.211,
+   "total_ms": 93.135,
+   "stats": {
+    "primary_vars": 3,
+    "vars": 28,
+    "clauses": 31
+   }
+  }
+ ]
+}

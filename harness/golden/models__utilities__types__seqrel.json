@@ -1,0 +1,15 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/seqrel",
+ "status": "type_error",
+ "error": {
+  "kind": "type_error",
+  "line": 96,
+  "col": 7,
+  "in_file": "seqrel.als",
+  "msg": "This expression failed to be typechecked line 96, column 7 (96,11), filename=D:\\sw\\alloytoolRS\\reference\\models\\utilities\\types\\seqrel.als"
+ },
+ "parse_ms": 150.653,
+ "commands": []
+}

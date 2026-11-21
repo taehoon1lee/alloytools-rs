@@ -1,0 +1,2 @@
+time,rev,scope,files,parse,commands,scored,verdict,perf,rust_s,java_s,regressions
+2026-11-21T16:35:48,-,partial,9,0,0,0,0,0,0.0,0.0,0

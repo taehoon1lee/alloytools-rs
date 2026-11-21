@@ -1,0 +1,144 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/money",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 104.494,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 5 int",
+   "overall": -1,
+   "bitwidth": 5,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 156.599,
+   "solve_ms": 175.215,
+   "total_ms": 331.815,
+   "stats": {
+    "primary_vars": 256,
+    "vars": 9779,
+    "clauses": 29620
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/D": [
+       [
+        "D$0"
+       ]
+      ],
+      "this/E": [
+       [
+        "E$0"
+       ]
+      ],
+      "this/M": [
+       [
+        "M$0"
+       ]
+      ],
+      "this/N": [
+       [
+        "N$0"
+       ]
+      ],
+      "this/Num": [
+       [
+        "D$0"
+       ],
+       [
+        "E$0"
+       ],
+       [
+        "M$0"
+       ],
+       [
+        "N$0"
+       ],
+       [
+        "O$0"
+       ],
+       [
+        "R$0"
+       ],
+       [
+        "S$0"
+       ],
+       [
+        "Y$0"
+       ]
+      ],
+      "this/Num.val": [
+       [
+        "D$0",
+        "7"
+       ],
+       [
+        "E$0",
+        "5"
+       ],
+       [
+        "M$0",
+        "1"
+       ],
+       [
+        "N$0",
+        "6"
+       ],
+       [
+        "O$0",
+        "0"
+       ],
+       [
+        "R$0",
+        "8"
+       ],
+       [
+        "S$0",
+        "9"
+       ],
+       [
+        "Y$0",
+        "2"
+       ]
+      ],
+      "this/O": [
+       [
+        "O$0"
+       ]
+      ],
+      "this/R": [
+       [
+        "R$0"
+       ]
+      ],
+      "this/S": [
+       [
+        "S$0"
+       ]
+      ],
+      "this/Y": [
+       [
+        "Y$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

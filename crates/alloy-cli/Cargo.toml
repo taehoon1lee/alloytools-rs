@@ -1,0 +1,14 @@
+[package]
+name = "alloy-cli"
+version.workspace = true
+edition.workspace = true
+description = "alloy-rs command line; implements the harness JSON protocol (harness/SCHEMA.md)"
+
+[[bin]]
+name = "alloy-rs"
+path = "src/main.rs"
+
+[dependencies]
+alloy-core = { path = "../alloy-core" }
+alloy-translate = { path = "../alloy-translate" }
+serde_json = { workspace = true }

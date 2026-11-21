@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/addressBook1",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 86.419,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 91.114,
+   "solve_ms": 6.992,
+   "total_ms": 98.106,
+   "stats": {
+    "primary_vars": 27,
+    "vars": 198,
+    "clauses": 307
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ],
+       [
+        "Addr$2"
+       ]
+      ],
+      "this/Alias": [
+       [
+        "Alias$0"
+       ]
+      ],
+      "this/Group": [
+       [
+        "Group$0"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Group$0"
+       ]
+      ],
+      "this/Name.address": [
+       [
+        "Alias$0",
+        "Addr$0"
+       ],
+       [
+        "Alias$0",
+        "Addr$1"
+       ],
+       [
+        "Alias$0",
+        "Group$0"
+       ],
+       [
+        "Group$0",
+        "Addr$2"
+       ],
+       [
+        "Group$0",
+        "Group$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

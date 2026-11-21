@@ -1,0 +1,61 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/properties",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 92.856,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 117.379,
+   "solve_ms": 22.761,
+   "total_ms": 140.14,
+   "stats": {
+    "primary_vars": 256,
+    "vars": 8615,
+    "clauses": 16583
+   }
+  },
+  {
+   "index": 1,
+   "label": "ReformulateNonEmptinessOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check ReformulateNonEmptinessOK",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 11.329,
+   "solve_ms": 0.093,
+   "total_ms": 11.422,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

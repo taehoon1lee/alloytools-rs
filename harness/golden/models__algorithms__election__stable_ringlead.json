@@ -1,0 +1,1184 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/election/stable_ringlead",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 207.935,
+ "command_count": 6,
+ "commands": [
+  {
+   "index": 0,
+   "label": "ConvergingRun",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ConvergingRun for 3 but 4 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 201.847,
+   "solve_ms": 32.811,
+   "total_ms": 234.658,
+   "stats": {
+    "primary_vars": 70,
+    "vars": 3897,
+    "clauses": 12271
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "po/Ord": [
+       [
+        "po/Ord$0"
+       ]
+      ],
+      "po/Ord.First": [
+       [
+        "po/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "po/Ord.Next": [
+       [
+        "po/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "po/Ord$0",
+        "Process$1",
+        "Process$2"
+       ]
+      ],
+      "skolem:$ConvergingRun_t": [
+       [
+        "State$3"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ]
+      ],
+      "this/State.running": [
+       [
+        "State$0",
+        "Process$1"
+       ],
+       [
+        "State$1",
+        "Process$1"
+       ],
+       [
+        "State$2",
+        "Process$2"
+       ]
+      ],
+      "this/State.val": [
+       [
+        "State$0",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$0",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$0",
+        "Process$2",
+        "Val$1"
+       ],
+       [
+        "State$1",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$1",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "State$1",
+        "Process$2",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$1",
+        "Val$0"
+       ],
+       [
+        "State$2",
+        "Process$2",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Val$0"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Val$2"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ],
+       [
+        "Val$2"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$2"
+       ],
+       [
+        "Val$2",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord": [
+       [
+        "vo/Ord$0"
+       ]
+      ],
+      "vo/Ord.First": [
+       [
+        "vo/Ord$0",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord.Next": [
+       [
+        "vo/Ord$0",
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "vo/Ord$0",
+        "Val$1",
+        "Val$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "DTraceWithoutLoop",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run DTraceWithoutLoop for 3 but 4 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 100.078,
+   "solve_ms": 55.863,
+   "total_ms": 155.941,
+   "stats": {
+    "primary_vars": 66,
+    "vars": 4670,
+    "clauses": 12930
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "po/Ord": [
+       [
+        "po/Ord$0"
+       ]
+      ],
+      "po/Ord.First": [
+       [
+        "po/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "po/Ord.Next": [
+       [
+        "po/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "po/Ord$0",
+        "Process$1",
+        "Process$2"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ]
+      ],
+      "this/State.running": [
+       [
+        "State$0",
+        "Process$0"
+       ],
+       [
+        "State$0",
+        "Process$1"
+       ],
+       [
+        "State$0",
+        "Process$2"
+       ],
+       [
+        "State$1",
+        "Process$0"
+       ],
+       [
+        "State$1",
+        "Process$1"
+       ],
+       [
+        "State$1",
+        "Process$2"
+       ],
+       [
+        "State$2",
+        "Process$0"
+       ],
+       [
+        "State$2",
+        "Process$1"
+       ]
+      ],
+      "this/State.val": [
+       [
+        "State$0",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$0",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$0",
+        "Process$2",
+        "Val$1"
+       ],
+       [
+        "State$1",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "State$1",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "State$1",
+        "Process$2",
+        "Val$2"
+       ],
+       [
+        "State$2",
+        "Process$0",
+        "Val$0"
+       ],
+       [
+        "State$2",
+        "Process$1",
+        "Val$0"
+       ],
+       [
+        "State$2",
+        "Process$2",
+        "Val$0"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Val$0"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ],
+       [
+        "Val$2"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$2"
+       ],
+       [
+        "Val$2",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord": [
+       [
+        "vo/Ord$0"
+       ]
+      ],
+      "vo/Ord.First": [
+       [
+        "vo/Ord$0",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord.Next": [
+       [
+        "vo/Ord$0",
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "vo/Ord$0",
+        "Val$1",
+        "Val$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "DBadLivenessTrace",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run DBadLivenessTrace for 3 but 4 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 54.016,
+   "solve_ms": 36.646,
+   "total_ms": 90.662,
+   "stats": {
+    "primary_vars": 70,
+    "vars": 4148,
+    "clauses": 12734
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "po/Ord": [
+       [
+        "po/Ord$0"
+       ]
+      ],
+      "po/Ord.First": [
+       [
+        "po/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "po/Ord.Next": [
+       [
+        "po/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "po/Ord$0",
+        "Process$1",
+        "Process$2"
+       ]
+      ],
+      "skolem:$BadLivenessHelper_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$2"
+       ],
+       [
+        "Process$1",
+        "Process$0"
+       ],
+       [
+        "Process$2",
+        "Process$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ]
+      ],
+      "this/State.running": [
+       [
+        "State$0",
+        "Process$0"
+       ],
+       [
+        "State$0",
+        "Process$1"
+       ],
+       [
+        "State$0",
+        "Process$2"
+       ],
+       [
+        "State$1",
+        "Process$0"
+       ],
+       [
+        "State$1",
+        "Process$1"
+       ],
+       [
+        "State$1",
+        "Process$2"
+       ],
+       [
+        "State$2",
+        "Process$0"
+       ],
+       [
+        "State$2",
+        "Process$1"
+       ],
+       [
+        "State$2",
+        "Process$2"
+       ]
+      ],
+      "this/State.val": [
+       [
+        "State$0",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "State$0",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "State$0",
+        "Process$2",
+        "Val$2"
+       ],
+       [
+        "State$1",
+        "Process$0",
+        "Val$0"
+       ],
+       [
+        "State$1",
+        "Process$1",
+        "Val$0"
+       ],
+       [
+        "State$1",
+        "Process$2",
+        "Val$0"
+       ],
+       [
+        "State$2",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$2",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Val$2"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ],
+       [
+        "Val$2"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$2"
+       ],
+       [
+        "Val$2",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord": [
+       [
+        "vo/Ord$0"
+       ]
+      ],
+      "vo/Ord.First": [
+       [
+        "vo/Ord$0",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord.Next": [
+       [
+        "vo/Ord$0",
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "vo/Ord$0",
+        "Val$1",
+        "Val$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 3,
+   "label": "CTraceWithoutLoop",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run CTraceWithoutLoop for 3 but 5 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 42.615,
+   "solve_ms": 49.264,
+   "total_ms": 91.879,
+   "stats": {
+    "primary_vars": 78,
+    "vars": 3956,
+    "clauses": 12609
+   }
+  },
+  {
+   "index": 4,
+   "label": "CBadLivenessTrace",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run CBadLivenessTrace for 4 but 5 State expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 59.855,
+   "solve_ms": 55.349,
+   "total_ms": 115.203,
+   "stats": {
+    "primary_vars": 137,
+    "vars": 8698,
+    "clauses": 27376
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "po/Ord": [
+       [
+        "po/Ord$0"
+       ]
+      ],
+      "po/Ord.First": [
+       [
+        "po/Ord$0",
+        "Process$0"
+       ]
+      ],
+      "po/Ord.Next": [
+       [
+        "po/Ord$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "po/Ord$0",
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "po/Ord$0",
+        "Process$2",
+        "Process$3"
+       ]
+      ],
+      "skolem:$BadLivenessHelper_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "so/Ord$0",
+        "State$3",
+        "State$4"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ],
+       [
+        "Process$3"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$3"
+       ],
+       [
+        "Process$3",
+        "Process$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ]
+      ],
+      "this/State.running": [
+       [
+        "State$0",
+        "Process$0"
+       ],
+       [
+        "State$1",
+        "Process$2"
+       ],
+       [
+        "State$2",
+        "Process$1"
+       ],
+       [
+        "State$3",
+        "Process$3"
+       ]
+      ],
+      "this/State.val": [
+       [
+        "State$0",
+        "Process$0",
+        "Val$3"
+       ],
+       [
+        "State$0",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$0",
+        "Process$2",
+        "Val$3"
+       ],
+       [
+        "State$0",
+        "Process$3",
+        "Val$1"
+       ],
+       [
+        "State$1",
+        "Process$0",
+        "Val$3"
+       ],
+       [
+        "State$1",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$1",
+        "Process$2",
+        "Val$3"
+       ],
+       [
+        "State$1",
+        "Process$3",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$0",
+        "Val$3"
+       ],
+       [
+        "State$2",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$2",
+        "Process$2",
+        "Val$3"
+       ],
+       [
+        "State$2",
+        "Process$3",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Val$3"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Val$3"
+       ],
+       [
+        "State$3",
+        "Process$3",
+        "Val$1"
+       ],
+       [
+        "State$4",
+        "Process$0",
+        "Val$3"
+       ],
+       [
+        "State$4",
+        "Process$1",
+        "Val$1"
+       ],
+       [
+        "State$4",
+        "Process$2",
+        "Val$3"
+       ],
+       [
+        "State$4",
+        "Process$3",
+        "Val$1"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ],
+       [
+        "Val$2"
+       ],
+       [
+        "Val$3"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$2"
+       ],
+       [
+        "Val$2",
+        "Val$3"
+       ],
+       [
+        "Val$3",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord": [
+       [
+        "vo/Ord$0"
+       ]
+      ],
+      "vo/Ord.First": [
+       [
+        "vo/Ord$0",
+        "Val$0"
+       ]
+      ],
+      "vo/Ord.Next": [
+       [
+        "vo/Ord$0",
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "vo/Ord$0",
+        "Val$1",
+        "Val$2"
+       ],
+       [
+        "vo/Ord$0",
+        "Val$2",
+        "Val$3"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 5,
+   "label": "CMustConverge",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check CMustConverge for 3 but 4 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 35.497,
+   "solve_ms": 57.252,
+   "total_ms": 92.749,
+   "stats": {
+    "primary_vars": 66,
+    "vars": 4193,
+    "clauses": 12824
+   }
+  }
+ ]
+}

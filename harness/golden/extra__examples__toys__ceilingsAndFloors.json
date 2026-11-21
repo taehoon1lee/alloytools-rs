@@ -1,0 +1,248 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/toys/ceilingsAndFloors",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 115.552,
+ "command_count": 5,
+ "commands": [
+  {
+   "index": 0,
+   "label": "BelowToo",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check BelowToo for 2 expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 98.049,
+   "solve_ms": 4.588,
+   "total_ms": 102.638,
+   "stats": {
+    "primary_vars": 14,
+    "vars": 139,
+    "clauses": 208
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$BelowToo_m": [
+       [
+        "Man$1"
+       ]
+      ],
+      "this/Man": [
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ]
+      ],
+      "this/Man.ceiling": [
+       [
+        "Man$0",
+        "Platform$1"
+       ],
+       [
+        "Man$1",
+        "Platform$1"
+       ]
+      ],
+      "this/Man.floor": [
+       [
+        "Man$0",
+        "Platform$1"
+       ],
+       [
+        "Man$1",
+        "Platform$0"
+       ]
+      ],
+      "this/Platform": [
+       [
+        "Platform$0"
+       ],
+       [
+        "Platform$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "BelowToo\"",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check BelowToo\" for 2 expect 0",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 12.267,
+   "solve_ms": 1.219,
+   "total_ms": 13.486,
+   "stats": {
+    "primary_vars": 14,
+    "vars": 187,
+    "clauses": 305
+   }
+  },
+  {
+   "index": 2,
+   "label": "BelowToo\"",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check BelowToo\" for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 8.477,
+   "solve_ms": 6.713,
+   "total_ms": 15.19,
+   "stats": {
+    "primary_vars": 27,
+    "vars": 291,
+    "clauses": 517
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$BelowToo\"_m": [
+       [
+        "Man$2"
+       ]
+      ],
+      "this/Man": [
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ],
+       [
+        "Man$2"
+       ]
+      ],
+      "this/Man.ceiling": [
+       [
+        "Man$0",
+        "Platform$2"
+       ],
+       [
+        "Man$1",
+        "Platform$0"
+       ],
+       [
+        "Man$2",
+        "Platform$0"
+       ]
+      ],
+      "this/Man.floor": [
+       [
+        "Man$0",
+        "Platform$0"
+       ],
+       [
+        "Man$1",
+        "Platform$2"
+       ],
+       [
+        "Man$2",
+        "Platform$1"
+       ]
+      ],
+      "this/Platform": [
+       [
+        "Platform$0"
+       ],
+       [
+        "Platform$1"
+       ],
+       [
+        "Platform$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 3,
+   "label": "BelowToo\"\"",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check BelowToo\"\" for 6 expect 0",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 19.08,
+   "solve_ms": 33.565,
+   "total_ms": 52.645,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 2176,
+    "clauses": 3928
+   }
+  },
+  {
+   "index": 4,
+   "label": "BelowToo\"\"",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check BelowToo\"\" for 10 expect 0",
+   "overall": 10,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 49.898,
+   "solve_ms": 3651.002,
+   "total_ms": 3700.9,
+   "stats": {
+    "primary_vars": 230,
+    "vars": 7582,
+    "clauses": 14286
+   }
+  }
+ ]
+}

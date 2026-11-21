@@ -1,0 +1,61 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/systems/javatypes_soundness",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 173.383,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TypeSoundness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check TypeSoundness for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 254.835,
+   "solve_ms": 443.213,
+   "total_ms": 698.048,
+   "stats": {
+    "primary_vars": 308,
+    "vars": 7581,
+    "clauses": 14302
+   }
+  },
+  {
+   "index": 1,
+   "label": "TypeSoundness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check TypeSoundness for 2 State, 1 Assignment, 1 Statement, 5 Interface, 5 Class, 1 Null, 7 Object, 12 Expr, 3 Field, 3 Slot expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 1074.716,
+   "solve_ms": 0.113,
+   "total_ms": 1074.829,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

@@ -1,0 +1,171 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/typography/paragraph-numbering",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 125.103,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "PreserveForest",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check PreserveForest for 4 expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 152.769,
+   "solve_ms": 78.744,
+   "total_ms": 231.513,
+   "stats": {
+    "primary_vars": 240,
+    "vars": 3745,
+    "clauses": 7383
+   }
+  },
+  {
+   "index": 1,
+   "label": "AddNeverReduces",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check AddNeverReduces for 5 expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 46.262,
+   "solve_ms": 12.104,
+   "total_ms": 58.366,
+   "stats": {
+    "primary_vars": 420,
+    "vars": 5862,
+    "clauses": 13037
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$AddNeverReduces_s": [
+       [
+        "NumberedState$1"
+       ]
+      ],
+      "skolem:$AddNeverReduces_s\"": [
+       [
+        "NumberedState$0"
+       ]
+      ],
+      "skolem:$AddNeverReduces_y": [
+       [
+        "NumberedStyle$0"
+       ]
+      ],
+      "skolem:$AddNeverReduces_z": [
+       [
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/NumberedState": [
+       [
+        "NumberedState$0"
+       ],
+       [
+        "NumberedState$1"
+       ]
+      ],
+      "this/NumberedState.value": [
+       [
+        "NumberedState$0",
+        "NumberedStyle$0",
+        "Value$1"
+       ],
+       [
+        "NumberedState$1",
+        "NumberedStyle$0",
+        "Value$0"
+       ]
+      ],
+      "this/NumberedStyle": [
+       [
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/NumberedStyle.initial": [
+       [
+        "NumberedStyle$0",
+        "Value$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "NumberedState$0"
+       ],
+       [
+        "NumberedState$1"
+       ]
+      ],
+      "this/State.ancestors": [
+       [
+        "NumberedState$0",
+        "NumberedStyle$0",
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/State.context": [
+       [
+        "NumberedState$0",
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/Style": [
+       [
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/Style.parents": [],
+      "this/Style.replaces": [
+       [
+        "NumberedStyle$0",
+        "NumberedStyle$0"
+       ]
+      ],
+      "this/Value": [
+       [
+        "Value$0"
+       ],
+       [
+        "Value$1"
+       ]
+      ],
+      "this/Value.next": [
+       [
+        "Value$0",
+        "Value$0"
+       ],
+       [
+        "Value$1",
+        "Value$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

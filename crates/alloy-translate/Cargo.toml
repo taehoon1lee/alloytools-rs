@@ -1,0 +1,9 @@
+[package]
+name = "alloy-translate"
+version.workspace = true
+edition.workspace = true
+description = "Alloy AST -> Kodkod translation and solving (port of edu.mit.csail.sdg.translator)"
+
+[dependencies]
+alloy-core = { path = "../alloy-core" }
+kodkod = { path = "../kodkod" }

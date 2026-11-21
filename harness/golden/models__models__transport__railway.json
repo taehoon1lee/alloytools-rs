@@ -1,0 +1,251 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/transport/railway",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 99.189,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "PolicyWorks",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check PolicyWorks for 2 Train, 1 GateState, 2 TrainState, 4 Seg expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 107.391,
+   "solve_ms": 26.776,
+   "total_ms": 134.168,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1053,
+    "clauses": 1761
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$PolicyWorks_g": [
+       [
+        "GateState$0"
+       ]
+      ],
+      "skolem:$PolicyWorks_ts": [
+       [
+        "Train$0"
+       ]
+      ],
+      "skolem:$PolicyWorks_x": [
+       [
+        "TrainState$1"
+       ]
+      ],
+      "skolem:$PolicyWorks_x\"": [
+       [
+        "TrainState$0"
+       ]
+      ],
+      "skolem:$Safe_s": [
+       [
+        "Seg$0"
+       ]
+      ],
+      "this/GateState": [
+       [
+        "GateState$0"
+       ]
+      ],
+      "this/GateState.closed": [],
+      "this/Seg": [
+       [
+        "Seg$0"
+       ],
+       [
+        "Seg$1"
+       ],
+       [
+        "Seg$2"
+       ],
+       [
+        "Seg$3"
+       ]
+      ],
+      "this/Seg.next": [
+       [
+        "Seg$2",
+        "Seg$1"
+       ]
+      ],
+      "this/Seg.overlaps": [
+       [
+        "Seg$0",
+        "Seg$0"
+       ],
+       [
+        "Seg$0",
+        "Seg$1"
+       ],
+       [
+        "Seg$0",
+        "Seg$3"
+       ],
+       [
+        "Seg$1",
+        "Seg$0"
+       ],
+       [
+        "Seg$1",
+        "Seg$1"
+       ],
+       [
+        "Seg$2",
+        "Seg$2"
+       ],
+       [
+        "Seg$3",
+        "Seg$0"
+       ],
+       [
+        "Seg$3",
+        "Seg$3"
+       ]
+      ],
+      "this/Train": [
+       [
+        "Train$0"
+       ],
+       [
+        "Train$1"
+       ]
+      ],
+      "this/TrainState": [
+       [
+        "TrainState$0"
+       ],
+       [
+        "TrainState$1"
+       ]
+      ],
+      "this/TrainState.occupied": [
+       [
+        "TrainState$0",
+        "Seg$1"
+       ],
+       [
+        "TrainState$0",
+        "Seg$3"
+       ],
+       [
+        "TrainState$1",
+        "Seg$2"
+       ],
+       [
+        "TrainState$1",
+        "Seg$3"
+       ]
+      ],
+      "this/TrainState.on": [
+       [
+        "TrainState$0",
+        "Train$0",
+        "Seg$1"
+       ],
+       [
+        "TrainState$0",
+        "Train$1",
+        "Seg$3"
+       ],
+       [
+        "TrainState$1",
+        "Train$0",
+        "Seg$2"
+       ],
+       [
+        "TrainState$1",
+        "Train$1",
+        "Seg$3"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "TrainsMoveLegal",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TrainsMoveLegal for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 19.734,
+   "solve_ms": 2.969,
+   "total_ms": 22.702,
+   "stats": {
+    "primary_vars": 87,
+    "vars": 1011,
+    "clauses": 1805
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$TrainsMoveLegal_g": [
+       [
+        "GateState$0"
+       ]
+      ],
+      "skolem:$TrainsMoveLegal_ts": [],
+      "skolem:$TrainsMoveLegal_x": [
+       [
+        "TrainState$0"
+       ]
+      ],
+      "skolem:$TrainsMoveLegal_x\"": [
+       [
+        "TrainState$0"
+       ]
+      ],
+      "this/GateState": [
+       [
+        "GateState$0"
+       ]
+      ],
+      "this/GateState.closed": [],
+      "this/Seg": [],
+      "this/Seg.next": [],
+      "this/Seg.overlaps": [],
+      "this/Train": [],
+      "this/TrainState": [
+       [
+        "TrainState$0"
+       ]
+      ],
+      "this/TrainState.occupied": [],
+      "this/TrainState.on": []
+     }
+    ]
+   }
+  }
+ ]
+}

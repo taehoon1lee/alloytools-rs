@@ -1,0 +1,126 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter4/grandpa2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 92.4,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoSelfFather",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoSelfFather",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 96.316,
+   "solve_ms": 4.703,
+   "total_ms": 101.019,
+   "stats": {
+    "primary_vars": 45,
+    "vars": 549,
+    "clauses": 845
+   }
+  },
+  {
+   "index": 1,
+   "label": "ownGrandpa",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run ownGrandpa for 4 Person",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 14.923,
+   "solve_ms": 5.227,
+   "total_ms": 20.15,
+   "stats": {
+    "primary_vars": 76,
+    "vars": 1158,
+    "clauses": 1802
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$ownGrandpa_p": [
+       [
+        "Man$0"
+       ]
+      ],
+      "this/Man": [
+       [
+        "Man$0"
+       ]
+      ],
+      "this/Man.wife": [
+       [
+        "Man$0",
+        "Woman$1"
+       ]
+      ],
+      "this/Person": [
+       [
+        "Man$0"
+       ],
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ],
+      "this/Person.father": [
+       [
+        "Woman$0",
+        "Man$0"
+       ]
+      ],
+      "this/Person.mother": [
+       [
+        "Man$0",
+        "Woman$1"
+       ],
+       [
+        "Woman$0",
+        "Woman$1"
+       ]
+      ],
+      "this/Woman": [
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ],
+      "this/Woman.husband": [
+       [
+        "Woman$1",
+        "Man$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

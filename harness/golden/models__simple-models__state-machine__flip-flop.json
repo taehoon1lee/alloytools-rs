@@ -1,0 +1,273 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/state-machine/flip-flop",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 151.926,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 10",
+   "overall": 10,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 121.908,
+   "solve_ms": 4.788,
+   "total_ms": 126.696,
+   "stats": {
+    "primary_vars": 40,
+    "vars": 164,
+    "clauses": 227
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "C$0"
+       ]
+      ],
+      "open$3/Ord.Next": [],
+      "open$4/Ord": [
+       [
+        "open$4/Ord$0"
+       ]
+      ],
+      "open$4/Ord.First": [
+       [
+        "open$4/Ord$0",
+        "On$0"
+       ]
+      ],
+      "open$4/Ord.Next": [
+       [
+        "open$4/Ord$0",
+        "On$0",
+        "Off$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Trace$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Trace$0",
+        "Trace$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$1",
+        "Trace$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$2",
+        "Trace$3"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$3",
+        "Trace$4"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$4",
+        "Trace$5"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$5",
+        "Trace$6"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$6",
+        "Trace$7"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$7",
+        "Trace$8"
+       ],
+       [
+        "ordering/Ord$0",
+        "Trace$8",
+        "Trace$9"
+       ]
+      ],
+      "skolem:$show_t": [],
+      "this/C": [
+       [
+        "C$0"
+       ]
+      ],
+      "this/Event": [
+       [
+        "C$0"
+       ]
+      ],
+      "this/Off": [
+       [
+        "Off$0"
+       ]
+      ],
+      "this/On": [
+       [
+        "On$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "Off$0"
+       ],
+       [
+        "On$0"
+       ]
+      ],
+      "this/Trace": [
+       [
+        "Trace$0"
+       ],
+       [
+        "Trace$1"
+       ],
+       [
+        "Trace$2"
+       ],
+       [
+        "Trace$3"
+       ],
+       [
+        "Trace$4"
+       ],
+       [
+        "Trace$5"
+       ],
+       [
+        "Trace$6"
+       ],
+       [
+        "Trace$7"
+       ],
+       [
+        "Trace$8"
+       ],
+       [
+        "Trace$9"
+       ]
+      ],
+      "this/Trace.event": [
+       [
+        "Trace$0",
+        "C$0"
+       ],
+       [
+        "Trace$1",
+        "C$0"
+       ],
+       [
+        "Trace$2",
+        "C$0"
+       ],
+       [
+        "Trace$3",
+        "C$0"
+       ],
+       [
+        "Trace$4",
+        "C$0"
+       ],
+       [
+        "Trace$5",
+        "C$0"
+       ],
+       [
+        "Trace$6",
+        "C$0"
+       ],
+       [
+        "Trace$7",
+        "C$0"
+       ],
+       [
+        "Trace$8",
+        "C$0"
+       ]
+      ],
+      "this/Trace.state": [
+       [
+        "Trace$0",
+        "On$0"
+       ],
+       [
+        "Trace$1",
+        "Off$0"
+       ],
+       [
+        "Trace$2",
+        "On$0"
+       ],
+       [
+        "Trace$3",
+        "Off$0"
+       ],
+       [
+        "Trace$4",
+        "On$0"
+       ],
+       [
+        "Trace$5",
+        "Off$0"
+       ],
+       [
+        "Trace$6",
+        "On$0"
+       ],
+       [
+        "Trace$7",
+        "Off$0"
+       ],
+       [
+        "Trace$8",
+        "On$0"
+       ],
+       [
+        "Trace$9",
+        "Off$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

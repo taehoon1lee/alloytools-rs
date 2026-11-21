@@ -1,0 +1,572 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/algorithms/stable_orient_ring",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 192.28,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "SomeState",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SomeState for 1 but 2 Tick, 2 Bool, 3 Process expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 166.55,
+   "solve_ms": 27.905,
+   "total_ms": 194.455,
+   "stats": {
+    "primary_vars": 95,
+    "vars": 1506,
+    "clauses": 2896
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "bool/Bool": [
+       [
+        "bool/False$0"
+       ],
+       [
+        "bool/True$0"
+       ]
+      ],
+      "bool/False": [
+       [
+        "bool/False$0"
+       ]
+      ],
+      "bool/True": [
+       [
+        "bool/True$0"
+       ]
+      ],
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "Tick$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "Tick$0",
+        "Tick$1"
+       ]
+      ],
+      "skolem:$SomeState_t": [
+       [
+        "Tick$1"
+       ]
+      ],
+      "skolem:$ring_n": [
+       [
+        "Process$0"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.AP1": [
+       [
+        "Process$0",
+        "Process$2"
+       ],
+       [
+        "Process$1",
+        "Process$0"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Process.AP2": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$1"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Tick": [
+       [
+        "Tick$0"
+       ],
+       [
+        "Tick$1"
+       ]
+      ],
+      "this/Tick.S": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/False$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/False$0"
+       ]
+      ],
+      "this/Tick.T": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/False$0"
+       ]
+      ],
+      "this/Tick.dir": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/False$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/True$0"
+       ]
+      ],
+      "this/Tick.ring_": [
+       [
+        "Tick$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "Process$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "Process$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Tick.runs": [
+       [
+        "Tick$0",
+        "Process$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "Closure",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check Closure for 1 but 2 Tick, 2 Bool, 3 Process expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 54.531,
+   "solve_ms": 13.275,
+   "total_ms": 67.806,
+   "stats": {
+    "primary_vars": 98,
+    "vars": 1598,
+    "clauses": 3074
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "bool/Bool": [
+       [
+        "bool/False$0"
+       ],
+       [
+        "bool/True$0"
+       ]
+      ],
+      "bool/False": [
+       [
+        "bool/False$0"
+       ]
+      ],
+      "bool/True": [
+       [
+        "bool/True$0"
+       ]
+      ],
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "Tick$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "Tick$0",
+        "Tick$1"
+       ]
+      ],
+      "skolem:$Closure_t": [
+       [
+        "Tick$0"
+       ]
+      ],
+      "skolem:$ring_n": [
+       [
+        "Process$1"
+       ]
+      ],
+      "skolem:$ring_n'": [
+       [
+        "Process$0"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ]
+      ],
+      "this/Process.AP1": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Process.AP2": [
+       [
+        "Process$0",
+        "Process$2"
+       ],
+       [
+        "Process$1",
+        "Process$0"
+       ],
+       [
+        "Process$2",
+        "Process$1"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Process$2",
+        "Process$0"
+       ]
+      ],
+      "this/Tick": [
+       [
+        "Tick$0"
+       ],
+       [
+        "Tick$1"
+       ]
+      ],
+      "this/Tick.S": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/False$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/False$0"
+       ]
+      ],
+      "this/Tick.T": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/False$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/False$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/False$0"
+       ]
+      ],
+      "this/Tick.dir": [
+       [
+        "Tick$0",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "bool/True$0"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "bool/False$0"
+       ]
+      ],
+      "this/Tick.ring_": [
+       [
+        "Tick$0",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Tick$0",
+        "Process$2",
+        "Process$0"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "Process$1"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "Process$2"
+       ],
+       [
+        "Tick$1",
+        "Process$2",
+        "Process$1"
+       ]
+      ],
+      "this/Tick.runs": [
+       [
+        "Tick$0",
+        "Process$0"
+       ],
+       [
+        "Tick$0",
+        "Process$2"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

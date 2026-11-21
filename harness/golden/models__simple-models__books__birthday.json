@@ -1,0 +1,216 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/books/birthday",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 93.707,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "AddWorks",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check AddWorks for 3 but 2 BirthdayBook expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 94.727,
+   "solve_ms": 5.811,
+   "total_ms": 100.538,
+   "stats": {
+    "primary_vars": 45,
+    "vars": 651,
+    "clauses": 1182
+   }
+  },
+  {
+   "index": 1,
+   "label": "DelIsUndo",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check DelIsUndo for 3 but 2 BirthdayBook expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 8.533,
+   "solve_ms": 2.559,
+   "total_ms": 11.091,
+   "stats": {
+    "primary_vars": 44,
+    "vars": 495,
+    "clauses": 974
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$DelIsUndo_bb1": [
+       [
+        "BirthdayBook$0"
+       ]
+      ],
+      "skolem:$DelIsUndo_bb2": [
+       [
+        "BirthdayBook$0"
+       ]
+      ],
+      "skolem:$DelIsUndo_bb3": [
+       [
+        "BirthdayBook$1"
+       ]
+      ],
+      "skolem:$DelIsUndo_d": [
+       [
+        "Date$0"
+       ]
+      ],
+      "skolem:$DelIsUndo_n": [
+       [
+        "Name$0"
+       ]
+      ],
+      "this/BirthdayBook": [
+       [
+        "BirthdayBook$0"
+       ],
+       [
+        "BirthdayBook$1"
+       ]
+      ],
+      "this/BirthdayBook.date": [
+       [
+        "BirthdayBook$0",
+        "Name$0",
+        "Date$0"
+       ]
+      ],
+      "this/BirthdayBook.known": [
+       [
+        "BirthdayBook$0",
+        "Name$0"
+       ]
+      ],
+      "this/Date": [
+       [
+        "Date$0"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "BusyDay",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run BusyDay for 3 but 1 BirthdayBook expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.384,
+   "solve_ms": 1.413,
+   "total_ms": 8.797,
+   "stats": {
+    "primary_vars": 26,
+    "vars": 189,
+    "clauses": 318
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$BusyDay_bb": [
+       [
+        "BirthdayBook$0"
+       ]
+      ],
+      "skolem:$BusyDay_cards": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ],
+      "skolem:$BusyDay_d": [
+       [
+        "Date$0"
+       ]
+      ],
+      "this/BirthdayBook": [
+       [
+        "BirthdayBook$0"
+       ]
+      ],
+      "this/BirthdayBook.date": [
+       [
+        "BirthdayBook$0",
+        "Name$0",
+        "Date$0"
+       ],
+       [
+        "BirthdayBook$0",
+        "Name$1",
+        "Date$0"
+       ]
+      ],
+      "this/BirthdayBook.known": [
+       [
+        "BirthdayBook$0",
+        "Name$0"
+       ],
+       [
+        "BirthdayBook$0",
+        "Name$1"
+       ]
+      ],
+      "this/Date": [
+       [
+        "Date$0"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

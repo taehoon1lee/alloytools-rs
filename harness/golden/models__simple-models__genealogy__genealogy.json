@@ -1,0 +1,153 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/genealogy/genealogy",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 100.129,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Show",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Show for 6 expect 1",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 110.932,
+   "solve_ms": 11.79,
+   "total_ms": 122.722,
+   "stats": {
+    "primary_vars": 86,
+    "vars": 2121,
+    "clauses": 3965
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$Show_p": [
+       [
+        "Woman$0"
+       ]
+      ],
+      "this/Adam": [
+       [
+        "Adam$0"
+       ]
+      ],
+      "this/Eve": [
+       [
+        "Eve$0"
+       ]
+      ],
+      "this/Man": [
+       [
+        "Adam$0"
+       ],
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ]
+      ],
+      "this/Person": [
+       [
+        "Adam$0"
+       ],
+       [
+        "Eve$0"
+       ],
+       [
+        "Man$0"
+       ],
+       [
+        "Man$1"
+       ],
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ],
+      "this/Person.parents": [
+       [
+        "Man$0",
+        "Adam$0"
+       ],
+       [
+        "Man$0",
+        "Eve$0"
+       ],
+       [
+        "Man$1",
+        "Adam$0"
+       ],
+       [
+        "Man$1",
+        "Eve$0"
+       ],
+       [
+        "Woman$0",
+        "Man$0"
+       ],
+       [
+        "Woman$0",
+        "Woman$1"
+       ],
+       [
+        "Woman$1",
+        "Adam$0"
+       ],
+       [
+        "Woman$1",
+        "Eve$0"
+       ]
+      ],
+      "this/Person.spouse": [
+       [
+        "Adam$0",
+        "Eve$0"
+       ],
+       [
+        "Eve$0",
+        "Adam$0"
+       ],
+       [
+        "Man$1",
+        "Woman$0"
+       ],
+       [
+        "Woman$0",
+        "Man$1"
+       ]
+      ],
+      "this/Woman": [
+       [
+        "Eve$0"
+       ],
+       [
+        "Woman$0"
+       ],
+       [
+        "Woman$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

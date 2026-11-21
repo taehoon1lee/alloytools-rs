@@ -1,0 +1,36 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/distributed-hashtable/chord2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 153.781,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "FindSuccessorWorks",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check FindSuccessorWorks for 4 but 1 State, 3 Node, 3 NodeData expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 170.654,
+   "solve_ms": 171.043,
+   "total_ms": 341.697,
+   "stats": {
+    "primary_vars": 218,
+    "vars": 11053,
+    "clauses": 19192
+   }
+  }
+ ]
+}

@@ -1,0 +1,550 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/mutex/dijkstra-K-state",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 161.744,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TraceShorterThanMaxSimpleLoop",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TraceShorterThanMaxSimpleLoop for 7 but 2 Process, 3 Val expect 1",
+   "overall": 7,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 138.354,
+   "solve_ms": 9.208,
+   "total_ms": 147.562,
+   "stats": {
+    "primary_vars": 87,
+    "vars": 1543,
+    "clauses": 2729
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/FirstProc": [
+       [
+        "FirstProc$0"
+       ]
+      ],
+      "this/Process": [
+       [
+        "FirstProc$0"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "FirstProc$0",
+        "FirstProc$0"
+       ]
+      ],
+      "this/Tick": [
+       [
+        "Tick$0"
+       ],
+       [
+        "Tick$1"
+       ],
+       [
+        "Tick$2"
+       ],
+       [
+        "Tick$3"
+       ],
+       [
+        "Tick$4"
+       ],
+       [
+        "Tick$5"
+       ],
+       [
+        "Tick$6"
+       ]
+      ],
+      "this/Tick.priv": [
+       [
+        "Tick$0",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$1",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$2",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$3",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$4",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$5",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$6",
+        "FirstProc$0"
+       ]
+      ],
+      "this/Tick.runs": [
+       [
+        "Tick$0",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$5",
+        "FirstProc$0"
+       ]
+      ],
+      "this/Tick.val": [
+       [
+        "Tick$0",
+        "FirstProc$0",
+        "Val$0"
+       ],
+       [
+        "Tick$1",
+        "FirstProc$0",
+        "Val$1"
+       ],
+       [
+        "Tick$2",
+        "FirstProc$0",
+        "Val$1"
+       ],
+       [
+        "Tick$3",
+        "FirstProc$0",
+        "Val$1"
+       ],
+       [
+        "Tick$4",
+        "FirstProc$0",
+        "Val$1"
+       ],
+       [
+        "Tick$5",
+        "FirstProc$0",
+        "Val$1"
+       ],
+       [
+        "Tick$6",
+        "FirstProc$0",
+        "Val$0"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$0"
+       ]
+      ],
+      "to/Ord": [
+       [
+        "to/Ord$0"
+       ]
+      ],
+      "to/Ord.First": [
+       [
+        "to/Ord$0",
+        "Tick$0"
+       ]
+      ],
+      "to/Ord.Next": [
+       [
+        "to/Ord$0",
+        "Tick$0",
+        "Tick$1"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$1",
+        "Tick$2"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$2",
+        "Tick$3"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$3",
+        "Tick$4"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$4",
+        "Tick$5"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$5",
+        "Tick$6"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "TwoPrivileged",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TwoPrivileged for 5 but 3 Process, 4 Val expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 30.776,
+   "solve_ms": 17.14,
+   "total_ms": 47.915,
+   "stats": {
+    "primary_vars": 143,
+    "vars": 2682,
+    "clauses": 5437
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$BadTick_p1": [
+       [
+        "Process$0"
+       ]
+      ],
+      "skolem:$BadTick_p2": [
+       [
+        "Process$1"
+       ]
+      ],
+      "skolem:$TwoPrivileged_p1": [
+       [
+        "Process$1"
+       ]
+      ],
+      "skolem:$TwoPrivileged_p2": [
+       [
+        "FirstProc$0"
+       ]
+      ],
+      "skolem:$TwoPrivileged_t1": [
+       [
+        "Tick$4"
+       ]
+      ],
+      "skolem:$TwoPrivileged_t2": [
+       [
+        "Tick$2"
+       ]
+      ],
+      "this/FirstProc": [
+       [
+        "FirstProc$0"
+       ]
+      ],
+      "this/Process": [
+       [
+        "FirstProc$0"
+       ],
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ]
+      ],
+      "this/Process.rightNeighbor": [
+       [
+        "FirstProc$0",
+        "Process$1"
+       ],
+       [
+        "Process$0",
+        "FirstProc$0"
+       ],
+       [
+        "Process$1",
+        "Process$0"
+       ]
+      ],
+      "this/Tick": [
+       [
+        "Tick$0"
+       ],
+       [
+        "Tick$1"
+       ],
+       [
+        "Tick$2"
+       ],
+       [
+        "Tick$3"
+       ],
+       [
+        "Tick$4"
+       ]
+      ],
+      "this/Tick.priv": [
+       [
+        "Tick$0",
+        "Process$0"
+       ],
+       [
+        "Tick$0",
+        "Process$1"
+       ],
+       [
+        "Tick$1",
+        "Process$1"
+       ],
+       [
+        "Tick$2",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$3",
+        "Process$0"
+       ],
+       [
+        "Tick$4",
+        "Process$1"
+       ]
+      ],
+      "this/Tick.runs": [
+       [
+        "Tick$0",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$0",
+        "Process$0"
+       ],
+       [
+        "Tick$1",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$1",
+        "Process$1"
+       ],
+       [
+        "Tick$2",
+        "FirstProc$0"
+       ],
+       [
+        "Tick$3",
+        "Process$0"
+       ]
+      ],
+      "this/Tick.val": [
+       [
+        "Tick$0",
+        "FirstProc$0",
+        "Val$2"
+       ],
+       [
+        "Tick$0",
+        "Process$0",
+        "Val$1"
+       ],
+       [
+        "Tick$0",
+        "Process$1",
+        "Val$3"
+       ],
+       [
+        "Tick$1",
+        "FirstProc$0",
+        "Val$2"
+       ],
+       [
+        "Tick$1",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "Tick$1",
+        "Process$1",
+        "Val$3"
+       ],
+       [
+        "Tick$2",
+        "FirstProc$0",
+        "Val$2"
+       ],
+       [
+        "Tick$2",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "Tick$2",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "Tick$3",
+        "FirstProc$0",
+        "Val$0"
+       ],
+       [
+        "Tick$3",
+        "Process$0",
+        "Val$2"
+       ],
+       [
+        "Tick$3",
+        "Process$1",
+        "Val$2"
+       ],
+       [
+        "Tick$4",
+        "FirstProc$0",
+        "Val$0"
+       ],
+       [
+        "Tick$4",
+        "Process$0",
+        "Val$0"
+       ],
+       [
+        "Tick$4",
+        "Process$1",
+        "Val$2"
+       ]
+      ],
+      "this/Val": [
+       [
+        "Val$0"
+       ],
+       [
+        "Val$1"
+       ],
+       [
+        "Val$2"
+       ],
+       [
+        "Val$3"
+       ]
+      ],
+      "this/Val.nextVal": [
+       [
+        "Val$0",
+        "Val$1"
+       ],
+       [
+        "Val$1",
+        "Val$3"
+       ],
+       [
+        "Val$2",
+        "Val$0"
+       ],
+       [
+        "Val$3",
+        "Val$2"
+       ]
+      ],
+      "to/Ord": [
+       [
+        "to/Ord$0"
+       ]
+      ],
+      "to/Ord.First": [
+       [
+        "to/Ord$0",
+        "Tick$0"
+       ]
+      ],
+      "to/Ord.Next": [
+       [
+        "to/Ord$0",
+        "Tick$0",
+        "Tick$1"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$1",
+        "Tick$2"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$2",
+        "Tick$3"
+       ],
+       [
+        "to/Ord$0",
+        "Tick$3",
+        "Tick$4"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "Closure",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Closure for 5 but 5 Process, 6 Val expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 60.816,
+   "solve_ms": 3497.077,
+   "total_ms": 3557.893,
+   "stats": {
+    "primary_vars": 286,
+    "vars": 7764,
+    "clauses": 15356
+   }
+  }
+ ]
+}

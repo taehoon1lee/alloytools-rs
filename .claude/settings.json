@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(python harness/check.py:*)",
+      "Bash(python harness/setup.py:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git stash:*)",
+      "Bash(java -cp:*)",
+      "Edit(/crates/**)",
+      "Write(/crates/**)",
+      "Edit(/loop/TASKS.md)",
+      "Edit(/loop/PROGRESS.md)",
+      "Edit(/loop/NOTES.md)",
+      "Edit(/docs/**)",
+      "Write(/tmp/**)"
+    ],
+    "deny": [
+      "Edit(/harness/**)",
+      "Write(/harness/**)",
+      "Edit(/reference/**)",
+      "Write(/reference/**)",
+      "Edit(/loop/PROMPT.md)",
+      "Edit(/loop/run-loop.ps1)",
+      "Edit(/CLAUDE.md)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)"
+    ]
+  }
+}

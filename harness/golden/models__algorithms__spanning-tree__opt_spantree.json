@@ -1,0 +1,317 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/spanning-tree/opt_spantree",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 174.986,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "SuccessfulRun",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SuccessfulRun for 4 State, exactly 5 Process, 3 Lvl expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 175.999,
+   "solve_ms": 16.222,
+   "total_ms": 192.221,
+   "stats": {
+    "primary_vars": 205,
+    "vars": 4568,
+    "clauses": 8718
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "lo/Ord": [
+       [
+        "lo/Ord$0"
+       ]
+      ],
+      "lo/Ord.First": [
+       [
+        "lo/Ord$0",
+        "Lvl$0"
+       ]
+      ],
+      "lo/Ord.Next": [
+       [
+        "lo/Ord$0",
+        "Lvl$0",
+        "Lvl$1"
+       ],
+       [
+        "lo/Ord$0",
+        "Lvl$1",
+        "Lvl$2"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ]
+      ],
+      "this/Lvl": [
+       [
+        "Lvl$0"
+       ],
+       [
+        "Lvl$1"
+       ],
+       [
+        "Lvl$2"
+       ]
+      ],
+      "this/Process": [
+       [
+        "Process$0"
+       ],
+       [
+        "Process$1"
+       ],
+       [
+        "Process$2"
+       ],
+       [
+        "Process$3"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Process.adj": [
+       [
+        "Process$0",
+        "Root$0"
+       ],
+       [
+        "Process$1",
+        "Root$0"
+       ],
+       [
+        "Process$2",
+        "Root$0"
+       ],
+       [
+        "Process$3",
+        "Root$0"
+       ],
+       [
+        "Root$0",
+        "Process$0"
+       ],
+       [
+        "Root$0",
+        "Process$1"
+       ],
+       [
+        "Root$0",
+        "Process$2"
+       ],
+       [
+        "Root$0",
+        "Process$3"
+       ]
+      ],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ]
+      ],
+      "this/State.lvl": [
+       [
+        "State$1",
+        "Root$0",
+        "Lvl$0"
+       ],
+       [
+        "State$2",
+        "Process$3",
+        "Lvl$1"
+       ],
+       [
+        "State$2",
+        "Root$0",
+        "Lvl$0"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Lvl$1"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Lvl$1"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Lvl$1"
+       ],
+       [
+        "State$3",
+        "Process$3",
+        "Lvl$1"
+       ],
+       [
+        "State$3",
+        "Root$0",
+        "Lvl$0"
+       ]
+      ],
+      "this/State.parent": [
+       [
+        "State$2",
+        "Process$3",
+        "Root$0"
+       ],
+       [
+        "State$3",
+        "Process$0",
+        "Root$0"
+       ],
+       [
+        "State$3",
+        "Process$1",
+        "Root$0"
+       ],
+       [
+        "State$3",
+        "Process$2",
+        "Root$0"
+       ],
+       [
+        "State$3",
+        "Process$3",
+        "Root$0"
+       ]
+      ],
+      "this/State.runs": [
+       [
+        "State$0",
+        "Root$0"
+       ],
+       [
+        "State$1",
+        "Process$3"
+       ],
+       [
+        "State$2",
+        "Process$0"
+       ],
+       [
+        "State$2",
+        "Process$1"
+       ],
+       [
+        "State$2",
+        "Process$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "BadLivenessTrace",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run BadLivenessTrace for 5 but 7 State expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 84.599,
+   "solve_ms": 235.246,
+   "total_ms": 319.845,
+   "stats": {
+    "primary_vars": 428,
+    "vars": 11913,
+    "clauses": 24373
+   }
+  },
+  {
+   "index": 2,
+   "label": "Closure",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Closure for 5 but 7 State expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 66.477,
+   "solve_ms": 121.143,
+   "total_ms": 187.619,
+   "stats": {
+    "primary_vars": 421,
+    "vars": 8516,
+    "clauses": 15918
+   }
+  }
+ ]
+}

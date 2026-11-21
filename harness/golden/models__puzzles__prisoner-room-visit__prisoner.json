@@ -1,0 +1,727 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/prisoner-room-visit/prisoner",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 198.989,
+ "command_count": 5,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TypeOK",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check TypeOK for 3 Prisoner, 12 State",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 336.804,
+   "solve_ms": 84.126,
+   "total_ms": 420.929,
+   "stats": {
+    "primary_vars": 710,
+    "vars": 10217,
+    "clauses": 29864
+   }
+  },
+  {
+   "index": 1,
+   "label": "Safety",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Safety for 3 Prisoner, 10 State",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 78.979,
+   "solve_ms": 31.862,
+   "total_ms": 110.841,
+   "stats": {
+    "primary_vars": 592,
+    "vars": 8412,
+    "clauses": 24579
+   }
+  },
+  {
+   "index": 2,
+   "label": "CountInvariant",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check CountInvariant for 3 Prisoner, 10 State",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 60.99,
+   "solve_ms": 18.293,
+   "total_ms": 79.283,
+   "stats": {
+    "primary_vars": 592,
+    "vars": 8493,
+    "clauses": 24748
+   }
+  },
+  {
+   "index": 3,
+   "label": "Theorem",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Theorem for 3 Prisoner, 12 State",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 70.534,
+   "solve_ms": 15.774,
+   "total_ms": 86.309,
+   "stats": {
+    "primary_vars": 698,
+    "vars": 9304,
+    "clauses": 26653
+   }
+  },
+  {
+   "index": 4,
+   "label": "run$5",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$5 for 4 int, exactly 3 Prisoner, 12 State",
+   "overall": -1,
+   "bitwidth": 4,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 40.207,
+   "solve_ms": 25.496,
+   "total_ms": 65.702,
+   "stats": {
+    "primary_vars": 707,
+    "vars": 9198,
+    "clauses": 26379
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$10",
+        "State$11"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$3",
+        "State$4"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$4",
+        "State$5"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$5",
+        "State$6"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$6",
+        "State$7"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$7",
+        "State$8"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$8",
+        "State$9"
+       ],
+       [
+        "ordering/Ord$0",
+        "State$9",
+        "State$10"
+       ]
+      ],
+      "this/Bool": [
+       [
+        "False$0"
+       ],
+       [
+        "True$0"
+       ]
+      ],
+      "this/CounterPrisoner": [
+       [
+        "CounterPrisoner$0"
+       ]
+      ],
+      "this/Down": [
+       [
+        "Down$0"
+       ]
+      ],
+      "this/False": [
+       [
+        "False$0"
+       ]
+      ],
+      "this/NULL": [
+       [
+        "NULL$0"
+       ]
+      ],
+      "this/OtherPrisoner": [
+       [
+        "OtherPrisoner$0"
+       ],
+       [
+        "OtherPrisoner$1"
+       ]
+      ],
+      "this/Prisoner": [
+       [
+        "CounterPrisoner$0"
+       ],
+       [
+        "OtherPrisoner$0"
+       ],
+       [
+        "OtherPrisoner$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$10"
+       ],
+       [
+        "State$11"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ],
+       [
+        "State$5"
+       ],
+       [
+        "State$6"
+       ],
+       [
+        "State$7"
+       ],
+       [
+        "State$8"
+       ],
+       [
+        "State$9"
+       ]
+      ],
+      "this/State.SwitchesStatus": [
+       [
+        "State$0",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$0",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$1",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$1",
+        "SwitcheB$0",
+        "Up$0"
+       ],
+       [
+        "State$10",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$10",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$11",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$11",
+        "SwitcheB$0",
+        "Up$0"
+       ],
+       [
+        "State$2",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$2",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$3",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$3",
+        "SwitcheB$0",
+        "Up$0"
+       ],
+       [
+        "State$4",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$4",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$5",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$5",
+        "SwitcheB$0",
+        "Up$0"
+       ],
+       [
+        "State$6",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$6",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$7",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$7",
+        "SwitcheB$0",
+        "Up$0"
+       ],
+       [
+        "State$8",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$8",
+        "SwitcheB$0",
+        "Down$0"
+       ],
+       [
+        "State$9",
+        "SwitcheA$0",
+        "Down$0"
+       ],
+       [
+        "State$9",
+        "SwitcheB$0",
+        "Up$0"
+       ]
+      ],
+      "this/State.announced": [
+       [
+        "State$0",
+        "False$0"
+       ],
+       [
+        "State$1",
+        "False$0"
+       ],
+       [
+        "State$10",
+        "False$0"
+       ],
+       [
+        "State$11",
+        "False$0"
+       ],
+       [
+        "State$2",
+        "False$0"
+       ],
+       [
+        "State$3",
+        "False$0"
+       ],
+       [
+        "State$4",
+        "False$0"
+       ],
+       [
+        "State$5",
+        "False$0"
+       ],
+       [
+        "State$6",
+        "False$0"
+       ],
+       [
+        "State$7",
+        "False$0"
+       ],
+       [
+        "State$8",
+        "False$0"
+       ],
+       [
+        "State$9",
+        "False$0"
+       ]
+      ],
+      "this/State.count": [
+       [
+        "State$0",
+        "0"
+       ],
+       [
+        "State$1",
+        "0"
+       ],
+       [
+        "State$10",
+        "0"
+       ],
+       [
+        "State$11",
+        "0"
+       ],
+       [
+        "State$2",
+        "0"
+       ],
+       [
+        "State$3",
+        "0"
+       ],
+       [
+        "State$4",
+        "0"
+       ],
+       [
+        "State$5",
+        "0"
+       ],
+       [
+        "State$6",
+        "0"
+       ],
+       [
+        "State$7",
+        "0"
+       ],
+       [
+        "State$8",
+        "0"
+       ],
+       [
+        "State$9",
+        "0"
+       ]
+      ],
+      "this/State.currentPrisoner": [
+       [
+        "State$0",
+        "NULL$0"
+       ],
+       [
+        "State$1",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$10",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$11",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$2",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$3",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$4",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$5",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$6",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$7",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$8",
+        "CounterPrisoner$0"
+       ],
+       [
+        "State$9",
+        "CounterPrisoner$0"
+       ]
+      ],
+      "this/State.timesSwitched": [
+       [
+        "State$0",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$0",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$1",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$1",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$10",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$10",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$11",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$11",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$2",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$2",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$3",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$3",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$4",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$4",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$5",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$5",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$6",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$6",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$7",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$7",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$8",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$8",
+        "OtherPrisoner$1",
+        "0"
+       ],
+       [
+        "State$9",
+        "OtherPrisoner$0",
+        "0"
+       ],
+       [
+        "State$9",
+        "OtherPrisoner$1",
+        "0"
+       ]
+      ],
+      "this/Status": [
+       [
+        "Down$0"
+       ],
+       [
+        "Up$0"
+       ]
+      ],
+      "this/SwitcheA": [
+       [
+        "SwitcheA$0"
+       ]
+      ],
+      "this/SwitcheB": [
+       [
+        "SwitcheB$0"
+       ]
+      ],
+      "this/Switches": [
+       [
+        "SwitcheA$0"
+       ],
+       [
+        "SwitcheB$0"
+       ]
+      ],
+      "this/True": [
+       [
+        "True$0"
+       ]
+      ],
+      "this/Up": [
+       [
+        "Up$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

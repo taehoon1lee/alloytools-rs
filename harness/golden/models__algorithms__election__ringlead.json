@@ -1,0 +1,970 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/election/ringlead",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 188.145,
+ "command_count": 5,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NeverFindLeader",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run NeverFindLeader for 1 but 3 Tick, 2 Bool, 2 NodeState expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 201.012,
+   "solve_ms": 4.739,
+   "total_ms": 205.751,
+   "stats": {
+    "primary_vars": 54,
+    "vars": 450,
+    "clauses": 700
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "bool/Bool": [
+       [
+        "bool/False$0"
+       ],
+       [
+        "bool/True$0"
+       ]
+      ],
+      "bool/False": [
+       [
+        "bool/False$0"
+       ]
+      ],
+      "bool/True": [
+       [
+        "bool/True$0"
+       ]
+      ],
+      "msg/Msg": [
+       [
+        "MsgViz$0"
+       ]
+      ],
+      "msg/Msg.readOn": [],
+      "msg/Msg.sentOn": [
+       [
+        "MsgViz$0",
+        "msg/Tick$0"
+       ]
+      ],
+      "msg/Msg.state": [
+       [
+        "MsgViz$0",
+        "RingLeadMsgState$0"
+       ]
+      ],
+      "msg/MsgState": [
+       [
+        "RingLeadMsgState$0"
+       ]
+      ],
+      "msg/MsgState.from": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "msg/MsgState.to": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "msg/Node": [
+       [
+        "RingLeadNode$0"
+       ]
+      ],
+      "msg/NodeState": [
+       [
+        "RingLeadNodeState$0"
+       ]
+      ],
+      "msg/Tick": [
+       [
+        "msg/Tick$0"
+       ],
+       [
+        "msg/Tick$1"
+       ],
+       [
+        "msg/Tick$2"
+       ]
+      ],
+      "msg/Tick.available": [
+       [
+        "msg/Tick$0",
+        "MsgViz$0"
+       ]
+      ],
+      "msg/Tick.needsToSend": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "MsgViz$0"
+       ]
+      ],
+      "msg/Tick.read": [],
+      "msg/Tick.sent": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "MsgViz$0"
+       ]
+      ],
+      "msg/Tick.state": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "RingLeadNodeState$0"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "RingLeadNodeState$0"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$0",
+        "RingLeadNodeState$0"
+       ]
+      ],
+      "msg/Tick.visible": [],
+      "nodeOrd/Ord": [
+       [
+        "nodeOrd/Ord$0"
+       ]
+      ],
+      "nodeOrd/Ord.First": [
+       [
+        "nodeOrd/Ord$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "nodeOrd/Ord.Next": [],
+      "skolem:$Loop_t": [
+       [
+        "msg/Tick$0"
+       ]
+      ],
+      "skolem:$TicksEquivalent_r": [],
+      "skolem:$TicksEquivalent_r'": [],
+      "this/MsgViz": [
+       [
+        "MsgViz$0"
+       ]
+      ],
+      "this/MsgViz.vFrom": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/MsgViz.vId": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/MsgViz.vTo": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/RingLeadMsgState": [
+       [
+        "RingLeadMsgState$0"
+       ]
+      ],
+      "this/RingLeadMsgState.id": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/RingLeadNode": [
+       [
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/RingLeadNode.rightNeighbor": [
+       [
+        "RingLeadNode$0",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/RingLeadNodeState": [
+       [
+        "RingLeadNodeState$0"
+       ]
+      ],
+      "this/RingLeadNodeState.leader": [
+       [
+        "RingLeadNodeState$0",
+        "bool/False$0"
+       ]
+      ],
+      "tickOrd/Ord": [
+       [
+        "tickOrd/Ord$0"
+       ]
+      ],
+      "tickOrd/Ord.First": [
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$0"
+       ]
+      ],
+      "tickOrd/Ord.Next": [
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$0",
+        "msg/Tick$1"
+       ],
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$1",
+        "msg/Tick$2"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "Liveness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Liveness for 3 but 6 Msg, 2 Bool, 2 NodeState expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 160.632,
+   "solve_ms": 76.086,
+   "total_ms": 236.718,
+   "stats": {
+    "primary_vars": 545,
+    "vars": 9144,
+    "clauses": 17711
+   }
+  },
+  {
+   "index": 2,
+   "label": "OneLeader",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check OneLeader for 5 but 2 Bool, 2 NodeState expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 379.987,
+   "solve_ms": 207.433,
+   "total_ms": 587.42,
+   "stats": {
+    "primary_vars": 988,
+    "vars": 18836,
+    "clauses": 35023
+   }
+  },
+  {
+   "index": 3,
+   "label": "SomeLeader",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SomeLeader for 2 but 3 Node, 5 Msg, 5 Tick, 5 MsgState expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 115.102,
+   "solve_ms": 43.567,
+   "total_ms": 158.669,
+   "stats": {
+    "primary_vars": 627,
+    "vars": 9595,
+    "clauses": 17737
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "bool/Bool": [
+       [
+        "bool/False$0"
+       ],
+       [
+        "bool/True$0"
+       ]
+      ],
+      "bool/False": [
+       [
+        "bool/False$0"
+       ]
+      ],
+      "bool/True": [
+       [
+        "bool/True$0"
+       ]
+      ],
+      "msg/Msg": [
+       [
+        "MsgViz$0"
+       ],
+       [
+        "MsgViz$1"
+       ],
+       [
+        "MsgViz$2"
+       ],
+       [
+        "MsgViz$3"
+       ],
+       [
+        "MsgViz$4"
+       ]
+      ],
+      "msg/Msg.readOn": [],
+      "msg/Msg.sentOn": [
+       [
+        "MsgViz$0",
+        "msg/Tick$0"
+       ],
+       [
+        "MsgViz$1",
+        "msg/Tick$1"
+       ],
+       [
+        "MsgViz$2",
+        "msg/Tick$2"
+       ],
+       [
+        "MsgViz$3",
+        "msg/Tick$0"
+       ],
+       [
+        "MsgViz$4",
+        "msg/Tick$0"
+       ]
+      ],
+      "msg/Msg.state": [
+       [
+        "MsgViz$0",
+        "RingLeadMsgState$3"
+       ],
+       [
+        "MsgViz$1",
+        "RingLeadMsgState$2"
+       ],
+       [
+        "MsgViz$2",
+        "RingLeadMsgState$1"
+       ],
+       [
+        "MsgViz$3",
+        "RingLeadMsgState$4"
+       ],
+       [
+        "MsgViz$4",
+        "RingLeadMsgState$0"
+       ]
+      ],
+      "msg/MsgState": [
+       [
+        "RingLeadMsgState$0"
+       ],
+       [
+        "RingLeadMsgState$1"
+       ],
+       [
+        "RingLeadMsgState$2"
+       ],
+       [
+        "RingLeadMsgState$3"
+       ],
+       [
+        "RingLeadMsgState$4"
+       ]
+      ],
+      "msg/MsgState.from": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$0"
+       ],
+       [
+        "RingLeadMsgState$1",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadMsgState$2",
+        "RingLeadNode$0"
+       ],
+       [
+        "RingLeadMsgState$3",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadMsgState$4",
+        "RingLeadNode$2"
+       ]
+      ],
+      "msg/MsgState.to": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadMsgState$1",
+        "RingLeadNode$2"
+       ],
+       [
+        "RingLeadMsgState$2",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadMsgState$3",
+        "RingLeadNode$2"
+       ],
+       [
+        "RingLeadMsgState$4",
+        "RingLeadNode$0"
+       ]
+      ],
+      "msg/Node": [
+       [
+        "RingLeadNode$0"
+       ],
+       [
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadNode$2"
+       ]
+      ],
+      "msg/NodeState": [
+       [
+        "RingLeadNodeState$0"
+       ],
+       [
+        "RingLeadNodeState$1"
+       ]
+      ],
+      "msg/Tick": [
+       [
+        "msg/Tick$0"
+       ],
+       [
+        "msg/Tick$1"
+       ],
+       [
+        "msg/Tick$2"
+       ],
+       [
+        "msg/Tick$3"
+       ],
+       [
+        "msg/Tick$4"
+       ]
+      ],
+      "msg/Tick.available": [
+       [
+        "msg/Tick$0",
+        "MsgViz$0"
+       ],
+       [
+        "msg/Tick$0",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$0",
+        "MsgViz$2"
+       ],
+       [
+        "msg/Tick$0",
+        "MsgViz$3"
+       ],
+       [
+        "msg/Tick$0",
+        "MsgViz$4"
+       ],
+       [
+        "msg/Tick$1",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$1",
+        "MsgViz$2"
+       ],
+       [
+        "msg/Tick$2",
+        "MsgViz$2"
+       ]
+      ],
+      "msg/Tick.needsToSend": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "MsgViz$0"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$1",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$2",
+        "MsgViz$2"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "MsgViz$2"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$1",
+        "MsgViz$2"
+       ]
+      ],
+      "msg/Tick.read": [
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "MsgViz$3"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$1",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$3",
+        "RingLeadNode$2",
+        "MsgViz$2"
+       ]
+      ],
+      "msg/Tick.sent": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "MsgViz$4"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$1",
+        "MsgViz$0"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$2",
+        "MsgViz$3"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$1",
+        "MsgViz$2"
+       ]
+      ],
+      "msg/Tick.state": [
+       [
+        "msg/Tick$0",
+        "RingLeadNode$0",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$1",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$0",
+        "RingLeadNode$2",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$1",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$1",
+        "RingLeadNode$2",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$0",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$1",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$2",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$3",
+        "RingLeadNode$0",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$3",
+        "RingLeadNode$1",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$3",
+        "RingLeadNode$2",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$4",
+        "RingLeadNode$0",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$4",
+        "RingLeadNode$1",
+        "RingLeadNodeState$1"
+       ],
+       [
+        "msg/Tick$4",
+        "RingLeadNode$2",
+        "RingLeadNodeState$0"
+       ]
+      ],
+      "msg/Tick.visible": [
+       [
+        "msg/Tick$1",
+        "RingLeadNode$0",
+        "MsgViz$3"
+       ],
+       [
+        "msg/Tick$2",
+        "RingLeadNode$1",
+        "MsgViz$1"
+       ],
+       [
+        "msg/Tick$3",
+        "RingLeadNode$2",
+        "MsgViz$2"
+       ]
+      ],
+      "nodeOrd/Ord": [
+       [
+        "nodeOrd/Ord$0"
+       ]
+      ],
+      "nodeOrd/Ord.First": [
+       [
+        "nodeOrd/Ord$0",
+        "RingLeadNode$1"
+       ]
+      ],
+      "nodeOrd/Ord.Next": [
+       [
+        "nodeOrd/Ord$0",
+        "RingLeadNode$0",
+        "RingLeadNode$2"
+       ],
+       [
+        "nodeOrd/Ord$0",
+        "RingLeadNode$1",
+        "RingLeadNode$0"
+       ]
+      ],
+      "skolem:$SomeLeaderAtTick_n": [
+       [
+        "RingLeadNode$2"
+       ]
+      ],
+      "skolem:$SomeLeader_t": [
+       [
+        "msg/Tick$4"
+       ]
+      ],
+      "this/MsgViz": [
+       [
+        "MsgViz$0"
+       ],
+       [
+        "MsgViz$1"
+       ],
+       [
+        "MsgViz$2"
+       ],
+       [
+        "MsgViz$3"
+       ],
+       [
+        "MsgViz$4"
+       ]
+      ],
+      "this/MsgViz.vFrom": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$1"
+       ],
+       [
+        "MsgViz$1",
+        "RingLeadNode$0"
+       ],
+       [
+        "MsgViz$2",
+        "RingLeadNode$1"
+       ],
+       [
+        "MsgViz$3",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$4",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/MsgViz.vId": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$1"
+       ],
+       [
+        "MsgViz$1",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$2",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$3",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$4",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/MsgViz.vTo": [
+       [
+        "MsgViz$0",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$1",
+        "RingLeadNode$1"
+       ],
+       [
+        "MsgViz$2",
+        "RingLeadNode$2"
+       ],
+       [
+        "MsgViz$3",
+        "RingLeadNode$0"
+       ],
+       [
+        "MsgViz$4",
+        "RingLeadNode$1"
+       ]
+      ],
+      "this/RingLeadMsgState": [
+       [
+        "RingLeadMsgState$0"
+       ],
+       [
+        "RingLeadMsgState$1"
+       ],
+       [
+        "RingLeadMsgState$2"
+       ],
+       [
+        "RingLeadMsgState$3"
+       ],
+       [
+        "RingLeadMsgState$4"
+       ]
+      ],
+      "this/RingLeadMsgState.id": [
+       [
+        "RingLeadMsgState$0",
+        "RingLeadNode$0"
+       ],
+       [
+        "RingLeadMsgState$1",
+        "RingLeadNode$2"
+       ],
+       [
+        "RingLeadMsgState$2",
+        "RingLeadNode$2"
+       ],
+       [
+        "RingLeadMsgState$3",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadMsgState$4",
+        "RingLeadNode$2"
+       ]
+      ],
+      "this/RingLeadNode": [
+       [
+        "RingLeadNode$0"
+       ],
+       [
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadNode$2"
+       ]
+      ],
+      "this/RingLeadNode.rightNeighbor": [
+       [
+        "RingLeadNode$0",
+        "RingLeadNode$1"
+       ],
+       [
+        "RingLeadNode$1",
+        "RingLeadNode$2"
+       ],
+       [
+        "RingLeadNode$2",
+        "RingLeadNode$0"
+       ]
+      ],
+      "this/RingLeadNodeState": [
+       [
+        "RingLeadNodeState$0"
+       ],
+       [
+        "RingLeadNodeState$1"
+       ]
+      ],
+      "this/RingLeadNodeState.leader": [
+       [
+        "RingLeadNodeState$0",
+        "bool/True$0"
+       ],
+       [
+        "RingLeadNodeState$1",
+        "bool/False$0"
+       ]
+      ],
+      "tickOrd/Ord": [
+       [
+        "tickOrd/Ord$0"
+       ]
+      ],
+      "tickOrd/Ord.First": [
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$0"
+       ]
+      ],
+      "tickOrd/Ord.Next": [
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$0",
+        "msg/Tick$1"
+       ],
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$1",
+        "msg/Tick$2"
+       ],
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$2",
+        "msg/Tick$3"
+       ],
+       [
+        "tickOrd/Ord$0",
+        "msg/Tick$3",
+        "msg/Tick$4"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "LeaderHighest",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check LeaderHighest for 3 but 2 NodeState, 5 Msg, 5 MsgState, 5 Tick expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 134.574,
+   "solve_ms": 1340.667,
+   "total_ms": 1475.241,
+   "stats": {
+    "primary_vars": 627,
+    "vars": 10416,
+    "clauses": 19136
+   }
+  }
+ ]
+}

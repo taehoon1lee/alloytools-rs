@@ -1,0 +1,111 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/algorithms/peterson",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 211.173,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TwoRun",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TwoRun for 13 but 3 pid, 4 priority, 5 label_t expect 1",
+   "overall": 13,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 175.089,
+   "solve_ms": 0.169,
+   "total_ms": 175.258,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 1,
+   "label": "ThreeRun",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ThreeRun for 19 but 3 pid, 4 priority, 5 label_t expect 1",
+   "overall": 19,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 67.372,
+   "solve_ms": 0.063,
+   "total_ms": 67.434,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 2,
+   "label": "Safety",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Safety for 10 but 2 pid, 3 priority, 5 label_t expect 0",
+   "overall": 10,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 37.97,
+   "solve_ms": 0.165,
+   "total_ms": 38.135,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  },
+  {
+   "index": 3,
+   "label": "NotStuck",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check NotStuck for 10 but 2 pid, 3 priority, 5 label_t expect 0",
+   "overall": 10,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 40.186,
+   "solve_ms": 0.078,
+   "total_ms": 40.265,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   }
+  }
+ ]
+}

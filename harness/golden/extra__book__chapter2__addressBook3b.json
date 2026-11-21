@@ -1,0 +1,226 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook3b",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 118.472,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "delUndoesAdd",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check delUndoesAdd for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 105.78,
+   "solve_ms": 8.015,
+   "total_ms": 113.795,
+   "stats": {
+    "primary_vars": 60,
+    "vars": 1182,
+    "clauses": 2446
+   }
+  },
+  {
+   "index": 1,
+   "label": "addIdempotent",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addIdempotent for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 22.311,
+   "solve_ms": 5.494,
+   "total_ms": 27.805,
+   "stats": {
+    "primary_vars": 60,
+    "vars": 1168,
+    "clauses": 2423
+   }
+  },
+  {
+   "index": 2,
+   "label": "addLocal",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addLocal for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 16.397,
+   "solve_ms": 0.86,
+   "total_ms": 17.257,
+   "stats": {
+    "primary_vars": 46,
+    "vars": 949,
+    "clauses": 2038
+   }
+  },
+  {
+   "index": 3,
+   "label": "lookupYields",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check lookupYields for 3 but 4 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 13.948,
+   "solve_ms": 3.469,
+   "total_ms": 17.417,
+   "stats": {
+    "primary_vars": 64,
+    "vars": 1393,
+    "clauses": 2759
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "BookOrder/Ord": [
+       [
+        "BookOrder/Ord$0"
+       ]
+      ],
+      "BookOrder/Ord.First": [
+       [
+        "BookOrder/Ord$0",
+        "Book$0"
+       ]
+      ],
+      "BookOrder/Ord.Next": [
+       [
+        "BookOrder/Ord$0",
+        "Book$0",
+        "Book$1"
+       ],
+       [
+        "BookOrder/Ord$0",
+        "Book$1",
+        "Book$2"
+       ],
+       [
+        "BookOrder/Ord$0",
+        "Book$2",
+        "Book$3"
+       ]
+      ],
+      "skolem:$lookupYields_b": [
+       [
+        "Book$1"
+       ]
+      ],
+      "skolem:$lookupYields_n": [
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Alias": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ],
+       [
+        "Book$1"
+       ],
+       [
+        "Book$2"
+       ],
+       [
+        "Book$3"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$1",
+        "Alias$1",
+        "Alias$0"
+       ],
+       [
+        "Book$3",
+        "Alias$0",
+        "Alias$1"
+       ]
+      ],
+      "this/Book.names": [
+       [
+        "Book$1",
+        "Alias$1"
+       ],
+       [
+        "Book$3",
+        "Alias$0"
+       ]
+      ],
+      "this/Group": [],
+      "this/Name": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

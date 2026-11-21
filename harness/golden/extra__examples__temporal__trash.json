@@ -1,0 +1,242 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/temporal/trash",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 109.881,
+ "command_count": 9,
+ "commands": [
+  {
+   "index": 0,
+   "label": "example",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run example",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 101.73,
+   "solve_ms": 5.631,
+   "total_ms": 107.361,
+   "stats": {
+    "primary_vars": 7,
+    "vars": 90,
+    "clauses": 154
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "this/File": [
+       [
+        "File$0"
+       ]
+      ],
+      "this/Trash": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "restoreAfterDelete",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check restoreAfterDelete for 10 steps",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 10,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 594.387,
+   "solve_ms": 156.627,
+   "total_ms": 751.014,
+   "stats": {
+    "primary_vars": 121,
+    "vars": 9258,
+    "clauses": 21320
+   }
+  },
+  {
+   "index": 2,
+   "label": "restoreAfterDelete",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check restoreAfterDelete for 1.. steps",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": 1,
+   "maxprefix": 2147483647,
+   "status": "ERROR",
+   "error": {
+    "kind": "error",
+    "line": 1,
+    "col": 1,
+    "in_file": "",
+    "msg": "Bounded engines do not support complete model checking."
+   },
+   "total_ms": 1.021
+  },
+  {
+   "index": 3,
+   "label": "deleteAll",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check deleteAll",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 148.945,
+   "solve_ms": 16.62,
+   "total_ms": 165.565,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 1908,
+    "clauses": 3551
+   }
+  },
+  {
+   "index": 4,
+   "label": "Exercise1",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Exercise1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 117.592,
+   "solve_ms": 18.139,
+   "total_ms": 135.731,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1693,
+    "clauses": 2246
+   }
+  },
+  {
+   "index": 5,
+   "label": "Exercise2",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Exercise2",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 174.644,
+   "solve_ms": 25.559,
+   "total_ms": 200.203,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1781,
+    "clauses": 2623
+   }
+  },
+  {
+   "index": 6,
+   "label": "Exercise3",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Exercise3",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 108.678,
+   "solve_ms": 2.203,
+   "total_ms": 110.881,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1813,
+    "clauses": 3096
+   }
+  },
+  {
+   "index": 7,
+   "label": "Exercise4",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Exercise4",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 100.853,
+   "solve_ms": 17.835,
+   "total_ms": 118.688,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 1770,
+    "clauses": 3089
+   }
+  },
+  {
+   "index": 8,
+   "label": "restoreIsPossibleBeforeEmpty",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check restoreIsPossibleBeforeEmpty for 3 but 1.. steps",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": 1,
+   "maxprefix": 2147483647,
+   "status": "ERROR",
+   "error": {
+    "kind": "error",
+    "line": 1,
+    "col": 1,
+    "in_file": "",
+    "msg": "Bounded engines do not support complete model checking."
+   },
+   "total_ms": 0.697
+  }
+ ]
+}

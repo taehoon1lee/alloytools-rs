@@ -1,0 +1,45 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/tree",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 155.843,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "isTree",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run isTree for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 95.073,
+   "solve_ms": 4.639,
+   "total_ms": 99.712,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$isTree_r": []
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,244 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter2/addressBook3c",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 121.556,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "delUndoesAdd",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check delUndoesAdd for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 109.17,
+   "solve_ms": 8.436,
+   "total_ms": 117.606,
+   "stats": {
+    "primary_vars": 60,
+    "vars": 1345,
+    "clauses": 2951
+   }
+  },
+  {
+   "index": 1,
+   "label": "addIdempotent",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addIdempotent for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 19.928,
+   "solve_ms": 4.609,
+   "total_ms": 24.537,
+   "stats": {
+    "primary_vars": 60,
+    "vars": 1421,
+    "clauses": 3073
+   }
+  },
+  {
+   "index": 2,
+   "label": "addLocal",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addLocal for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 18.822,
+   "solve_ms": 0.947,
+   "total_ms": 19.769,
+   "stats": {
+    "primary_vars": 46,
+    "vars": 1007,
+    "clauses": 2255
+   }
+  },
+  {
+   "index": 3,
+   "label": "lookupYields",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check lookupYields for 3 but 4 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 17.644,
+   "solve_ms": 3.585,
+   "total_ms": 21.229,
+   "stats": {
+    "primary_vars": 64,
+    "vars": 1492,
+    "clauses": 3281
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "BookOrder/Ord": [
+       [
+        "BookOrder/Ord$0"
+       ]
+      ],
+      "BookOrder/Ord.First": [
+       [
+        "BookOrder/Ord$0",
+        "Book$0"
+       ]
+      ],
+      "BookOrder/Ord.Next": [
+       [
+        "BookOrder/Ord$0",
+        "Book$0",
+        "Book$1"
+       ],
+       [
+        "BookOrder/Ord$0",
+        "Book$1",
+        "Book$2"
+       ],
+       [
+        "BookOrder/Ord$0",
+        "Book$2",
+        "Book$3"
+       ]
+      ],
+      "skolem:$lookupYields_b": [
+       [
+        "Book$3"
+       ]
+      ],
+      "skolem:$lookupYields_n": [
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ]
+      ],
+      "this/Alias": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ],
+       [
+        "Book$1"
+       ],
+       [
+        "Book$2"
+       ],
+       [
+        "Book$3"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$1",
+        "Alias$0",
+        "Addr$0"
+       ],
+       [
+        "Book$2",
+        "Alias$0",
+        "Addr$0"
+       ],
+       [
+        "Book$2",
+        "Alias$1",
+        "Alias$0"
+       ],
+       [
+        "Book$3",
+        "Alias$1",
+        "Alias$0"
+       ]
+      ],
+      "this/Book.names": [
+       [
+        "Book$1",
+        "Alias$0"
+       ],
+       [
+        "Book$2",
+        "Alias$0"
+       ],
+       [
+        "Book$2",
+        "Alias$1"
+       ],
+       [
+        "Book$3",
+        "Alias$1"
+       ]
+      ],
+      "this/Group": [],
+      "this/Name": [
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ],
+      "this/Target": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Alias$0"
+       ],
+       [
+        "Alias$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

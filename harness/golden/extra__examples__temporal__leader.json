@@ -1,0 +1,875 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/temporal/leader",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 148.847,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 4 but 10 steps, exactly 4 Node",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 10,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 189.353,
+   "solve_ms": 13.958,
+   "total_ms": 203.311,
+   "stats": {
+    "primary_vars": 65,
+    "vars": 1167,
+    "clauses": 2424
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$2",
+        "Id$3"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ],
+       [
+        "Id$3"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ],
+       [
+        "Node$3"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$3"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ],
+       [
+        "Node$3",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$0",
+        "Id$3"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ],
+       [
+        "Node$3",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$2"
+       ],
+       [
+        "Node$1",
+        "Node$3"
+       ],
+       [
+        "Node$2",
+        "Node$1"
+       ],
+       [
+        "Node$3",
+        "Node$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "example",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run example for 3 but 6 steps, exactly 3 Node",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 6,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 6,
+   "translate_ms": 324.153,
+   "solve_ms": 22.342,
+   "total_ms": 346.495,
+   "stats": {
+    "primary_vars": 160,
+    "vars": 6366,
+    "clauses": 13160
+   },
+   "instance": {
+    "trace_length": 6,
+    "loop": 5,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     },
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$1",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     },
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     },
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$2",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     },
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ],
+       [
+        "Node$2",
+        "Id$2"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     },
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [
+       [
+        "Node$0",
+        "Id$2"
+       ]
+      ],
+      "this/Node.outbox": [
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "safety",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check safety for 3 but 15 steps",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": 15,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 15,
+   "translate_ms": 1418.41,
+   "solve_ms": 120.919,
+   "total_ms": 1539.329,
+   "stats": {
+    "primary_vars": 379,
+    "vars": 29125,
+    "clauses": 57362
+   }
+  },
+  {
+   "index": 3,
+   "label": "liveness",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check liveness for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": true,
+   "min_trace": 1,
+   "max_trace": 10,
+   "translate_ms": 7.921,
+   "solve_ms": 1.357,
+   "total_ms": 9.278,
+   "stats": {
+    "primary_vars": 41,
+    "vars": 1053,
+    "clauses": 2016
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": 0,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "Id$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "Id$1",
+        "Id$2"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.inbox": [],
+      "this/Node.outbox": [
+       [
+        "Node$0",
+        "Id$2"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ],
+       [
+        "Node$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node.succ": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ],
+       [
+        "Node$2",
+        "Node$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

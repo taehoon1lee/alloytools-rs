@@ -1,0 +1,184 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter6/memory/cacheMemory",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 91.882,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "LoadNotObservable",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check LoadNotObservable",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 99.353,
+   "solve_ms": 10.192,
+   "total_ms": 109.545,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 1591,
+    "clauses": 3003
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$LoadNotObservable_a1": [
+       [
+        "Addr$2"
+       ]
+      ],
+      "skolem:$LoadNotObservable_a2": [
+       [
+        "Addr$1"
+       ]
+      ],
+      "skolem:$LoadNotObservable_c": [
+       [
+        "CacheSystem$2"
+       ]
+      ],
+      "skolem:$LoadNotObservable_c\"": [
+       [
+        "CacheSystem$2"
+       ]
+      ],
+      "skolem:$LoadNotObservable_c\"\"": [
+       [
+        "CacheSystem$1"
+       ]
+      ],
+      "skolem:$LoadNotObservable_d1": [
+       [
+        "Data$1"
+       ]
+      ],
+      "skolem:$LoadNotObservable_d2": [
+       [
+        "Data$0"
+       ]
+      ],
+      "skolem:$LoadNotObservable_d3": [
+       [
+        "Data$1"
+       ]
+      ],
+      "skolem:$load_addrs": [],
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ],
+       [
+        "Addr$2"
+       ]
+      ],
+      "this/CacheSystem": [
+       [
+        "CacheSystem$0"
+       ],
+       [
+        "CacheSystem$1"
+       ],
+       [
+        "CacheSystem$2"
+       ]
+      ],
+      "this/CacheSystem.cache": [
+       [
+        "CacheSystem$0",
+        "Addr$0",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$0",
+        "Addr$1",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$0",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$1",
+        "Data$1"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$2",
+        "Data$1"
+       ],
+       [
+        "CacheSystem$2",
+        "Addr$1",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$2",
+        "Addr$2",
+        "Data$1"
+       ]
+      ],
+      "this/CacheSystem.main": [
+       [
+        "CacheSystem$0",
+        "Addr$0",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$0",
+        "Addr$1",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$0",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$1",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$1",
+        "Addr$2",
+        "Data$0"
+       ],
+       [
+        "CacheSystem$2",
+        "Addr$1",
+        "Data$0"
+       ]
+      ],
+      "this/Data": [
+       [
+        "Data$0"
+       ],
+       [
+        "Data$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

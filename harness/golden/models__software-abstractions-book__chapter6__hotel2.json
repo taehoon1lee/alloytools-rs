@@ -1,0 +1,86 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter6/hotel2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 136.071,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoBadEntry",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoBadEntry for 3 but 2 Room, 2 Guest, 5 Time",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 211.492,
+   "solve_ms": 22.336,
+   "total_ms": 233.828,
+   "stats": {
+    "primary_vars": 132,
+    "vars": 2643,
+    "clauses": 5485
+   }
+  },
+  {
+   "index": 1,
+   "label": "NoBadEntry",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoBadEntry for 3 but 3 Room, 3 Guest, 7 Time",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 125.597,
+   "solve_ms": 98.213,
+   "total_ms": 223.811,
+   "stats": {
+    "primary_vars": 283,
+    "vars": 6087,
+    "clauses": 14167
+   }
+  },
+  {
+   "index": 2,
+   "label": "NoBadEntry",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoBadEntry for 5 but 3 Room, 3 Guest, 9 Time",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 154.315,
+   "solve_ms": 3009.161,
+   "total_ms": 3163.477,
+   "stats": {
+    "primary_vars": 527,
+    "vars": 12288,
+    "clauses": 31328
+   }
+  }
+ ]
+}

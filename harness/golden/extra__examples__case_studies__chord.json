@@ -1,0 +1,1704 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/case_studies/chord",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 200.227,
+ "command_count": 17,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Same1",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Same1 for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 150.232,
+   "solve_ms": 34.372,
+   "total_ms": 184.603,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 3047,
+    "clauses": 5321
+   }
+  },
+  {
+   "index": 1,
+   "label": "Same2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Same2 for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 43.934,
+   "solve_ms": 9.414,
+   "total_ms": 53.348,
+   "stats": {
+    "primary_vars": 170,
+    "vars": 3040,
+    "clauses": 5348
+   }
+  },
+  {
+   "index": 2,
+   "label": "SameFC",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameFC for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 52.279,
+   "solve_ms": 83.514,
+   "total_ms": 135.793,
+   "stats": {
+    "primary_vars": 167,
+    "vars": 4349,
+    "clauses": 9886
+   }
+  },
+  {
+   "index": 3,
+   "label": "ShowMeFC",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMeFC for 2 but 1 State expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 15.699,
+   "solve_ms": 5.427,
+   "total_ms": 21.126,
+   "stats": {
+    "primary_vars": 61,
+    "vars": 831,
+    "clauses": 1317
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [],
+      "this/Id.next": [],
+      "this/Node": [],
+      "this/Node.id": [],
+      "this/NodeData": [],
+      "this/NodeData.closest_preceding_finger": [],
+      "this/NodeData.find_predecessor": [],
+      "this/NodeData.find_successor": [],
+      "this/NodeData.finger": [],
+      "this/NodeData.next": [],
+      "this/NodeData.prev": [],
+      "this/State": [],
+      "this/State.active": [],
+      "this/State.data": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 4,
+   "label": "SameCPF",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameCPF for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 43.885,
+   "solve_ms": 33.989,
+   "total_ms": 77.874,
+   "stats": {
+    "primary_vars": 167,
+    "vars": 5183,
+    "clauses": 11344
+   }
+  },
+  {
+   "index": 5,
+   "label": "SameCPF1",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameCPF1 for 2 but 1 State expect 0",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 15.003,
+   "solve_ms": 1.878,
+   "total_ms": 16.881,
+   "stats": {
+    "primary_vars": 66,
+    "vars": 1509,
+    "clauses": 2504
+   }
+  },
+  {
+   "index": 6,
+   "label": "SameCPF2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameCPF2 for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 23.384,
+   "solve_ms": 13.82,
+   "total_ms": 37.204,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 4137,
+    "clauses": 8592
+   }
+  },
+  {
+   "index": 7,
+   "label": "ShowMeCPF",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMeCPF for 2 but 1 State expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 11.745,
+   "solve_ms": 1.875,
+   "total_ms": 13.62,
+   "stats": {
+    "primary_vars": 61,
+    "vars": 1067,
+    "clauses": 1656
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$1"
+       ],
+       [
+        "State$0",
+        "Node$1",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 8,
+   "label": "FPisActive",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check FPisActive for 3 but 1 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 20.484,
+   "solve_ms": 7.955,
+   "total_ms": 28.439,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 5294,
+    "clauses": 9411
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$FPisActive_n": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$FPisActive_nd": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "skolem:$FPisActive_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$1"
+       ],
+       [
+        "Node$1",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$1"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 9,
+   "label": "SameFP",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check SameFP for 3 but 1 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 19.266,
+   "solve_ms": 5.037,
+   "total_ms": 24.303,
+   "stats": {
+    "primary_vars": 167,
+    "vars": 4135,
+    "clauses": 9011
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$SameFP_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 10,
+   "label": "SameFP1",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameFP1 for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 15.145,
+   "solve_ms": 24.556,
+   "total_ms": 39.701,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 4622,
+    "clauses": 9473
+   }
+  },
+  {
+   "index": 11,
+   "label": "SameFP2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check SameFP2 for 3 but 1 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 11.877,
+   "solve_ms": 21.506,
+   "total_ms": 33.383,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 4608,
+    "clauses": 9377
+   }
+  },
+  {
+   "index": 12,
+   "label": "ShowMe1Node",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMe1Node for 2 but 1 State, 1 Node expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 7.829,
+   "solve_ms": 0.826,
+   "total_ms": 8.655,
+   "stats": {
+    "primary_vars": 35,
+    "vars": 366,
+    "clauses": 542
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 13,
+   "label": "ShowMe1",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMe1 for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 16.446,
+   "solve_ms": 2.998,
+   "total_ms": 19.444,
+   "stats": {
+    "primary_vars": 192,
+    "vars": 3114,
+    "clauses": 5995
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ],
+       [
+        "Node$1",
+        "Id$1"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ],
+       [
+        "State$0",
+        "Node$1",
+        "NodeData$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 14,
+   "label": "ShowMe2",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ShowMe2 for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 20.794,
+   "solve_ms": 6.793,
+   "total_ms": 27.588,
+   "stats": {
+    "primary_vars": 192,
+    "vars": 3996,
+    "clauses": 7456
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ],
+       [
+        "Id$2"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$2"
+       ],
+       [
+        "Id$2",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$0"
+       ],
+       [
+        "Node$1",
+        "Id$2"
+       ],
+       [
+        "Node$2",
+        "Id$1"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ],
+       [
+        "NodeData$2"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$2",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Id$2",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$2",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Node$2"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$2"
+       ],
+       [
+        "NodeData$2",
+        "Node$2"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ],
+       [
+        "State$0",
+        "Node$2"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$2"
+       ],
+       [
+        "State$0",
+        "Node$1",
+        "NodeData$0"
+       ],
+       [
+        "State$0",
+        "Node$2",
+        "NodeData$1"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 15,
+   "label": "InjectiveIds",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check InjectiveIds for 5 expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 45.919,
+   "solve_ms": 6.693,
+   "total_ms": 52.612,
+   "stats": {
+    "primary_vars": 780,
+    "vars": 14835,
+    "clauses": 35106
+   }
+  },
+  {
+   "index": 16,
+   "label": "FindSuccessorWorks",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check FindSuccessorWorks for 3 but 1 State expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 12.325,
+   "solve_ms": 2.394,
+   "total_ms": 14.719,
+   "stats": {
+    "primary_vars": 173,
+    "vars": 2674,
+    "clauses": 4654
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$FindSuccessorWorks_i": [
+       [
+        "Id$1"
+       ]
+      ],
+      "skolem:$FindSuccessorWorks_n\"": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$FindSuccessorWorks_s": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/Id": [
+       [
+        "Id$0"
+       ],
+       [
+        "Id$1"
+       ]
+      ],
+      "this/Id.next": [
+       [
+        "Id$0",
+        "Id$1"
+       ],
+       [
+        "Id$1",
+        "Id$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ]
+      ],
+      "this/Node.id": [
+       [
+        "Node$0",
+        "Id$1"
+       ],
+       [
+        "Node$1",
+        "Id$0"
+       ]
+      ],
+      "this/NodeData": [
+       [
+        "NodeData$0"
+       ],
+       [
+        "NodeData$1"
+       ],
+       [
+        "NodeData$2"
+       ]
+      ],
+      "this/NodeData.closest_preceding_finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_predecessor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.find_successor": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$0",
+        "Id$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.finger": [
+       [
+        "NodeData$0",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Id$1",
+        "Node$0"
+       ],
+       [
+        "NodeData$2",
+        "Id$0",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Id$1",
+        "Node$0"
+       ]
+      ],
+      "this/NodeData.next": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Node$1"
+       ]
+      ],
+      "this/NodeData.prev": [
+       [
+        "NodeData$0",
+        "Node$0"
+       ],
+       [
+        "NodeData$1",
+        "Node$1"
+       ],
+       [
+        "NodeData$2",
+        "Node$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$0",
+        "Node$0"
+       ]
+      ],
+      "this/State.data": [
+       [
+        "State$0",
+        "Node$0",
+        "NodeData$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

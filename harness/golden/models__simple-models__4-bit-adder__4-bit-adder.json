@@ -1,0 +1,160 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/4-bit-adder/4-bit-adder",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 105.445,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 195.003,
+   "solve_ms": 10.29,
+   "total_ms": 205.293,
+   "stats": {
+    "primary_vars": 1024,
+    "vars": 1794,
+    "clauses": 3020
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/A": [
+       [
+        "A$0"
+       ]
+      ],
+      "this/B": [
+       [
+        "B$0"
+       ]
+      ],
+      "this/BitVector": [
+       [
+        "A$0"
+       ],
+       [
+        "B$0"
+       ],
+       [
+        "C$0"
+       ],
+       [
+        "S$0"
+       ]
+      ],
+      "this/BitVector.values": [
+       [
+        "A$0",
+        "0",
+        "0"
+       ],
+       [
+        "A$0",
+        "1",
+        "0"
+       ],
+       [
+        "A$0",
+        "2",
+        "0"
+       ],
+       [
+        "A$0",
+        "3",
+        "0"
+       ],
+       [
+        "B$0",
+        "0",
+        "1"
+       ],
+       [
+        "B$0",
+        "1",
+        "1"
+       ],
+       [
+        "B$0",
+        "2",
+        "1"
+       ],
+       [
+        "B$0",
+        "3",
+        "1"
+       ],
+       [
+        "C$0",
+        "0",
+        "0"
+       ],
+       [
+        "C$0",
+        "1",
+        "0"
+       ],
+       [
+        "C$0",
+        "2",
+        "0"
+       ],
+       [
+        "C$0",
+        "3",
+        "0"
+       ],
+       [
+        "S$0",
+        "0",
+        "1"
+       ],
+       [
+        "S$0",
+        "1",
+        "1"
+       ],
+       [
+        "S$0",
+        "2",
+        "1"
+       ],
+       [
+        "S$0",
+        "3",
+        "1"
+       ]
+      ],
+      "this/C": [
+       [
+        "C$0"
+       ]
+      ],
+      "this/S": [
+       [
+        "S$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

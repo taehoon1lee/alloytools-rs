@@ -1,0 +1,186 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/coloring/color-australia",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 117.925,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "colors",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run colors for 1 but exactly 3 Color",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 116.945,
+   "solve_ms": 12.262,
+   "total_ms": 129.207,
+   "stats": {
+    "primary_vars": 21,
+    "vars": 196,
+    "clauses": 306
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "wa$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "nsw$0",
+        "v$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "nt$0",
+        "q$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "q$0",
+        "sa$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "sa$0",
+        "nsw$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "v$0",
+        "t$0"
+       ],
+       [
+        "ordering/Ord$0",
+        "wa$0",
+        "nt$0"
+       ]
+      ],
+      "skolem:$colors_coloring": [
+       [
+        "nsw$0",
+        "Color$1"
+       ],
+       [
+        "nt$0",
+        "Color$1"
+       ],
+       [
+        "q$0",
+        "Color$2"
+       ],
+       [
+        "sa$0",
+        "Color$0"
+       ],
+       [
+        "t$0",
+        "Color$2"
+       ],
+       [
+        "v$0",
+        "Color$2"
+       ],
+       [
+        "wa$0",
+        "Color$2"
+       ]
+      ],
+      "this/Color": [
+       [
+        "Color$0"
+       ],
+       [
+        "Color$1"
+       ],
+       [
+        "Color$2"
+       ]
+      ],
+      "this/State": [
+       [
+        "nsw$0"
+       ],
+       [
+        "nt$0"
+       ],
+       [
+        "q$0"
+       ],
+       [
+        "sa$0"
+       ],
+       [
+        "t$0"
+       ],
+       [
+        "v$0"
+       ],
+       [
+        "wa$0"
+       ]
+      ],
+      "this/nsw": [
+       [
+        "nsw$0"
+       ]
+      ],
+      "this/nt": [
+       [
+        "nt$0"
+       ]
+      ],
+      "this/q": [
+       [
+        "q$0"
+       ]
+      ],
+      "this/sa": [
+       [
+        "sa$0"
+       ]
+      ],
+      "this/t": [
+       [
+        "t$0"
+       ]
+      ],
+      "this/v": [
+       [
+        "v$0"
+       ]
+      ],
+      "this/wa": [
+       [
+        "wa$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

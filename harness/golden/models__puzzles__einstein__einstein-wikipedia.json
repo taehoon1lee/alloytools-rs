@@ -1,0 +1,579 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/einstein/einstein-wikipedia",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 217.176,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 5",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 237.204,
+   "solve_ms": 21.121,
+   "total_ms": 258.325,
+   "stats": {
+    "primary_vars": 125,
+    "vars": 1211,
+    "clauses": 2046
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "open$3/Ord": [
+       [
+        "open$3/Ord$0"
+       ]
+      ],
+      "open$3/Ord.First": [
+       [
+        "open$3/Ord$0",
+        "yellow$0"
+       ]
+      ],
+      "open$3/Ord.Next": [
+       [
+        "open$3/Ord$0",
+        "blue$0",
+        "red$0"
+       ],
+       [
+        "open$3/Ord$0",
+        "ivory$0",
+        "green$0"
+       ],
+       [
+        "open$3/Ord$0",
+        "red$0",
+        "ivory$0"
+       ],
+       [
+        "open$3/Ord$0",
+        "yellow$0",
+        "blue$0"
+       ]
+      ],
+      "open$4/Ord": [
+       [
+        "open$4/Ord$0"
+       ]
+      ],
+      "open$4/Ord.First": [
+       [
+        "open$4/Ord$0",
+        "Norwegian$0"
+       ]
+      ],
+      "open$4/Ord.Next": [
+       [
+        "open$4/Ord$0",
+        "Englishman$0",
+        "Spaniard$0"
+       ],
+       [
+        "open$4/Ord$0",
+        "Norwegian$0",
+        "Ukrainian$0"
+       ],
+       [
+        "open$4/Ord$0",
+        "Spaniard$0",
+        "Japanese$0"
+       ],
+       [
+        "open$4/Ord$0",
+        "Ukrainian$0",
+        "Englishman$0"
+       ]
+      ],
+      "open$5/Ord": [
+       [
+        "open$5/Ord$0"
+       ]
+      ],
+      "open$5/Ord.First": [
+       [
+        "open$5/Ord$0",
+        "water$0"
+       ]
+      ],
+      "open$5/Ord.Next": [
+       [
+        "open$5/Ord$0",
+        "juice$0",
+        "coffee$0"
+       ],
+       [
+        "open$5/Ord$0",
+        "milk$0",
+        "juice$0"
+       ],
+       [
+        "open$5/Ord$0",
+        "tea$0",
+        "milk$0"
+       ],
+       [
+        "open$5/Ord$0",
+        "water$0",
+        "tea$0"
+       ]
+      ],
+      "open$6/Ord": [
+       [
+        "open$6/Ord$0"
+       ]
+      ],
+      "open$6/Ord.First": [
+       [
+        "open$6/Ord$0",
+        "Kools$0"
+       ]
+      ],
+      "open$6/Ord.Next": [
+       [
+        "open$6/Ord$0",
+        "Chesterfield$0",
+        "OldGold$0"
+       ],
+       [
+        "open$6/Ord$0",
+        "Kools$0",
+        "Chesterfield$0"
+       ],
+       [
+        "open$6/Ord$0",
+        "LuckyStrike$0",
+        "Parliament$0"
+       ],
+       [
+        "open$6/Ord$0",
+        "OldGold$0",
+        "LuckyStrike$0"
+       ]
+      ],
+      "open$7/Ord": [
+       [
+        "open$7/Ord$0"
+       ]
+      ],
+      "open$7/Ord.First": [
+       [
+        "open$7/Ord$0",
+        "fox$0"
+       ]
+      ],
+      "open$7/Ord.Next": [
+       [
+        "open$7/Ord$0",
+        "dog$0",
+        "zebra$0"
+       ],
+       [
+        "open$7/Ord$0",
+        "fox$0",
+        "horse$0"
+       ],
+       [
+        "open$7/Ord$0",
+        "horse$0",
+        "snails$0"
+       ],
+       [
+        "open$7/Ord$0",
+        "snails$0",
+        "dog$0"
+       ]
+      ],
+      "ordering/Ord": [
+       [
+        "ordering/Ord$0"
+       ]
+      ],
+      "ordering/Ord.First": [
+       [
+        "ordering/Ord$0",
+        "House$0"
+       ]
+      ],
+      "ordering/Ord.Next": [
+       [
+        "ordering/Ord$0",
+        "House$0",
+        "House$1"
+       ],
+       [
+        "ordering/Ord$0",
+        "House$1",
+        "House$2"
+       ],
+       [
+        "ordering/Ord$0",
+        "House$2",
+        "House$3"
+       ],
+       [
+        "ordering/Ord$0",
+        "House$3",
+        "House$4"
+       ]
+      ],
+      "this/Chesterfield": [
+       [
+        "Chesterfield$0"
+       ]
+      ],
+      "this/Color": [
+       [
+        "blue$0"
+       ],
+       [
+        "green$0"
+       ],
+       [
+        "ivory$0"
+       ],
+       [
+        "red$0"
+       ],
+       [
+        "yellow$0"
+       ]
+      ],
+      "this/Drink": [
+       [
+        "coffee$0"
+       ],
+       [
+        "juice$0"
+       ],
+       [
+        "milk$0"
+       ],
+       [
+        "tea$0"
+       ],
+       [
+        "water$0"
+       ]
+      ],
+      "this/Englishman": [
+       [
+        "Englishman$0"
+       ]
+      ],
+      "this/House": [
+       [
+        "House$0"
+       ],
+       [
+        "House$1"
+       ],
+       [
+        "House$2"
+       ],
+       [
+        "House$3"
+       ],
+       [
+        "House$4"
+       ]
+      ],
+      "this/House.drunk": [
+       [
+        "House$0",
+        "water$0"
+       ],
+       [
+        "House$1",
+        "tea$0"
+       ],
+       [
+        "House$2",
+        "milk$0"
+       ],
+       [
+        "House$3",
+        "juice$0"
+       ],
+       [
+        "House$4",
+        "coffee$0"
+       ]
+      ],
+      "this/House.home": [
+       [
+        "House$0",
+        "Norwegian$0"
+       ],
+       [
+        "House$1",
+        "Ukrainian$0"
+       ],
+       [
+        "House$2",
+        "Englishman$0"
+       ],
+       [
+        "House$3",
+        "Spaniard$0"
+       ],
+       [
+        "House$4",
+        "Japanese$0"
+       ]
+      ],
+      "this/House.house": [
+       [
+        "House$0",
+        "yellow$0"
+       ],
+       [
+        "House$1",
+        "blue$0"
+       ],
+       [
+        "House$2",
+        "red$0"
+       ],
+       [
+        "House$3",
+        "ivory$0"
+       ],
+       [
+        "House$4",
+        "green$0"
+       ]
+      ],
+      "this/House.owns": [
+       [
+        "House$0",
+        "fox$0"
+       ],
+       [
+        "House$1",
+        "horse$0"
+       ],
+       [
+        "House$2",
+        "snails$0"
+       ],
+       [
+        "House$3",
+        "dog$0"
+       ],
+       [
+        "House$4",
+        "zebra$0"
+       ]
+      ],
+      "this/House.smoker": [
+       [
+        "House$0",
+        "Kools$0"
+       ],
+       [
+        "House$1",
+        "Chesterfield$0"
+       ],
+       [
+        "House$2",
+        "OldGold$0"
+       ],
+       [
+        "House$3",
+        "LuckyStrike$0"
+       ],
+       [
+        "House$4",
+        "Parliament$0"
+       ]
+      ],
+      "this/Japanese": [
+       [
+        "Japanese$0"
+       ]
+      ],
+      "this/Kools": [
+       [
+        "Kools$0"
+       ]
+      ],
+      "this/LuckyStrike": [
+       [
+        "LuckyStrike$0"
+       ]
+      ],
+      "this/Nationality": [
+       [
+        "Englishman$0"
+       ],
+       [
+        "Japanese$0"
+       ],
+       [
+        "Norwegian$0"
+       ],
+       [
+        "Spaniard$0"
+       ],
+       [
+        "Ukrainian$0"
+       ]
+      ],
+      "this/Norwegian": [
+       [
+        "Norwegian$0"
+       ]
+      ],
+      "this/OldGold": [
+       [
+        "OldGold$0"
+       ]
+      ],
+      "this/Parliament": [
+       [
+        "Parliament$0"
+       ]
+      ],
+      "this/Pet": [
+       [
+        "dog$0"
+       ],
+       [
+        "fox$0"
+       ],
+       [
+        "horse$0"
+       ],
+       [
+        "snails$0"
+       ],
+       [
+        "zebra$0"
+       ]
+      ],
+      "this/Smoke": [
+       [
+        "Chesterfield$0"
+       ],
+       [
+        "Kools$0"
+       ],
+       [
+        "LuckyStrike$0"
+       ],
+       [
+        "OldGold$0"
+       ],
+       [
+        "Parliament$0"
+       ]
+      ],
+      "this/Spaniard": [
+       [
+        "Spaniard$0"
+       ]
+      ],
+      "this/Ukrainian": [
+       [
+        "Ukrainian$0"
+       ]
+      ],
+      "this/blue": [
+       [
+        "blue$0"
+       ]
+      ],
+      "this/coffee": [
+       [
+        "coffee$0"
+       ]
+      ],
+      "this/dog": [
+       [
+        "dog$0"
+       ]
+      ],
+      "this/fox": [
+       [
+        "fox$0"
+       ]
+      ],
+      "this/green": [
+       [
+        "green$0"
+       ]
+      ],
+      "this/horse": [
+       [
+        "horse$0"
+       ]
+      ],
+      "this/ivory": [
+       [
+        "ivory$0"
+       ]
+      ],
+      "this/juice": [
+       [
+        "juice$0"
+       ]
+      ],
+      "this/milk": [
+       [
+        "milk$0"
+       ]
+      ],
+      "this/red": [
+       [
+        "red$0"
+       ]
+      ],
+      "this/snails": [
+       [
+        "snails$0"
+       ]
+      ],
+      "this/tea": [
+       [
+        "tea$0"
+       ]
+      ],
+      "this/water": [
+       [
+        "water$0"
+       ]
+      ],
+      "this/yellow": [
+       [
+        "yellow$0"
+       ]
+      ],
+      "this/zebra": [
+       [
+        "zebra$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

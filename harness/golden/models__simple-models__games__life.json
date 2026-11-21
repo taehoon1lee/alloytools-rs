@@ -1,0 +1,379 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/games/life",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 120.062,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Square",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Square for 6 Point, 3 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 155.053,
+   "solve_ms": 14.731,
+   "total_ms": 169.784,
+   "stats": {
+    "primary_vars": 95,
+    "vars": 4719,
+    "clauses": 13939
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ]
+      ],
+      "this/Point": [
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Point.below": [],
+      "this/Point.right": [],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ]
+      ],
+      "this/State.live": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "Show",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Show for exactly 12 Point, 3 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 116.6,
+   "solve_ms": 160.767,
+   "total_ms": 277.367,
+   "stats": {
+    "primary_vars": 324,
+    "vars": 27502,
+    "clauses": 92875
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ]
+      ],
+      "this/Point": [
+       [
+        "Point$0"
+       ],
+       [
+        "Point$1"
+       ],
+       [
+        "Point$10"
+       ],
+       [
+        "Point$2"
+       ],
+       [
+        "Point$3"
+       ],
+       [
+        "Point$4"
+       ],
+       [
+        "Point$5"
+       ],
+       [
+        "Point$6"
+       ],
+       [
+        "Point$7"
+       ],
+       [
+        "Point$8"
+       ],
+       [
+        "Point$9"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Point.below": [],
+      "this/Point.right": [
+       [
+        "Point$0",
+        "Point$7"
+       ],
+       [
+        "Point$10",
+        "Point$9"
+       ],
+       [
+        "Point$2",
+        "Point$6"
+       ],
+       [
+        "Point$3",
+        "Point$1"
+       ],
+       [
+        "Point$4",
+        "Point$2"
+       ],
+       [
+        "Point$5",
+        "Point$10"
+       ],
+       [
+        "Point$6",
+        "Point$3"
+       ],
+       [
+        "Point$7",
+        "Point$5"
+       ],
+       [
+        "Point$8",
+        "Point$4"
+       ],
+       [
+        "Point$9",
+        "Point$8"
+       ],
+       [
+        "Root$0",
+        "Point$0"
+       ]
+      ],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ]
+      ],
+      "this/State.live": []
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "interesting",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run interesting for exactly 6 Point, 3 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 20.353,
+   "solve_ms": 20.778,
+   "total_ms": 41.131,
+   "stats": {
+    "primary_vars": 90,
+    "vars": 3654,
+    "clauses": 11352
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ]
+      ],
+      "this/Point": [
+       [
+        "Point$0"
+       ],
+       [
+        "Point$1"
+       ],
+       [
+        "Point$2"
+       ],
+       [
+        "Point$3"
+       ],
+       [
+        "Point$4"
+       ],
+       [
+        "Root$0"
+       ]
+      ],
+      "this/Point.below": [
+       [
+        "Point$1",
+        "Point$0"
+       ],
+       [
+        "Point$2",
+        "Point$3"
+       ],
+       [
+        "Root$0",
+        "Point$4"
+       ]
+      ],
+      "this/Point.right": [
+       [
+        "Point$0",
+        "Point$3"
+       ],
+       [
+        "Point$1",
+        "Point$2"
+       ],
+       [
+        "Point$4",
+        "Point$0"
+       ],
+       [
+        "Root$0",
+        "Point$1"
+       ]
+      ],
+      "this/Root": [
+       [
+        "Root$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ]
+      ],
+      "this/State.live": [
+       [
+        "State$0",
+        "Point$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

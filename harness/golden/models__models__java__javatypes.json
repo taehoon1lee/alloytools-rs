@@ -1,0 +1,97 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/java/javatypes",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 107.609,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Show",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Show for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 98.486,
+   "solve_ms": 6.88,
+   "total_ms": 105.366,
+   "stats": {
+    "primary_vars": 46,
+    "vars": 443,
+    "clauses": 736
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Class": [
+       [
+        "Class$0"
+       ],
+       [
+        "Object$0"
+       ]
+      ],
+      "this/Instance": [],
+      "this/Instance.type": [],
+      "this/Interface": [
+       [
+        "Interface$0"
+       ]
+      ],
+      "this/Object": [
+       [
+        "Object$0"
+       ]
+      ],
+      "this/Type": [
+       [
+        "Class$0"
+       ],
+       [
+        "Interface$0"
+       ],
+       [
+        "Object$0"
+       ]
+      ],
+      "this/Type.subtypes": [
+       [
+        "Object$0",
+        "Class$0"
+       ],
+       [
+        "Object$0",
+        "Interface$0"
+       ]
+      ],
+      "this/Variable": [
+       [
+        "Variable$0"
+       ]
+      ],
+      "this/Variable.holds": [],
+      "this/Variable.type": [
+       [
+        "Variable$0",
+        "Interface$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,1282 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/case_studies/firewire",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 183.465,
+ "command_count": 7,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Execution",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Execution for 7 Op, 2 Msg, 2 Node, 4 Link, 4 Queue, 6 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 274.168,
+   "solve_ms": 38.575,
+   "total_ms": 312.743,
+   "stats": {
+    "primary_vars": 290,
+    "vars": 6912,
+    "clauses": 12887
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "ord/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "ord/Ord$0",
+        "State$3",
+        "State$4"
+       ],
+       [
+        "ord/Ord$0",
+        "State$4",
+        "State$5"
+       ]
+      ],
+      "skolem:$Execution_root": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$Execution_tree": [],
+      "this/Ack": [
+       [
+        "Ack$0"
+       ]
+      ],
+      "this/AssignParent": [
+       [
+        "AssignParent$0"
+       ]
+      ],
+      "this/Elect": [
+       [
+        "Elect$0"
+       ]
+      ],
+      "this/Init": [
+       [
+        "Init$0"
+       ]
+      ],
+      "this/Link": [],
+      "this/Link.reverse": [],
+      "this/Link.source": [],
+      "this/Link.target": [],
+      "this/Msg": [
+       [
+        "Ack$0"
+       ],
+       [
+        "Req$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ]
+      ],
+      "this/Node.from": [],
+      "this/Node.to": [],
+      "this/Op": [
+       [
+        "AssignParent$0"
+       ],
+       [
+        "Elect$0"
+       ],
+       [
+        "Init$0"
+       ],
+       [
+        "ReadReqOrAck$0"
+       ],
+       [
+        "ResolveContention$0"
+       ],
+       [
+        "Stutter$0"
+       ],
+       [
+        "WriteReqOrAck$0"
+       ]
+      ],
+      "this/Queue": [],
+      "this/Queue.overflow": [],
+      "this/Queue.slot": [],
+      "this/ReadReqOrAck": [
+       [
+        "ReadReqOrAck$0"
+       ]
+      ],
+      "this/Req": [
+       [
+        "Req$0"
+       ]
+      ],
+      "this/ResolveContention": [
+       [
+        "ResolveContention$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ],
+       [
+        "State$5"
+       ]
+      ],
+      "this/State.active": [],
+      "this/State.contending": [],
+      "this/State.elected": [],
+      "this/State.op": [
+       [
+        "State$0",
+        "Init$0"
+       ],
+       [
+        "State$1",
+        "Stutter$0"
+       ],
+       [
+        "State$2",
+        "Stutter$0"
+       ],
+       [
+        "State$3",
+        "Stutter$0"
+       ],
+       [
+        "State$4",
+        "Stutter$0"
+       ],
+       [
+        "State$5",
+        "Stutter$0"
+       ]
+      ],
+      "this/State.parentLinks": [],
+      "this/State.queue": [],
+      "this/State.waiting": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$1",
+        "Node$0"
+       ],
+       [
+        "State$2",
+        "Node$0"
+       ],
+       [
+        "State$3",
+        "Node$0"
+       ],
+       [
+        "State$4",
+        "Node$0"
+       ],
+       [
+        "State$5",
+        "Node$0"
+       ]
+      ],
+      "this/Stutter": [
+       [
+        "Stutter$0"
+       ]
+      ],
+      "this/WriteReqOrAck": [
+       [
+        "WriteReqOrAck$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 1,
+   "label": "ElectionHappens",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ElectionHappens for 7 Op, 2 Msg, exactly 3 Node, 6 Link, 3 Queue, 7 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 152.231,
+   "solve_ms": 265.623,
+   "total_ms": 417.854,
+   "stats": {
+    "primary_vars": 456,
+    "vars": 12704,
+    "clauses": 24375
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "ord/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "ord/Ord$0",
+        "State$3",
+        "State$4"
+       ],
+       [
+        "ord/Ord$0",
+        "State$4",
+        "State$5"
+       ],
+       [
+        "ord/Ord$0",
+        "State$5",
+        "State$6"
+       ]
+      ],
+      "skolem:$ElectionHappens_root": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$ElectionHappens_s": [
+       [
+        "State$6"
+       ]
+      ],
+      "skolem:$ElectionHappens_s'": [
+       [
+        "State$5"
+       ]
+      ],
+      "skolem:$ElectionHappens_tree": [
+       [
+        "Node$0",
+        "Node$1"
+       ],
+       [
+        "Node$1",
+        "Node$2"
+       ]
+      ],
+      "this/Ack": [
+       [
+        "Ack$0"
+       ]
+      ],
+      "this/AssignParent": [
+       [
+        "AssignParent$0"
+       ]
+      ],
+      "this/Elect": [
+       [
+        "Elect$0"
+       ]
+      ],
+      "this/Init": [
+       [
+        "Init$0"
+       ]
+      ],
+      "this/Link": [
+       [
+        "Link$0"
+       ],
+       [
+        "Link$1"
+       ],
+       [
+        "Link$2"
+       ],
+       [
+        "Link$3"
+       ]
+      ],
+      "this/Link.reverse": [
+       [
+        "Link$0",
+        "Link$2"
+       ],
+       [
+        "Link$1",
+        "Link$3"
+       ],
+       [
+        "Link$2",
+        "Link$0"
+       ],
+       [
+        "Link$3",
+        "Link$1"
+       ]
+      ],
+      "this/Link.source": [
+       [
+        "Link$0",
+        "Node$1"
+       ],
+       [
+        "Link$1",
+        "Node$1"
+       ],
+       [
+        "Link$2",
+        "Node$0"
+       ],
+       [
+        "Link$3",
+        "Node$2"
+       ]
+      ],
+      "this/Link.target": [
+       [
+        "Link$0",
+        "Node$0"
+       ],
+       [
+        "Link$1",
+        "Node$2"
+       ],
+       [
+        "Link$2",
+        "Node$1"
+       ],
+       [
+        "Link$3",
+        "Node$1"
+       ]
+      ],
+      "this/Msg": [
+       [
+        "Ack$0"
+       ],
+       [
+        "Req$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ],
+       [
+        "Node$1"
+       ],
+       [
+        "Node$2"
+       ]
+      ],
+      "this/Node.from": [
+       [
+        "Node$0",
+        "Link$2"
+       ],
+       [
+        "Node$1",
+        "Link$0"
+       ],
+       [
+        "Node$1",
+        "Link$1"
+       ],
+       [
+        "Node$2",
+        "Link$3"
+       ]
+      ],
+      "this/Node.to": [
+       [
+        "Node$0",
+        "Link$0"
+       ],
+       [
+        "Node$1",
+        "Link$2"
+       ],
+       [
+        "Node$1",
+        "Link$3"
+       ],
+       [
+        "Node$2",
+        "Link$1"
+       ]
+      ],
+      "this/Op": [
+       [
+        "AssignParent$0"
+       ],
+       [
+        "Elect$0"
+       ],
+       [
+        "Init$0"
+       ],
+       [
+        "ReadReqOrAck$0"
+       ],
+       [
+        "ResolveContention$0"
+       ],
+       [
+        "Stutter$0"
+       ],
+       [
+        "WriteReqOrAck$0"
+       ]
+      ],
+      "this/Queue": [
+       [
+        "Queue$0"
+       ],
+       [
+        "Queue$1"
+       ],
+       [
+        "Queue$2"
+       ]
+      ],
+      "this/Queue.overflow": [],
+      "this/Queue.slot": [
+       [
+        "Queue$0",
+        "Ack$0"
+       ],
+       [
+        "Queue$1",
+        "Req$0"
+       ]
+      ],
+      "this/ReadReqOrAck": [
+       [
+        "ReadReqOrAck$0"
+       ]
+      ],
+      "this/Req": [
+       [
+        "Req$0"
+       ]
+      ],
+      "this/ResolveContention": [
+       [
+        "ResolveContention$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ],
+       [
+        "State$5"
+       ],
+       [
+        "State$6"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$1",
+        "Node$2"
+       ],
+       [
+        "State$2",
+        "Node$2"
+       ],
+       [
+        "State$3",
+        "Node$0"
+       ],
+       [
+        "State$3",
+        "Node$2"
+       ],
+       [
+        "State$4",
+        "Node$0"
+       ],
+       [
+        "State$4",
+        "Node$2"
+       ],
+       [
+        "State$5",
+        "Node$0"
+       ],
+       [
+        "State$5",
+        "Node$1"
+       ],
+       [
+        "State$5",
+        "Node$2"
+       ],
+       [
+        "State$6",
+        "Node$0"
+       ],
+       [
+        "State$6",
+        "Node$2"
+       ]
+      ],
+      "this/State.contending": [],
+      "this/State.elected": [
+       [
+        "State$6",
+        "Node$1"
+       ]
+      ],
+      "this/State.op": [
+       [
+        "State$0",
+        "Init$0"
+       ],
+       [
+        "State$1",
+        "WriteReqOrAck$0"
+       ],
+       [
+        "State$2",
+        "AssignParent$0"
+       ],
+       [
+        "State$3",
+        "WriteReqOrAck$0"
+       ],
+       [
+        "State$4",
+        "AssignParent$0"
+       ],
+       [
+        "State$5",
+        "WriteReqOrAck$0"
+       ],
+       [
+        "State$6",
+        "Elect$0"
+       ]
+      ],
+      "this/State.parentLinks": [
+       [
+        "State$2",
+        "Link$3"
+       ],
+       [
+        "State$3",
+        "Link$3"
+       ],
+       [
+        "State$4",
+        "Link$2"
+       ],
+       [
+        "State$4",
+        "Link$3"
+       ],
+       [
+        "State$5",
+        "Link$2"
+       ],
+       [
+        "State$5",
+        "Link$3"
+       ],
+       [
+        "State$6",
+        "Link$2"
+       ],
+       [
+        "State$6",
+        "Link$3"
+       ]
+      ],
+      "this/State.queue": [
+       [
+        "State$0",
+        "Link$0",
+        "Queue$2"
+       ],
+       [
+        "State$0",
+        "Link$1",
+        "Queue$2"
+       ],
+       [
+        "State$0",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$0",
+        "Link$3",
+        "Queue$2"
+       ],
+       [
+        "State$1",
+        "Link$0",
+        "Queue$2"
+       ],
+       [
+        "State$1",
+        "Link$1",
+        "Queue$2"
+       ],
+       [
+        "State$1",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$1",
+        "Link$3",
+        "Queue$1"
+       ],
+       [
+        "State$2",
+        "Link$0",
+        "Queue$2"
+       ],
+       [
+        "State$2",
+        "Link$1",
+        "Queue$2"
+       ],
+       [
+        "State$2",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$2",
+        "Link$3",
+        "Queue$2"
+       ],
+       [
+        "State$3",
+        "Link$0",
+        "Queue$2"
+       ],
+       [
+        "State$3",
+        "Link$1",
+        "Queue$2"
+       ],
+       [
+        "State$3",
+        "Link$2",
+        "Queue$1"
+       ],
+       [
+        "State$3",
+        "Link$3",
+        "Queue$2"
+       ],
+       [
+        "State$4",
+        "Link$0",
+        "Queue$2"
+       ],
+       [
+        "State$4",
+        "Link$1",
+        "Queue$2"
+       ],
+       [
+        "State$4",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$4",
+        "Link$3",
+        "Queue$2"
+       ],
+       [
+        "State$5",
+        "Link$0",
+        "Queue$0"
+       ],
+       [
+        "State$5",
+        "Link$1",
+        "Queue$0"
+       ],
+       [
+        "State$5",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$5",
+        "Link$3",
+        "Queue$2"
+       ],
+       [
+        "State$6",
+        "Link$0",
+        "Queue$0"
+       ],
+       [
+        "State$6",
+        "Link$1",
+        "Queue$0"
+       ],
+       [
+        "State$6",
+        "Link$2",
+        "Queue$2"
+       ],
+       [
+        "State$6",
+        "Link$3",
+        "Queue$2"
+       ]
+      ],
+      "this/State.waiting": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$0",
+        "Node$1"
+       ],
+       [
+        "State$0",
+        "Node$2"
+       ],
+       [
+        "State$1",
+        "Node$0"
+       ],
+       [
+        "State$1",
+        "Node$1"
+       ],
+       [
+        "State$2",
+        "Node$0"
+       ],
+       [
+        "State$2",
+        "Node$1"
+       ],
+       [
+        "State$3",
+        "Node$1"
+       ],
+       [
+        "State$4",
+        "Node$1"
+       ]
+      ],
+      "this/Stutter": [
+       [
+        "Stutter$0"
+       ]
+      ],
+      "this/WriteReqOrAck": [
+       [
+        "WriteReqOrAck$0"
+       ]
+      ]
+     }
+    ]
+   }
+  },
+  {
+   "index": 2,
+   "label": "NoRepeats",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run NoRepeats for 7 Op, 2 Msg, 2 Node, 2 Link, 2 Queue, 4 State expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 67.288,
+   "solve_ms": 5.89,
+   "total_ms": 73.178,
+   "stats": {
+    "primary_vars": 124,
+    "vars": 2894,
+    "clauses": 5186
+   }
+  },
+  {
+   "index": 3,
+   "label": "NoRepeats",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run NoRepeats for 7 Op, 2 Msg, 3 Node, 6 Link, 6 Queue, 8 State expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 148.053,
+   "solve_ms": 507.198,
+   "total_ms": 655.25,
+   "stats": {
+    "primary_vars": 647,
+    "vars": 22017,
+    "clauses": 44378
+   }
+  },
+  {
+   "index": 4,
+   "label": "NoOverflow",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check NoOverflow for 7 Op, 2 Msg, 3 Node, 6 Link, 5 Queue, 9 State expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 69.415,
+   "solve_ms": 1686.627,
+   "total_ms": 1756.041,
+   "stats": {
+    "primary_vars": 664,
+    "vars": 20377,
+    "clauses": 40045
+   }
+  },
+  {
+   "index": 5,
+   "label": "AtMostOneElected",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check AtMostOneElected for 7 Op, 2 Msg, 3 Node, 6 Link, 3 Queue, 9 State expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 62.595,
+   "solve_ms": 1610.891,
+   "total_ms": 1673.486,
+   "stats": {
+    "primary_vars": 540,
+    "vars": 17975,
+    "clauses": 34220
+   }
+  },
+  {
+   "index": 6,
+   "label": "OneEventuallyElected",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check OneEventuallyElected for 7 Op, 2 Msg, 3 Node, 6 Link, 3 Queue, 9 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 55.122,
+   "solve_ms": 41.244,
+   "total_ms": 96.365,
+   "stats": {
+    "primary_vars": 531,
+    "vars": 16887,
+    "clauses": 32333
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "ord/Ord": [
+       [
+        "ord/Ord$0"
+       ]
+      ],
+      "ord/Ord.First": [
+       [
+        "ord/Ord$0",
+        "State$0"
+       ]
+      ],
+      "ord/Ord.Next": [
+       [
+        "ord/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "ord/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "ord/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "ord/Ord$0",
+        "State$3",
+        "State$4"
+       ],
+       [
+        "ord/Ord$0",
+        "State$4",
+        "State$5"
+       ],
+       [
+        "ord/Ord$0",
+        "State$5",
+        "State$6"
+       ],
+       [
+        "ord/Ord$0",
+        "State$6",
+        "State$7"
+       ],
+       [
+        "ord/Ord$0",
+        "State$7",
+        "State$8"
+       ]
+      ],
+      "skolem:$OneEventuallyElected_root": [
+       [
+        "Node$0"
+       ]
+      ],
+      "skolem:$OneEventuallyElected_tree": [],
+      "this/Ack": [
+       [
+        "Ack$0"
+       ]
+      ],
+      "this/AssignParent": [
+       [
+        "AssignParent$0"
+       ]
+      ],
+      "this/Elect": [
+       [
+        "Elect$0"
+       ]
+      ],
+      "this/Init": [
+       [
+        "Init$0"
+       ]
+      ],
+      "this/Link": [],
+      "this/Link.reverse": [],
+      "this/Link.source": [],
+      "this/Link.target": [],
+      "this/Msg": [
+       [
+        "Ack$0"
+       ],
+       [
+        "Req$0"
+       ]
+      ],
+      "this/Node": [
+       [
+        "Node$0"
+       ]
+      ],
+      "this/Node.from": [],
+      "this/Node.to": [],
+      "this/Op": [
+       [
+        "AssignParent$0"
+       ],
+       [
+        "Elect$0"
+       ],
+       [
+        "Init$0"
+       ],
+       [
+        "ReadReqOrAck$0"
+       ],
+       [
+        "ResolveContention$0"
+       ],
+       [
+        "Stutter$0"
+       ],
+       [
+        "WriteReqOrAck$0"
+       ]
+      ],
+      "this/Queue": [],
+      "this/Queue.overflow": [],
+      "this/Queue.slot": [],
+      "this/ReadReqOrAck": [
+       [
+        "ReadReqOrAck$0"
+       ]
+      ],
+      "this/Req": [
+       [
+        "Req$0"
+       ]
+      ],
+      "this/ResolveContention": [
+       [
+        "ResolveContention$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ],
+       [
+        "State$5"
+       ],
+       [
+        "State$6"
+       ],
+       [
+        "State$7"
+       ],
+       [
+        "State$8"
+       ]
+      ],
+      "this/State.active": [
+       [
+        "State$4",
+        "Node$0"
+       ],
+       [
+        "State$5",
+        "Node$0"
+       ],
+       [
+        "State$6",
+        "Node$0"
+       ],
+       [
+        "State$7",
+        "Node$0"
+       ],
+       [
+        "State$8",
+        "Node$0"
+       ]
+      ],
+      "this/State.contending": [],
+      "this/State.elected": [],
+      "this/State.op": [
+       [
+        "State$0",
+        "Init$0"
+       ],
+       [
+        "State$1",
+        "Stutter$0"
+       ],
+       [
+        "State$2",
+        "Stutter$0"
+       ],
+       [
+        "State$3",
+        "Stutter$0"
+       ],
+       [
+        "State$4",
+        "WriteReqOrAck$0"
+       ],
+       [
+        "State$5",
+        "Stutter$0"
+       ],
+       [
+        "State$6",
+        "Stutter$0"
+       ],
+       [
+        "State$7",
+        "Stutter$0"
+       ],
+       [
+        "State$8",
+        "Stutter$0"
+       ]
+      ],
+      "this/State.parentLinks": [],
+      "this/State.queue": [],
+      "this/State.waiting": [
+       [
+        "State$0",
+        "Node$0"
+       ],
+       [
+        "State$1",
+        "Node$0"
+       ],
+       [
+        "State$2",
+        "Node$0"
+       ],
+       [
+        "State$3",
+        "Node$0"
+       ]
+      ],
+      "this/Stutter": [
+       [
+        "Stutter$0"
+       ]
+      ],
+      "this/WriteReqOrAck": [
+       [
+        "WriteReqOrAck$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

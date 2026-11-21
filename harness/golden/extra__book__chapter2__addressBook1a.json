@@ -1,0 +1,77 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook1a",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 86.277,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3 but 1 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 84.201,
+   "solve_ms": 5.14,
+   "total_ms": 89.341,
+   "stats": {
+    "primary_vars": 16,
+    "vars": 176,
+    "clauses": 263
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "this/Addr": [
+       [
+        "Addr$0"
+       ],
+       [
+        "Addr$1"
+       ]
+      ],
+      "this/Book": [
+       [
+        "Book$0"
+       ]
+      ],
+      "this/Book.addr": [
+       [
+        "Book$0",
+        "Name$0",
+        "Addr$1"
+       ],
+       [
+        "Book$0",
+        "Name$1",
+        "Addr$0"
+       ]
+      ],
+      "this/Name": [
+       [
+        "Name$0"
+       ],
+       [
+        "Name$1"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

@@ -1,0 +1,647 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/mapping/view-backing",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 149.873,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "zippishOK",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check zippishOK for 6 but 8 State, 3 ViewType expect 1",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 639.507,
+   "solve_ms": 152.94,
+   "total_ms": 792.447,
+   "stats": {
+    "primary_vars": 1734,
+    "vars": 95613,
+    "clauses": 294467
+   },
+   "instance": {
+    "trace_length": 1,
+    "loop": -1,
+    "states": [
+     {
+      "skolem:$zippishOK_k": [
+       [
+        "SetRef$0"
+       ]
+      ],
+      "skolem:$zippishOK_ki": [
+       [
+        "IteratorRef$1"
+       ]
+      ],
+      "skolem:$zippishOK_ks": [
+       [
+        "SetRef$0"
+       ]
+      ],
+      "skolem:$zippishOK_m": [
+       [
+        "MapRef$0"
+       ]
+      ],
+      "skolem:$zippishOK_v": [
+       [
+        "SetRef$0"
+       ]
+      ],
+      "skolem:$zippishOK_vi": [
+       [
+        "IteratorRef$0"
+       ]
+      ],
+      "skolem:$zippishOK_vs": [
+       [
+        "SetRef$0"
+       ]
+      ],
+      "so/Ord": [
+       [
+        "so/Ord$0"
+       ]
+      ],
+      "so/Ord.First": [
+       [
+        "so/Ord$0",
+        "State$0"
+       ]
+      ],
+      "so/Ord.Next": [
+       [
+        "so/Ord$0",
+        "State$0",
+        "State$1"
+       ],
+       [
+        "so/Ord$0",
+        "State$1",
+        "State$2"
+       ],
+       [
+        "so/Ord$0",
+        "State$2",
+        "State$3"
+       ],
+       [
+        "so/Ord$0",
+        "State$3",
+        "State$4"
+       ],
+       [
+        "so/Ord$0",
+        "State$4",
+        "State$5"
+       ],
+       [
+        "so/Ord$0",
+        "State$5",
+        "State$6"
+       ],
+       [
+        "so/Ord$0",
+        "State$6",
+        "State$7"
+       ]
+      ],
+      "this/Iterator": [
+       [
+        "Iterator$0"
+       ],
+       [
+        "Iterator$1"
+       ],
+       [
+        "Iterator$2"
+       ]
+      ],
+      "this/Iterator.done": [
+       [
+        "Iterator$0",
+        "SetRef$0"
+       ]
+      ],
+      "this/Iterator.lastRef": [
+       [
+        "Iterator$0",
+        "SetRef$0"
+       ]
+      ],
+      "this/Iterator.left": [
+       [
+        "Iterator$1",
+        "SetRef$0"
+       ]
+      ],
+      "this/IteratorRef": [
+       [
+        "IteratorRef$0"
+       ],
+       [
+        "IteratorRef$1"
+       ]
+      ],
+      "this/IteratorView": [
+       [
+        "IteratorView$0"
+       ]
+      ],
+      "this/KeySetView": [
+       [
+        "KeySetView$0"
+       ]
+      ],
+      "this/KeySetView\"": [
+       [
+        "KeySetView\"$0"
+       ]
+      ],
+      "this/Map": [
+       [
+        "Map$0"
+       ]
+      ],
+      "this/Map.keys": [
+       [
+        "Map$0",
+        "SetRef$0"
+       ]
+      ],
+      "this/Map.map": [
+       [
+        "Map$0",
+        "SetRef$0",
+        "SetRef$0"
+       ]
+      ],
+      "this/MapRef": [
+       [
+        "MapRef$0"
+       ]
+      ],
+      "this/Object": [
+       [
+        "Iterator$0"
+       ],
+       [
+        "Iterator$1"
+       ],
+       [
+        "Iterator$2"
+       ],
+       [
+        "Map$0"
+       ],
+       [
+        "Set$0"
+       ],
+       [
+        "Set$1"
+       ]
+      ],
+      "this/Ref": [
+       [
+        "IteratorRef$0"
+       ],
+       [
+        "IteratorRef$1"
+       ],
+       [
+        "MapRef$0"
+       ],
+       [
+        "SetRef$0"
+       ]
+      ],
+      "this/Set": [
+       [
+        "Set$0"
+       ],
+       [
+        "Set$1"
+       ]
+      ],
+      "this/Set.elts": [
+       [
+        "Set$0",
+        "SetRef$0"
+       ]
+      ],
+      "this/SetRef": [
+       [
+        "SetRef$0"
+       ]
+      ],
+      "this/State": [
+       [
+        "State$0"
+       ],
+       [
+        "State$1"
+       ],
+       [
+        "State$2"
+       ],
+       [
+        "State$3"
+       ],
+       [
+        "State$4"
+       ],
+       [
+        "State$5"
+       ],
+       [
+        "State$6"
+       ],
+       [
+        "State$7"
+       ]
+      ],
+      "this/State.dirty": [
+       [
+        "State$6",
+        "IteratorRef$0"
+       ],
+       [
+        "State$7",
+        "IteratorRef$0"
+       ]
+      ],
+      "this/State.obj": [
+       [
+        "State$0",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$0",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$1",
+        "IteratorRef$1",
+        "Iterator$1"
+       ],
+       [
+        "State$1",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$1",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$2",
+        "IteratorRef$0",
+        "Iterator$1"
+       ],
+       [
+        "State$2",
+        "IteratorRef$1",
+        "Iterator$1"
+       ],
+       [
+        "State$2",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$2",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$3",
+        "IteratorRef$0",
+        "Iterator$1"
+       ],
+       [
+        "State$3",
+        "IteratorRef$1",
+        "Iterator$0"
+       ],
+       [
+        "State$3",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$3",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$4",
+        "IteratorRef$0",
+        "Iterator$0"
+       ],
+       [
+        "State$4",
+        "IteratorRef$1",
+        "Iterator$0"
+       ],
+       [
+        "State$4",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$4",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$5",
+        "IteratorRef$0",
+        "Iterator$0"
+       ],
+       [
+        "State$5",
+        "IteratorRef$1",
+        "Iterator$0"
+       ],
+       [
+        "State$5",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$5",
+        "SetRef$0",
+        "Set$0"
+       ],
+       [
+        "State$6",
+        "IteratorRef$0",
+        "Iterator$0"
+       ],
+       [
+        "State$6",
+        "IteratorRef$1",
+        "Iterator$2"
+       ],
+       [
+        "State$6",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$6",
+        "SetRef$0",
+        "Set$1"
+       ],
+       [
+        "State$7",
+        "IteratorRef$0",
+        "Iterator$2"
+       ],
+       [
+        "State$7",
+        "IteratorRef$1",
+        "Iterator$2"
+       ],
+       [
+        "State$7",
+        "MapRef$0",
+        "Map$0"
+       ],
+       [
+        "State$7",
+        "SetRef$0",
+        "Set$1"
+       ]
+      ],
+      "this/State.refs": [
+       [
+        "State$0",
+        "MapRef$0"
+       ],
+       [
+        "State$0",
+        "SetRef$0"
+       ],
+       [
+        "State$1",
+        "IteratorRef$1"
+       ],
+       [
+        "State$1",
+        "MapRef$0"
+       ],
+       [
+        "State$1",
+        "SetRef$0"
+       ],
+       [
+        "State$2",
+        "IteratorRef$0"
+       ],
+       [
+        "State$2",
+        "IteratorRef$1"
+       ],
+       [
+        "State$2",
+        "MapRef$0"
+       ],
+       [
+        "State$2",
+        "SetRef$0"
+       ],
+       [
+        "State$3",
+        "IteratorRef$0"
+       ],
+       [
+        "State$3",
+        "IteratorRef$1"
+       ],
+       [
+        "State$3",
+        "MapRef$0"
+       ],
+       [
+        "State$3",
+        "SetRef$0"
+       ],
+       [
+        "State$4",
+        "IteratorRef$0"
+       ],
+       [
+        "State$4",
+        "IteratorRef$1"
+       ],
+       [
+        "State$4",
+        "MapRef$0"
+       ],
+       [
+        "State$4",
+        "SetRef$0"
+       ],
+       [
+        "State$5",
+        "IteratorRef$0"
+       ],
+       [
+        "State$5",
+        "IteratorRef$1"
+       ],
+       [
+        "State$5",
+        "MapRef$0"
+       ],
+       [
+        "State$5",
+        "SetRef$0"
+       ],
+       [
+        "State$6",
+        "IteratorRef$0"
+       ],
+       [
+        "State$6",
+        "IteratorRef$1"
+       ],
+       [
+        "State$6",
+        "MapRef$0"
+       ],
+       [
+        "State$6",
+        "SetRef$0"
+       ],
+       [
+        "State$7",
+        "IteratorRef$0"
+       ],
+       [
+        "State$7",
+        "IteratorRef$1"
+       ],
+       [
+        "State$7",
+        "MapRef$0"
+       ],
+       [
+        "State$7",
+        "SetRef$0"
+       ]
+      ],
+      "this/State.views": [
+       [
+        "State$1",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$2",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$2",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$3",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$3",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$4",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$4",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$5",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$5",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$6",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$6",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ],
+       [
+        "State$7",
+        "IteratorView$0",
+        "IteratorRef$0",
+        "SetRef$0"
+       ],
+       [
+        "State$7",
+        "IteratorView$0",
+        "IteratorRef$1",
+        "SetRef$0"
+       ]
+      ],
+      "this/ViewType": [
+       [
+        "IteratorView$0"
+       ],
+       [
+        "KeySetView$0"
+       ],
+       [
+        "KeySetView\"$0"
+       ]
+      ]
+     }
+    ]
+   }
+  }
+ ]
+}

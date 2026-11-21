@@ -25,6 +25,8 @@ pub trait SatSolver {
     fn set_priority(&mut self, _vars: &[u32]) {}
     /// Abort `solve()` (returning `None`) after this many conflicts; `None` = unlimited.
     fn set_conflict_limit(&mut self, _limit: Option<u64>) {}
+    /// Abort `solve()` (returning `None`) once the flag is set (portfolio races).
+    fn set_stop_flag(&mut self, _flag: std::sync::Arc<std::sync::atomic::AtomicBool>) {}
     /// Abort `solve()` (returning `None`) after this much wall-clock time; `None` = unlimited.
     fn set_time_limit(&mut self, _limit: Option<std::time::Duration>) {}
     /// Value of variable `v` (1-based) in the last model. Only valid after `solve()==Some(true)`.
@@ -37,6 +39,8 @@ pub struct Budget {
     pub limit: Option<u64>,
     pub learnt: u64,
     pub deadline: Option<std::time::Instant>,
+    /// Set by another thread of a portfolio race when it already has the answer.
+    pub stop_flag: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl batsat::Callbacks for Budget {
@@ -46,7 +50,9 @@ impl batsat::Callbacks for Budget {
         }
     }
     fn stop(&self) -> bool {
-        self.limit.map_or(false, |l| self.learnt >= l) || self.deadline.map_or(false, |d| std::time::Instant::now() >= d)
+        self.limit.map_or(false, |l| self.learnt >= l)
+            || self.deadline.map_or(false, |d| std::time::Instant::now() >= d)
+            || self.stop_flag.as_ref().map_or(false, |f| f.load(std::sync::atomic::Ordering::Relaxed))
     }
 }
 
@@ -58,6 +64,7 @@ pub struct BatSat {
     priority: Vec<u32>,
     unsat: bool,
     solved_vars: Vec<Var>,
+    init_pol: Option<bool>,
     built: bool,
     time_limit: Option<std::time::Duration>,
     s: Solver<Budget>,
@@ -67,10 +74,27 @@ pub struct BatSat {
 
 impl Default for BatSat {
     fn default() -> Self {
+        Self::with_luby(false)
+    }
+}
+
+impl BatSat {
+    /// `luby = true`: Luby restarts (an alternative search schedule for portfolio runs); the default is geometric.
+    pub fn with_luby(luby: bool) -> Self {
+        Self::configured(luby, 0.0, 0, None)
+    }
+
+    /// Portfolio configuration: restart schedule, random-decision frequency, random seed (0 = default) and the
+    /// initial branching polarity (`None` = solver default, i.e. false first).
+    pub fn configured(luby: bool, random_var_freq: f64, seed: u32, init_pol: Option<bool>) -> Self {
         let mut o = batsat::SolverOpts::default();
+        o.random_var_freq = random_var_freq;
+        if seed != 0 {
+            o.random_seed = seed as f64;
+        }
         // Geometric restarts like SAT4J's MiniSat restarts (the Java baseline); Luby restarts were up to 5x slower
         // on the hard UNSAT corpus models.
-        o.luby_restart = false;
+        o.luby_restart = luby;
         let f = |k: &str| std::env::var(k).ok().and_then(|v| v.parse::<f64>().ok());
         if let Some(v) = f("KSAT_VD") {
             o.var_decay = v;
@@ -111,6 +135,7 @@ impl Default for BatSat {
             priority: Vec::new(),
             unsat: false,
             solved_vars: Vec::new(),
+            init_pol,
             built: false,
             time_limit: None,
             s: Solver::new(o, Budget::default()),
@@ -127,6 +152,9 @@ impl BatSat {
 }
 
 impl SatSolver for BatSat {
+    fn set_stop_flag(&mut self, flag: std::sync::Arc<std::sync::atomic::AtomicBool>) {
+        self.s.cb_mut().stop_flag = Some(flag);
+    }
     fn set_conflict_limit(&mut self, limit: Option<u64>) {
         self.s.cb_mut().limit = limit;
         self.s.cb_mut().learnt = 0;
@@ -196,7 +224,11 @@ impl SatSolver for BatSat {
         }
         let mut var_of = vec![None; self.n_vars as usize + 1];
         for v in order {
-            let sv = self.s.new_var_default();
+            let sv = match self.init_pol {
+                Some(true) => self.s.new_var(lbool::TRUE, true),
+                Some(false) => self.s.new_var(lbool::FALSE, true),
+                None => self.s.new_var_default(),
+            };
             var_of[v as usize] = Some(sv);
         }
         self.vars = (1..=self.n_vars).map(|v| var_of[v as usize].unwrap()).collect();

@@ -1193,23 +1193,72 @@ pub struct Solution {
 
 /// Translates `formula` under `bounds`, solves with the default SAT backend and decodes the model.
 pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
-    // Restart portfolio: SAT search time is heavy-tailed in the symmetry-breaking predicate (it helps UNSAT
-    // proofs but can make satisfiable puzzles much harder), so a short attempt without it is followed by
-    // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
-    // (symmetry-breaking order, conflict limit, time limit). Java's predicate first (most commands, UNSAT proofs
-    // profit from it), a short no-SBP attempt for satisfiable puzzles it makes hard, then unlimited.
-    const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 3] =
-        [(0, Some(6_000), Some(200)), (NO_SBP, None, Some(1_000)), (0, None, None)];
-    for (order, conflicts, limit_ms) in ATTEMPTS {
+    // 1. Java's symmetry-breaking predicate with a short budget: most commands finish here.
+    {
         let mut sat = BatSat::new();
-        sat.set_conflict_limit(conflicts);
-        sat.set_time_limit(limit_ms.map(std::time::Duration::from_millis));
-        let sol = solve_ordered(bounds, formula, sat, order)?;
-        if sol.sat.is_some() || (conflicts.is_none() && limit_ms.is_none()) {
+        sat.set_conflict_limit(Some(6_000));
+        sat.set_time_limit(Some(std::time::Duration::from_millis(200)));
+        let sol = solve_ordered(bounds, formula, sat, 0)?;
+        if sol.sat.is_some() {
             return Ok(sol);
         }
     }
-    unreachable!("the last attempt is unlimited")
+    // 2. SAT search time is heavy-tailed in the symmetry-breaking predicate and the restart schedule (it helps UNSAT
+    //    proofs but can make satisfiable puzzles much harder), so race a few equally sound configurations; the
+    //    first answer wins. With one core the configurations run one after another instead.
+    // (symmetry-breaking order, luby restarts, random-decision frequency, seed, initial polarity)
+    const CONFIGS: [(u8, bool, f64, u32, Option<bool>); 8] = [
+        (0, false, 0.0, 0, None),
+        (NO_SBP, false, 0.0, 0, None),
+        (1, false, 0.0, 0, None),
+        (0, true, 0.0, 0, None),
+        (0, false, 0.01, 7, None),
+        (NO_SBP, true, 0.0, 0, Some(true)),
+        (1, true, 0.0, 0, Some(true)),
+        (0, false, 0.0, 0, Some(true)),
+    ];
+    let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
+    if cores < 2 {
+        for (order, luby) in [(NO_SBP, false), (0, false)] {
+            let mut sat = BatSat::with_luby(luby);
+            if order == NO_SBP {
+                sat.set_time_limit(Some(std::time::Duration::from_millis(1_000)));
+            }
+            let sol = solve_ordered(bounds, formula, sat, order)?;
+            if sol.sat.is_some() || order != NO_SBP {
+                return Ok(sol);
+            }
+        }
+        unreachable!("the last attempt is unlimited");
+    }
+    let n = CONFIGS.len().min(cores.max(2)).min(4);
+    let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let (tx, rx) = std::sync::mpsc::channel::<Result<Solution, String>>();
+    std::thread::scope(|scope| {
+        for &(order, luby, rnd, seed, pol) in CONFIGS.iter().take(n) {
+            let tx = tx.clone();
+            let stop = stop.clone();
+            scope.spawn(move || {
+                let mut sat = BatSat::configured(luby, rnd, seed, pol);
+                sat.set_stop_flag(stop);
+                let r = solve_ordered(bounds, formula, sat, order);
+                let _ = tx.send(r);
+            });
+        }
+        drop(tx);
+        let mut answer: Option<Result<Solution, String>> = None;
+        for r in rx.iter() {
+            let done = match &r {
+                Ok(sol) => sol.sat.is_some(),
+                Err(_) => true,
+            };
+            if done && answer.is_none() {
+                answer = Some(r);
+                stop.store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+        }
+        answer.unwrap_or_else(|| Err("no solver configuration finished".to_string()))
+    })
 }
 
 pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> Result<Solution, String> {

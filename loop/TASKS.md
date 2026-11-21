@@ -13,7 +13,7 @@ Open (all outside `reference/models` except the first two):
 - [ ] perf: hard UNSAT commands 2-5x slower than Java (firewire#4, hotel2#2, ceilingsAndFloors#4, iolus, ringlead#4, p306-hotel#2 which exceeds 60 s)
 - [ ] parse: the 4 `models/utilities/types/*` type_error files (Java reports ambiguity / failed typecheck inside library bodies)
 - [ ] M8 temporal (extra/examples/temporal: buffer, leader, leader_events, trash = 21 commands)
-- [ ] M7 `--count` (solution enumeration)
+- [x] M7 `--count` (solution enumeration)
 
 ## M0 — Environment (done by the environment builder)
 - [x] Java oracle, golden outputs, corpus (199 models, 465 Java-decided commands), harness, loop driver
@@ -109,8 +109,8 @@ Compare `stats.primary_vars` / `vars` / `clauses` with Java in `--verbose`; equa
 - [ ] M6.5 Acceptance: **perf == verdict** (every verdict-correct command at most 1.1×Java+20ms).
 
 ## M7 — Solution enumeration
-- [ ] M7.1 `Solution::next()` like `A4Solution.next()` (block primary variables, re-solve incrementally).
-- [ ] M7.2 Acceptance: `python harness/check.py --count` (symmetry=0 counts) matches Java on all scored commands.
+- [x] M7.1 `Solution::next()` like `A4Solution.next()` (block primary variables, re-solve incrementally).
+- [x] M7.2 Acceptance: `python harness/check.py --count` (symmetry=0 counts) matches Java on all scored commands.
 
 ## M8 — Alloy 6 temporal logic (var sigs/fields, LTL, `steps`)
 Reference: `KK/engine/ltl2fol/{LTL2FOLTranslator,TemporalTranslator,TemporalBoundsExpander}.java`,

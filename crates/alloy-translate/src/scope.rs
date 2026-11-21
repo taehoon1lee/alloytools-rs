@@ -24,6 +24,8 @@ pub struct Layout {
     children: Vec<Vec<SigId>>,
     is_subset: Vec<bool>,
     model_sigs_len: usize,
+    /// Atom range `[start, end)` of the `String` sig (string literals, padded to the `String` scope).
+    pub string_range: (u32, u32),
 }
 
 impl Layout {
@@ -96,6 +98,7 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
             is_subset[i] = !s.subset_of.is_empty();
         }
     }
+    let mut maxstring: Option<i32> = None;
     let mut scope: Vec<Option<i32>> = vec![None; n];
     let mut exact = vec![false; n];
     let is_user = |i: usize| model.sigs[i].kind == SigKind::User;
@@ -103,6 +106,7 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
     // 1. explicit scopes of the command (`for N but ...`)
     for rs in &cmd.scopes {
         if rs.sig == SIG_STRING {
+            maxstring = Some(rs.start);
             continue;
         }
         let i = rs.sig as usize;
@@ -239,6 +243,7 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
         children: children.clone(),
         is_subset: is_subset.clone(),
         model_sigs_len: n,
+        string_range: (0, 0),
     };
     let mut atoms = Vec::new();
     let mut range = vec![(0u32, 0u32); n];
@@ -250,6 +255,17 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
     }
     layout.atoms = atoms;
     layout.range = range;
+    // String atoms: the literals (named with their quotes), padded with `"String0"`, ... up to the String scope.
+    let s0 = layout.atoms.len() as u32;
+    for lit in &model.strings {
+        layout.atoms.push(format!("\"{lit}\""));
+    }
+    let mut k = 0;
+    while (layout.atoms.len() as u32 - s0) < maxstring.unwrap_or(0).max(0) as u32 {
+        layout.atoms.push(format!("\"String{k}\""));
+        k += 1;
+    }
+    layout.string_range = (s0, layout.atoms.len() as u32);
     Ok(layout)
 }
 

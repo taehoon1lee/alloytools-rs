@@ -257,6 +257,7 @@ fn load_one(
         }
     }
 
+    let uses_seq = module.uses_seq && name != "util/sequniv";
     let idx = out.len();
     out.push(LoadedModule {
         name: name.clone(),
@@ -275,6 +276,20 @@ fn load_one(
             loc: Loc { line: 1, col: 1 },
             is_private: true,
             alias: IMPLICIT_INTEGER_ALIAS.to_string(),
+            target,
+            paragraph: None,
+        });
+    }
+    // Java `CompModule.addSeq`: using the `seq` keyword implicitly opens util/sequniv as `seq`.
+    if uses_seq {
+        let (child_path, child_src) = find_module("util/sequniv", &name, path)?;
+        chain.push(child_path.clone());
+        let target = load_one(&child_path, &child_src, chain, out)?;
+        chain.pop();
+        resolved.push(ResolvedOpen {
+            loc: Loc { line: 1, col: 1 },
+            is_private: false,
+            alias: "seq".to_string(),
             target,
             paragraph: None,
         });

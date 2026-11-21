@@ -37,6 +37,7 @@ pub struct Parser {
     file: String,
     toks: Vec<Token>,
     pos: usize,
+    uses_seq: bool,
 }
 
 impl Parser {
@@ -51,6 +52,7 @@ impl Parser {
             file: file.to_string(),
             toks,
             pos: 0,
+            uses_seq: false,
         }
     }
 
@@ -301,7 +303,10 @@ impl Parser {
                 Tok::Lone => UnOp::Lone,
                 Tok::One => UnOp::One,
                 Tok::Set => UnOp::Set,
-                _ => UnOp::Seq,
+                _ => {
+                    self.uses_seq = true;
+                    UnOp::Seq
+                }
             };
             self.bump();
             let e = self.shift_level()?;
@@ -826,7 +831,7 @@ pub fn parse_module(file: &str, src: &str) -> PResult<Module> {
     while *p.peek() != Tok::Eof {
         paragraphs.push(p.paragraph()?);
     }
-    Ok(Module { header, paragraphs })
+    Ok(Module { header, paragraphs, uses_seq: p.uses_seq })
 }
 
 /// Result of a Java `TypeNumber` production (`CommandScope` start/end/increment/isExact).

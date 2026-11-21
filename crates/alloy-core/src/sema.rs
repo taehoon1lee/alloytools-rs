@@ -128,6 +128,8 @@ pub enum RExpr {
     Local(LocalId),
     Const(Const),
     Num(i32),
+    /// String literal (an atom of the `String` sig named with its quotes).
+    Str(String),
     Un(UnOp, Box<RExpr>),
     Bin(BinOp, Box<RExpr>, Box<RExpr>),
     Quant(Quant, Vec<RDecl>, Box<RExpr>),
@@ -186,6 +188,8 @@ pub struct Model {
     pub sig_facts: Vec<(SigId, RExpr)>,
     /// Sigs forced to have an exact scope by `module m[exactly A]` parameters (Java `exactSigs`).
     pub exact_sigs: Vec<SigId>,
+    /// Every string literal of the model (without quotes), in order of first use.
+    pub strings: Vec<String>,
     /// `disj f, g: e` field declarations: the fields of each group are pairwise disjoint.
     pub field_disjoint: Vec<Vec<FieldId>>,
 }
@@ -253,6 +257,10 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
         b.declare(i)?;
     }
     b.bind_params()?;
+    // Sig hierarchy first: a sig fact may use fields of ancestors declared later in the file.
+    for i in 0..mods.len() {
+        b.link_sigs(i)?;
+    }
     for i in 0..mods.len() {
         b.resolve(i)?;
     }
@@ -499,6 +507,45 @@ impl<'a> Builder<'a> {
         }
     }
 
+    /// Resolves `extends` / `in` / `=` of every sig of instance `i` (the sig hierarchy).
+    fn link_sigs(&mut self, i: usize) -> Result<(), AlloyError> {
+        let mut sig_next = self.model.sigs.iter().position(|x| x.module == i && x.kind == SigKind::User).unwrap_or(0);
+        if i == 0 {
+            sig_next += self.mods[0].module.header.as_ref().map_or(0, |h| h.params.len());
+        }
+        let paragraphs = self.mods[i].module.paragraphs.clone();
+        for p in &paragraphs {
+            match p {
+                Paragraph::Sig(s) => {
+                    for k in 0..s.names.len() {
+                        let sid = (sig_next + k) as SigId;
+                        match &s.extends {
+                            Some(SigExtends::Extends(e)) => {
+                                let p = self.sig_ref(i, e)?;
+                                self.model.sigs[sid as usize].parent = Some(p);
+                            }
+                            Some(SigExtends::In(v)) | Some(SigExtends::Equal(v)) => {
+                                let mut out = Vec::new();
+                                for e in v {
+                                    out.push(self.sig_ref(i, e)?);
+                                }
+                                self.model.sigs[sid as usize].subset_of = out;
+                                if matches!(s.extends, Some(SigExtends::Equal(_))) {
+                                    self.model.sigs[sid as usize].is_exact = true;
+                                }
+                            }
+                            None => {}
+                        }
+                    }
+                    sig_next += s.names.len();
+                }
+                Paragraph::Enum(e) => sig_next += 1 + e.values.len(),
+                _ => {}
+            }
+        }
+        Ok(())
+    }
+
     /// Phase 2: resolve everything that refers to names of instance `i`.
     fn resolve(&mut self, i: usize) -> Result<(), AlloyError> {
         // Entities of one instance are declared contiguously and in source order, so counters suffice.
@@ -613,7 +660,20 @@ impl<'a> Builder<'a> {
         let mut params = Vec::new();
         let mut pushed_this = false;
         if let Some(on) = owner_name {
-            if let Some(Sym::Sig(sid)) = self.lookup(i, on).and_then(|v| v.into_iter().next()) {
+            let builtin = match on {
+                "String" => Some(SIG_STRING),
+                "Int" => Some(SIG_INT),
+                "univ" => Some(SIG_UNIV),
+                _ => None,
+            };
+            let owner_sig = match builtin {
+                Some(b) => Some(b),
+                None => match self.lookup(i, on).and_then(|v| v.into_iter().next()) {
+                    Some(Sym::Sig(sid)) => Some(sid),
+                    _ => None,
+                },
+            };
+            if let Some(sid) = owner_sig {
                 let lid = self.new_local("this");
                 self.locals.push(("this".into(), lid));
                 params.push((lid, RExpr::Sig(sid)));
@@ -886,7 +946,12 @@ impl<'a> Builder<'a> {
                 other => RExpr::Const(*other),
             },
             ExprKind::Num(n) => RExpr::Num(*n),
-            ExprKind::Str(_) => return Err(unsupported("string constants (M3.2 follow-up: atoms named \"...\")")),
+            ExprKind::Str(text) => {
+                if !self.model.strings.contains(text) {
+                    self.model.strings.push(text.clone());
+                }
+                RExpr::Str(text.clone())
+            }
             ExprKind::Unary(op, x) => RExpr::Un(*op, Box::new(self.expr(i, x)?)),
             ExprKind::Binary(BinOp::Join, l, r) => {
                 let cands = self.func_cands(i, r, 1);

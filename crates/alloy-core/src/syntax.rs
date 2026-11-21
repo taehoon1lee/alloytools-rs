@@ -18,6 +18,8 @@ pub struct Module {
     /// `module a/b[X]` header, if present (name pieces joined by `/`).
     pub header: Option<ModuleHeader>,
     pub paragraphs: Vec<Paragraph>,
+    /// The `seq` keyword is used in an expression: Java adds `open util/sequniv as seq` (`CompModule.addSeq`).
+    pub uses_seq: bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 
 use alloy_core::error::{AlloyError, ErrorKind};
-use alloy_core::sema::{FieldId, LocalId, Model, RCommand, RDecl, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_UNIV};
+use alloy_core::sema::{FieldId, LocalId, Model, RCommand, RDecl, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_SEQINT, SIG_STRING, SIG_UNIV};
 use alloy_core::syntax::{BinOp, Const, Mult, Quant, UnOp};
 use kodkod::ast::{Const as KConst, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quantifier};
 use kodkod::instance::{Bounds, TupleSet, Universe};
@@ -51,6 +51,32 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     let int_rel = bounds
         .bound("Int", int_tuples.clone(), int_tuples)
         .map_err(other)?;
+    // The `String` sig is exactly the string atoms; every literal is its own exact relation (Java `s2k`), so
+    // different literals are distinguishable for symmetry breaking.
+    let string_tuples = TupleSet::from_tuples(1, (lay.string_range.0..lay.string_range.1).map(|a| vec![a]));
+    let string_rel = bounds.bound("String", string_tuples.clone(), string_tuples).map_err(other)?;
+    let mut string_lits: HashMap<String, u32> = HashMap::new();
+    for lit in &model.strings {
+        let name = format!("\"{lit}\"");
+        if let Some(a) = lay.atoms.iter().position(|x| *x == name) {
+            let ts = TupleSet::from_tuples(1, std::iter::once(vec![a as u32]));
+            let id = bounds.bound(&name, ts.clone(), ts).map_err(other)?;
+            string_lits.insert(lit.clone(), id);
+        }
+    }
+    // `seq/Int`: the integers 0 .. maxseq-1 (Java `ScopeComputer`: maxseq defaults to the overall scope or 4,
+    // at most the largest integer).
+    let max_int = if bitwidth > 0 { (1i64 << (bitwidth - 1)) - 1 } else { -1 };
+    let maxseq = {
+        let m = cmd.maxseq.unwrap_or_else(|| cmd.overall.filter(|o| *o >= 0).unwrap_or(4)) as i64;
+        m.min(max_int + 1).max(0)
+    };
+    let int_min_v = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
+    let seq_tuples = TupleSet::from_tuples(
+        1,
+        (0..maxseq).map(|i| vec![(n_sig_atoms as i64 + (i - int_min_v)) as u32]),
+    );
+    let seqint_rel = bounds.bound("seq/Int", seq_tuples.clone(), seq_tuples).map_err(other)?;
     bounds.ordered_atoms = (n_sig_atoms..n_atoms).collect();
     bounds.int_start = n_sig_atoms;
     bounds.int_min = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
@@ -96,6 +122,9 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         lay: &lay,
         sig_expr,
         sig_disjoint: disjoint,
+        string_rel,
+        string_lits,
+        seqint_rel,
         int_rel,
         field_rel,
         locals: HashMap::new(),
@@ -293,6 +322,8 @@ fn sig_upper(model: &Model, lay: &Layout, s: SigId, n_atoms: u32) -> Result<Vec<
             SIG_UNIV => (0..n_atoms).collect(),
             SIG_NONE => Vec::new(),
             SIG_INT => (lay.atoms.len() as u32..n_atoms).collect(),
+            SIG_STRING => (lay.string_range.0..lay.string_range.1).collect(),
+            SIG_SEQINT => (lay.atoms.len() as u32..n_atoms).collect(),
             _ => return Err(unsupported(format!("builtin sig {} (strings/seq)", sig.label))),
         });
     }
@@ -357,6 +388,7 @@ fn type_of(
         RExpr::Const(Const::Univ) => unary((0..n_atoms).collect()),
         RExpr::Const(Const::None) => TupleSet::empty(1),
         RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some, x) => t!(x),
+        RExpr::Un(UnOp::Seq, x) => unary(sig_upper(model, lay, SIG_SEQINT, n_atoms)?).product(&t!(x)),
         RExpr::Bin(BinOp::Plus, a, b) => t!(a).union(&t!(b)),
         RExpr::Bin(BinOp::Intersect, a, b) => {
             let (a, b) = (t!(a), t!(b));
@@ -412,6 +444,13 @@ fn type_of(
                 });
             }
             acc.ok_or_else(|| other("empty choice"))?
+        }
+        RExpr::Str(text) => {
+            let name = format!("\"{text}\"");
+            match lay.atoms.iter().position(|x| *x == name) {
+                Some(a) => unary(vec![a as u32]),
+                None => TupleSet::empty(1),
+            }
         }
         RExpr::Const(Const::Iden) => {
             let all = unary((0..n_atoms).collect());
@@ -489,6 +528,9 @@ struct Tr<'a> {
     model: &'a Model,
     lay: &'a Layout,
     sig_expr: Vec<Option<Expr>>,
+    string_rel: u32,
+    seqint_rel: u32,
+    string_lits: HashMap<String, u32>,
     /// `no (sum of earlier children & child)` formulas of the sig hierarchy.
     sig_disjoint: Vec<Formula>,
     /// The `Int` relation (exactly the integer atoms).
@@ -521,6 +563,8 @@ impl<'a> Tr<'a> {
             SIG_UNIV => Ok(Expr::Const(KConst::Univ)),
             SIG_NONE => Ok(Expr::Const(KConst::None)),
             SIG_INT => Ok(Expr::Rel(self.int_rel)),
+            SIG_STRING => Ok(Expr::Rel(self.string_rel)),
+            SIG_SEQINT => Ok(Expr::Rel(self.seqint_rel)),
             _ => match self.sig_expr.get(s as usize).cloned().flatten() {
                 Some(e) => Ok(e),
                 None => Err(unsupported(format!("sig {} (integers/strings/seq)", self.model.sigs[s as usize].label))),
@@ -681,7 +725,8 @@ impl<'a> Tr<'a> {
                                 return Ok(inner.clone());
                             }
                         }
-                        Err(other("no overloaded candidate matches the expected type"))
+                        let desc = format!("{:.300}", format!("{:?}", cands));
+                        Err(other(format!("no overloaded candidate matches the expected type: {desc}")))
                     }
                     1 => Ok(keep.remove(0)),
                     _ => Ok(RExpr::Choice(keep)),
@@ -805,6 +850,10 @@ impl<'a> Tr<'a> {
                 .get(l)
                 .cloned()
                 .ok_or_else(|| other(format!("unbound local {l}")))?,
+            RExpr::Str(text) => match self.string_lits.get(text) {
+                Some(r) => Expr::Rel(*r),
+                None => return Err(other("string literal without an atom")),
+            },
             RExpr::Const(Const::Iden) => Expr::Const(KConst::Iden),
             RExpr::Const(c @ (Const::IntMin | Const::IntMax)) => Expr::IntToExpr(Box::new(self.int_of(&RExpr::Const(*c))?)),
             RExpr::Const(Const::IntNext) => self.int_next()?,
@@ -818,6 +867,7 @@ impl<'a> Tr<'a> {
                 Expr::IntToExpr(Box::new(self.int_of(e)?))
             }
             RExpr::Un(UnOp::Set, x) => self.expr(x)?,
+            RExpr::Un(UnOp::Seq, x) => Expr::product(Expr::Rel(self.seqint_rel), self.expr(x)?),
             RExpr::Un(UnOp::Transpose, x) => Expr::Transpose(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Closure, x) => Expr::Closure(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::ReflClosure, x) => Expr::ReflexiveClosure(Box::new(self.expr(x)?)),
@@ -1212,6 +1262,29 @@ impl<'a> Tr<'a> {
                 Ok(Formula::And(vec![inner, Formula::Multiplicity(m, lhs)]))
             }
             RExpr::Un(UnOp::Set, x) => self.in_formula(lhs, x),
+            // `seq e` (Java ISSEQ_ARROW_LONE): lhs in seq/Int -> lone e, over a prefix of the sequence indices
+            RExpr::Un(UnOp::Seq, x) => {
+                let rx = self.expr(x)?;
+                let idx = Expr::Rel(self.seqint_rel);
+                let mut parts = vec![Formula::Subset(lhs.clone(), Expr::product(idx.clone(), rx))];
+                let i = self.fresh();
+                self.local_arity.insert(i, 1);
+                parts.push(Formula::Quantified(
+                    Quantifier::All,
+                    vec![Decl { var: i, domain: idx, disjoint: false, set: false }],
+                    Box::new(Formula::Multiplicity(Multiplicity::Lone, Expr::join(Expr::Var(i), lhs.clone()))),
+                ));
+                // domain minus its successors only holds 0: a prefix of the indices
+                let mut dom = lhs.clone();
+                let ar = self.arity(&dom)?;
+                for _ in 1..ar {
+                    dom = Expr::join(dom, Expr::Const(KConst::Univ));
+                }
+                let zero = Expr::IntToExpr(Box::new(IntExpr::Const(0)));
+                let succ = Expr::join(dom.clone(), self.int_next()?);
+                parts.push(Formula::Subset(Expr::Difference(Box::new(dom), Box::new(succ)), zero));
+                Ok(Formula::And(parts))
+            }
             other_r => Ok(Formula::Subset(lhs, self.expr(other_r)?)),
         }
     }
@@ -1558,6 +1631,7 @@ fn kind_name(e: &RExpr) -> &'static str {
         RExpr::Local(_) => "local",
         RExpr::Const(_) => "const",
         RExpr::Num(_) => "number",
+        RExpr::Str(_) => "string",
         RExpr::Un(_, _) => "unary",
         RExpr::Bin(_, _, _) => "binary",
         RExpr::Quant(_, _, _) => "quantifier",

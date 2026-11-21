@@ -49,6 +49,12 @@ pub struct Translator<'a, S: SatSolver> {
     env: HashMap<VarId, BoolMatrix>,
     /// Number of primary variables (free upper-bound tuples).
     pub primary_vars: usize,
+    /// Polarity of the formula being translated (true = positive).
+    pol: bool,
+    /// > 0 where a formula occurs in both polarities (no skolemization there).
+    no_skolem: u32,
+    /// Effectively universal quantifiers around the current formula (Kodkod's `skolemDepth = 0` stops there).
+    univ_depth: u32,
 }
 
 impl<'a, S: SatSolver> Translator<'a, S> {
@@ -75,6 +81,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             rels,
             env: HashMap::new(),
             primary_vars,
+            pol: true,
+            no_skolem: 0,
+            univ_depth: 0,
         }
     }
 
@@ -224,7 +233,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 out
             }
             Expr::IfThenElse(c, a, b) => {
-                let cond = self.formula(c)?;
+                self.no_skolem += 1;
+                let cond = self.formula(c);
+                self.no_skolem -= 1;
+                let cond = cond?;
                 let (a, b) = (self.expr(a)?, self.expr(b)?);
                 same_arity(&a, &b, "if-then-else")?;
                 let mut keys: Vec<Vec<u32>> = a.entries.keys().cloned().collect();
@@ -259,7 +271,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     return Err("set declarations in comprehensions are not supported yet".into());
                 }
                 self.leaves(decls, 0, BoolVal::TRUE, &mut key, false, &mut leaves, &mut |t: &mut Self, g| {
-                    let b = t.formula(&body)?;
+                    t.no_skolem += 1;
+                    let b = t.formula(&body);
+                    t.no_skolem -= 1;
+                    let b = b?;
                     Ok(t.f.and2(g, b))
                 })?;
                 let arity = self.comprehension_arity(decls)?;
@@ -538,7 +553,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 }
             }
             Formula::Not(a) => {
-                let a = self.formula(a)?;
+                self.pol = !self.pol;
+                let a = self.formula(a);
+                self.pol = !self.pol;
+                let a = a?;
                 self.f.not(a)
             }
             Formula::And(items) => {
@@ -550,11 +568,18 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 self.f.or(&vals)
             }
             Formula::Implies(a, b) => {
-                let (a, b) = (self.formula(a)?, self.formula(b)?);
+                self.pol = !self.pol;
+                let a = self.formula(a);
+                self.pol = !self.pol;
+                let a = a?;
+                let b = self.formula(b)?;
                 self.f.implies(a, b)
             }
             Formula::Iff(a, b) => {
-                let (a, b) = (self.formula(a)?, self.formula(b)?);
+                self.no_skolem += 1;
+                let r = (|| Ok::<_, String>((self.formula(a)?, self.formula(b)?)))();
+                self.no_skolem -= 1;
+                let (a, b) = r?;
                 self.f.iff(a, b)
             }
             Formula::IntCompare(cmp, a, b) => {
@@ -568,6 +593,11 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                         self.f.or2(lt, eq)
                     }
                 }
+            }
+            Formula::Quantified(q, decls, body)
+                if self.no_skolem == 0 && self.univ_depth == 0 && ((*q == Quantifier::Some) == self.pol) =>
+            {
+                self.skolemize(*q, decls, body)?
             }
             Formula::Quantified(q, decls, body) => {
                 // Duality for set declarations: all s ⊆ E. f  ==  not (some s ⊆ E. not f). The existential
@@ -584,8 +614,16 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let mut key = Vec::new();
                 let mut leaves = Vec::new();
                 let all = *q == Quantifier::All;
+                let univ = (*q == Quantifier::All) == self.pol;
                 self.leaves(decls, 0, BoolVal::TRUE, &mut key, all, &mut leaves, &mut |t: &mut Self, g| {
-                    let b = t.formula(&body)?;
+                    if univ {
+                        t.univ_depth += 1;
+                    }
+                    let b = t.formula(&body);
+                    if univ {
+                        t.univ_depth -= 1;
+                    }
+                    let b = b?;
                     Ok(if all { t.f.implies(g, b) } else { t.f.and2(g, b) })
                 })?;
                 let vals: Vec<BoolVal> = leaves.into_iter().map(|(_, v)| v).collect();
@@ -595,6 +633,55 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     self.f.or(&vals)
                 }
             }
+        })
+    }
+
+    /// Skolemization (Kodkod `Skolemizer`, depth 0): an existential quantifier (`some` in positive position, `all`
+    /// in negative position) not inside a universal one becomes fresh free bits per variable, each restricted
+    /// to its domain (exactly one tuple unless it is a `set` declaration).
+    fn skolemize(&mut self, q: Quantifier, decls: &[Decl], body: &Formula) -> Result<BoolVal, String> {
+        let mut cons = Vec::new();
+        let mut saved = Vec::new();
+        for d in decls {
+            let dom = self.expr(&d.domain)?;
+            let mut m = BoolMatrix::empty(dom.arity);
+            let mut bits = Vec::new();
+            for (t, v) in &dom.entries {
+                if *v == BoolVal::FALSE {
+                    continue;
+                }
+                let bit = self.f.new_var();
+                self.primary_vars += 1;
+                if *v != BoolVal::TRUE {
+                    cons.push(self.f.implies(bit, *v));
+                }
+                m.entries.insert(t.clone(), bit);
+                bits.push(bit);
+            }
+            if !d.set {
+                cons.push(self.f.or(&bits));
+                cons.push(self.at_most_one(&bits));
+            }
+            saved.push((d.var, self.env.insert(d.var, m)));
+        }
+        let b = self.formula(body);
+        for (v, old) in saved.into_iter().rev() {
+            match old {
+                Some(m) => {
+                    self.env.insert(v, m);
+                }
+                None => {
+                    self.env.remove(&v);
+                }
+            }
+        }
+        let b = b?;
+        Ok(if q == Quantifier::Some {
+            cons.push(b);
+            self.f.and(&cons)
+        } else {
+            let c = self.f.and(&cons);
+            self.f.implies(c, b)
         })
     }
 
@@ -713,6 +800,18 @@ fn same_arity(a: &BoolMatrix, b: &BoolMatrix, op: &str) -> Result<(), String> {
     }
 }
 
+/// Does swapping atoms `a` and `b` map every relation's lower and upper bound onto itself?
+pub fn interchangeable(bounds: &Bounds, a: u32, b: u32) -> bool {
+    let swap = |t: &Vec<u32>| -> Vec<u32> {
+        t.iter().map(|&x| if x == a { b } else if x == b { a } else { x }).collect()
+    };
+    bounds.relations.iter().all(|rb| {
+        let up: std::collections::BTreeSet<Vec<u32>> = rb.upper.tuples.iter().map(swap).collect();
+        let lo: std::collections::BTreeSet<Vec<u32>> = rb.lower.tuples.iter().map(swap).collect();
+        up == rb.upper.tuples && lo == rb.lower.tuples
+    })
+}
+
 /// Interchangeable atom pairs: `(a, b)` such that swapping `a` and `b` maps every relation's lower and
 /// upper bound onto itself (Kodkod's `SymmetryDetector`, restricted to transpositions). Atoms in
 /// `ordered_atoms` are excluded.
@@ -739,16 +838,7 @@ pub fn symmetric_pairs(bounds: &Bounds) -> Vec<(u32, u32)> {
     for atoms in groups.values() {
         for w in atoms.windows(2) {
             let (a, b) = (w[0], w[1]);
-            let swap = |t: &Vec<u32>| -> Vec<u32> {
-                t.iter()
-                    .map(|&x| if x == a { b } else if x == b { a } else { x })
-                    .collect()
-            };
-            let invariant = bounds.relations.iter().all(|rb| {
-                let up: std::collections::BTreeSet<Vec<u32>> = rb.upper.tuples.iter().map(swap).collect();
-                let lo: std::collections::BTreeSet<Vec<u32>> = rb.lower.tuples.iter().map(swap).collect();
-                up == rb.upper.tuples && lo == rb.lower.tuples
-            });
+            let invariant = interchangeable(bounds, a, b);
             if invariant {
                 pairs.push((a, b));
             }

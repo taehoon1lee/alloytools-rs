@@ -845,17 +845,22 @@ impl Parser {
         self.expect(&Tok::Module)?;
         let name = self.name()?;
         let mut params = Vec::new();
+        let mut exact_params = Vec::new();
         if self.eat(&Tok::LBracket) {
             loop {
-                self.eat(&Tok::Exactly);
-                params.push(self.name()?);
+                let exactly = self.eat(&Tok::Exactly);
+                let n = self.name()?;
+                if exactly {
+                    exact_params.push(n.clone());
+                }
+                params.push(n);
                 if !self.eat(&Tok::Comma) {
                     break;
                 }
             }
             self.expect(&Tok::RBracket)?;
         }
-        Ok(ModuleHeader { loc, name, params })
+        Ok(ModuleHeader { loc, name, params, exact_params })
     }
 
     /// One paragraph. `[private]` is consumed here for the productions that accept `Vis`;

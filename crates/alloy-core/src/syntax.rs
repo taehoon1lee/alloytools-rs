@@ -26,6 +26,8 @@ pub struct ModuleHeader {
     pub name: String,
     /// Formal parameters of a parametric module, e.g. `[exactly T]` -> `["T"]`.
     pub params: Vec<String>,
+    /// Parameters declared `exactly` (their scope is forced to be exact).
+    pub exact_params: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

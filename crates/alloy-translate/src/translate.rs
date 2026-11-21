@@ -78,7 +78,15 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         field_rel[fi] = Some(id);
     }
 
+    // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
+    // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
+    let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> = std::collections::HashSet::new();
+    for (_, body) in &model.sig_facts {
+        pin_total_orders(body, &mut bounds, &sig_rel, &field_rel, &mut pinned);
+    }
+
     let mut tr = Tr {
+        pinned,
         model,
         lay: &lay,
         sig_rel,
@@ -112,6 +120,78 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         bounds,
         formula: Formula::And(conjuncts),
     })
+}
+
+/// `(elem, first field, next field)` of `pred/totalOrder[elem, this.first, this.next]`.
+fn total_order_key(args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
+    let field_of = |e: &RExpr| match e {
+        RExpr::Bin(BinOp::Join, a, b) => match (&**a, &**b) {
+            (RExpr::Local(_), RExpr::Field(f)) => Some(*f),
+            _ => None,
+        },
+        _ => None,
+    };
+    match args {
+        [RExpr::Sig(e), f, n] => Some((*e, field_of(f)?, field_of(n)?)),
+        _ => None,
+    }
+}
+
+fn pin_total_orders(
+    e: &RExpr,
+    bounds: &mut Bounds,
+    sig_rel: &[Option<u32>],
+    field_rel: &[Option<u32>],
+    pinned: &mut std::collections::HashSet<(SigId, FieldId, FieldId)>,
+) {
+    match e {
+        RExpr::Block(items) => {
+            for i in items {
+                pin_total_orders(i, bounds, sig_rel, field_rel, pinned);
+            }
+        }
+        RExpr::Quant(Quant::All, _, body) => pin_total_orders(body, bounds, sig_rel, field_rel, pinned),
+        RExpr::TotalOrder(args) => {
+            let Some(key @ (elem, f1, f2)) = total_order_key(args) else { return };
+            let (Some(Some(er)), Some(Some(r1)), Some(Some(r2))) =
+                (sig_rel.get(elem as usize), field_rel.get(f1 as usize), field_rel.get(f2 as usize))
+            else {
+                return;
+            };
+            let (er, r1, r2) = (*er as usize, *r1 as usize, *r2 as usize);
+            if bounds.relations[r1].arity != 2 || bounds.relations[r2].arity != 3 {
+                return;
+            }
+            let dom: Vec<u32> = bounds.relations[er].upper.tuples.iter().map(|t| t[0]).collect();
+            // The owner (a `one` sig) must be a single atom: the first column of both fields.
+            let owners: std::collections::BTreeSet<u32> = bounds.relations[r1].upper.tuples.iter().map(|t| t[0]).collect();
+            if dom.is_empty() || owners.len() != 1 {
+                return;
+            }
+            let o = *owners.iter().next().unwrap();
+            if !dom.windows(2).all(|w| kodkod::translate::interchangeable(bounds, w[0], w[1])) {
+                return;
+            }
+            let first_t = vec![o, dom[0]];
+            let chain: std::collections::BTreeSet<Vec<u32>> = dom.windows(2).map(|w| vec![o, w[0], w[1]]).collect();
+            if !bounds.relations[r1].upper.tuples.contains(&first_t)
+                || !bounds.relations[r2].lower.tuples.is_subset(&chain)
+                || !chain.is_subset(&bounds.relations[r2].upper.tuples)
+            {
+                return;
+            }
+            let upper_e = bounds.relations[er].upper.clone();
+            bounds.relations[er].lower = upper_e;
+            let first = TupleSet::from_tuples(2, std::iter::once(first_t));
+            bounds.relations[r1].lower = first.clone();
+            bounds.relations[r1].upper = first;
+            let nx = TupleSet::from_tuples(3, chain.into_iter());
+            bounds.relations[r2].lower = nx.clone();
+            bounds.relations[r2].upper = nx;
+            pinned.insert(key);
+        }
+        _ => {}
+    }
 }
 
 /// Names of the integer atoms of a bitwidth: `-2^(b-1) ..= 2^(b-1)-1` (empty for bitwidth 0).
@@ -249,6 +329,51 @@ fn type_of(
         }
         RExpr::Block(items) if items.len() == 1 => t!(&items[0]),
         RExpr::Choice(c) if c.len() == 1 => t!(&c[0]),
+        RExpr::Choice(c) => {
+            let mut acc: Option<TupleSet> = None;
+            for x in c {
+                let t = t!(x);
+                acc = Some(match acc {
+                    Some(a) if a.arity == t.arity => a.union(&t),
+                    Some(a) => a,
+                    None => t,
+                });
+            }
+            acc.ok_or_else(|| other("empty choice"))?
+        }
+        RExpr::Const(Const::Iden) => {
+            let all = unary((0..n_atoms).collect());
+            TupleSet::from_tuples(2, all.tuples.iter().map(|t| vec![t[0], t[0]]))
+        }
+        RExpr::Const(Const::IntNext) | RExpr::Const(Const::IntMin) | RExpr::Const(Const::IntMax) => {
+            let ints = unary(sig_upper(model, lay, SIG_INT, n_atoms)?);
+            if matches!(e, RExpr::Const(Const::IntNext)) {
+                ints.product(&ints)
+            } else {
+                ints
+            }
+        }
+        RExpr::Num(_)
+        | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
+        | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
+            unary(sig_upper(model, lay, SIG_INT, n_atoms)?)
+        }
+        RExpr::Un(UnOp::Closure | UnOp::ReflClosure, x) => {
+            // Superset: any (first column, last column) pair.
+            let a = t!(x);
+            let mut out = TupleSet::empty(2);
+            let firsts: std::collections::BTreeSet<u32> = a.tuples.iter().map(|t| t[0]).collect();
+            let lasts: std::collections::BTreeSet<u32> = a.tuples.iter().map(|t| t[t.len() - 1]).collect();
+            for &f in &firsts {
+                for &l in &lasts {
+                    out.tuples.insert(vec![f, l]);
+                }
+            }
+            out
+        }
+        RExpr::Bin(BinOp::DomainRestrict, _, b) => t!(b),
+        RExpr::Bin(BinOp::RangeRestrict, a, _) => t!(a),
+        RExpr::Bin(BinOp::Override, a, b) => t!(a).union(&t!(b)),
         RExpr::Ite(_, a, b) => t!(a).union(&t!(b)),
         RExpr::Un(UnOp::Transpose, x) => {
             let a = t!(x);
@@ -275,7 +400,19 @@ fn join_ts(a: &TupleSet, b: &TupleSet) -> Result<TupleSet, AlloyError> {
     Ok(out)
 }
 
+/// Expected type of an overloaded operand.
+enum Exp {
+    Any,
+    /// Same arity and at least one common tuple.
+    Same(TupleSet),
+    /// Candidate's first column must hit these atoms (it is the right operand of a join).
+    JoinRight(std::collections::BTreeSet<u32>),
+    /// Candidate's last column must hit these atoms (it is the left operand of a join).
+    JoinLeft(std::collections::BTreeSet<u32>),
+}
+
 struct Tr<'a> {
+    pinned: std::collections::HashSet<(SigId, FieldId, FieldId)>,
     model: &'a Model,
     lay: &'a Layout,
     sig_rel: Vec<Option<u32>>,
@@ -346,45 +483,143 @@ impl<'a> Tr<'a> {
         })
     }
 
-    /// Java `ExprChoice` resolution by type: the candidates whose owner (first column) can be
-    /// the receiver's last column. Exactly one must remain; several are not supported yet.
-    fn choose_by_type(&mut self, receiver: &RExpr, cands: &[RExpr]) -> Result<RExpr, AlloyError> {
-        let recv = self.receiver_atoms(receiver)?;
-        let mut keep = Vec::new();
-        for c in cands {
-            let first = match c {
-                RExpr::Field(f) => {
-                    let owner = self.model.fields[*f as usize].owner;
-                    unary(sig_upper(self.model, self.lay, owner, self.n_atoms)?)
+    /// Static (upper-bound atom) type of an expression; `None` when it cannot be computed.
+    fn ty(&self, e: &RExpr) -> Option<TupleSet> {
+        let mut env: HashMap<LocalId, TupleSet> = HashMap::new();
+        let mut pending: Vec<(&LocalId, &RExpr)> = self.local_bound.iter().collect();
+        for _ in 0..3 {
+            let mut rest = Vec::new();
+            for (l, b) in pending {
+                let mut memo = vec![None; self.model.fields.len()];
+                match type_of(self.model, self.lay, self.n_atoms, b, &mut memo, &mut Vec::new(), &mut env) {
+                    Ok(t) => {
+                        env.insert(*l, t);
+                    }
+                    Err(_) => rest.push((l, b)),
                 }
-                RExpr::Sig(s) => unary(sig_upper(self.model, self.lay, *s, self.n_atoms)?),
-                _ => return Err(unsupported("overloaded name that is not a field or sig")),
-            };
-            let overlap = first.tuples.iter().any(|t| recv.as_ref().map_or(true, |r| r.tuples.contains(t)));
-            if overlap {
-                keep.push(c.clone());
+            }
+            pending = rest;
+            if pending.is_empty() {
+                break;
             }
         }
-        match keep.len() {
-            1 => Ok(keep.remove(0)),
-            0 => Err(other("no overloaded candidate matches the receiver's type")),
-            _ => Err(unsupported("overloaded name with several candidates for the receiver (M3.4)")),
+        let mut memo = vec![None; self.model.fields.len()];
+        type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), &mut env).ok()
+    }
+
+    /// Does candidate `c` fit the expected type?
+    fn compatible(&self, c: &RExpr, exp: &Exp) -> bool {
+        if matches!(exp, Exp::Any) {
+            return true;
+        }
+        let Some(t) = self.ty(c) else { return true };
+        match exp {
+            Exp::Any => true,
+            Exp::Same(w) => t.arity == w.arity && t.tuples.iter().any(|x| w.tuples.contains(x)),
+            Exp::JoinRight(cols) => t.tuples.iter().any(|x| cols.contains(&x[0])),
+            Exp::JoinLeft(cols) => t.tuples.iter().any(|x| cols.contains(&x[x.len() - 1])),
         }
     }
 
-    /// Upper-bound atoms of a receiver expression (`None` = unknown, treated as compatible).
-    fn receiver_atoms(&self, e: &RExpr) -> Result<Option<TupleSet>, AlloyError> {
-        let bound = match e {
-            RExpr::Local(l) => match self.local_bound.get(l) {
-                Some(b) => b.clone(),
-                None => return Ok(None),
-            },
-            RExpr::Sig(_) | RExpr::Field(_) | RExpr::Const(_) => e.clone(),
-            _ => return Ok(None),
-        };
-        let mut memo = vec![None; self.model.fields.len()];
-        let ty = type_of(self.model, self.lay, self.n_atoms, &bound, &mut memo, &mut Vec::new(), &mut HashMap::new())?;
-        Ok(Some(ty))
+    /// Java `ExprChoice` resolution by type. Candidates not fitting the expected type are dropped; overloaded
+    /// calls also need their (resolved) arguments to fit the parameter types. Several survivors stay a `Choice`.
+    fn resolve(&mut self, e: &RExpr, exp: &Exp) -> Result<RExpr, AlloyError> {
+        match e {
+            RExpr::Block(items) if items.len() == 1 => self.resolve(&items[0], exp),
+            RExpr::Choice(cands) => {
+                let mut keep = Vec::new();
+                for c in cands {
+                    let c = match c {
+                        RExpr::Call(fid, args) => {
+                            let params = self.model.funcs[*fid as usize].params.clone();
+                            if params.len() != args.len() {
+                                continue;
+                            }
+                            let mut new_args = Vec::new();
+                            let mut ok = true;
+                            for (a, (_, pb)) in args.iter().zip(&params) {
+                                let e2 = match self.ty(pb) {
+                                    Some(w) => Exp::Same(w),
+                                    None => Exp::Any,
+                                };
+                                match self.resolve(a, &e2) {
+                                    Ok(r) => {
+                                        if Self::is_choice(&r) || self.compatible(&r, &e2) {
+                                            new_args.push(r)
+                                        } else {
+                                            ok = false;
+                                            break;
+                                        }
+                                    }
+                                    Err(_) => {
+                                        ok = false;
+                                        break;
+                                    }
+                                }
+                            }
+                            if !ok {
+                                continue;
+                            }
+                            RExpr::Call(*fid, new_args)
+                        }
+                        other_c => other_c.clone(),
+                    };
+                    if self.compatible(&c, exp) {
+                        keep.push(c);
+                    }
+                }
+                match keep.len() {
+                    0 => Err(other("no overloaded candidate matches the expected type")),
+                    1 => Ok(keep.remove(0)),
+                    _ => Ok(RExpr::Choice(keep)),
+                }
+            }
+            _ => Ok(e.clone()),
+        }
+    }
+
+    fn is_choice(e: &RExpr) -> bool {
+        match e {
+            RExpr::Choice(c) => c.len() > 1,
+            RExpr::Block(items) if items.len() == 1 => Self::is_choice(&items[0]),
+            _ => false,
+        }
+    }
+
+    /// Resolves the overloaded operands of a binary operator against each other (same arity/overlapping types).
+    fn resolve_pair(&mut self, a: &RExpr, b: &RExpr) -> Result<(RExpr, RExpr), AlloyError> {
+        let (mut a, mut b) = (a.clone(), b.clone());
+        if Self::is_choice(&a) {
+            let exp = if Self::is_choice(&b) { None } else { self.ty(&b) };
+            a = self.resolve(&a, &exp.map_or(Exp::Any, Exp::Same))?;
+        }
+        if Self::is_choice(&b) {
+            let exp = self.ty(&a);
+            b = self.resolve(&b, &exp.map_or(Exp::Any, Exp::Same))?;
+        }
+        if Self::is_choice(&a) && !Self::is_choice(&b) {
+            let exp = self.ty(&b);
+            a = self.resolve(&a, &exp.map_or(Exp::Any, Exp::Same))?;
+        }
+        Ok((a, b))
+    }
+
+    /// Resolves the operands of a join `a.b`: last column of `a` against first column of `b`.
+    fn resolve_join(&mut self, a: &RExpr, b: &RExpr) -> Result<(RExpr, RExpr), AlloyError> {
+        let (mut a, mut b) = (a.clone(), b.clone());
+        if Self::is_choice(&a) && !Self::is_choice(&b) {
+            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
+            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
+        }
+        if Self::is_choice(&b) {
+            let exp = self.ty(&a).map(|t| Exp::JoinRight(t.tuples.iter().map(|x| x[x.len() - 1]).collect()));
+            b = self.resolve(&b, &exp.unwrap_or(Exp::Any))?;
+        }
+        if Self::is_choice(&a) {
+            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
+            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
+        }
+        Ok((a, b))
     }
 
     /// `univ^k` for the k-ary complement used by domain/range restriction.
@@ -424,19 +659,28 @@ impl<'a> Tr<'a> {
             RExpr::Un(UnOp::ReflClosure, x) => Expr::ReflexiveClosure(Box::new(self.expr(x)?)),
             RExpr::Un(op, _) => return Err(unsupported(format!("unary operator {op:?} in expression position"))),
             RExpr::Bin(BinOp::Join, a, b) => {
-                if let RExpr::Choice(cands) = &**b {
-                    let chosen = self.choose_by_type(a, cands)?;
-                    return Ok(Expr::join(self.expr(a)?, self.expr(&chosen)?));
-                }
-                Expr::join(self.expr(a)?, self.expr(b)?)
+                let (a, b) = self.resolve_join(a, b)?;
+                Expr::join(self.expr(&a)?, self.expr(&b)?)
             }
-            RExpr::Bin(BinOp::Plus, a, b) => Expr::union(self.expr(a)?, self.expr(b)?),
-            RExpr::Bin(BinOp::Minus, a, b) => Expr::Difference(Box::new(self.expr(a)?), Box::new(self.expr(b)?)),
-            RExpr::Bin(BinOp::Intersect, a, b) => Expr::Intersection(Box::new(self.expr(a)?), Box::new(self.expr(b)?)),
-            RExpr::Bin(BinOp::Override, a, b) => Expr::Override(Box::new(self.expr(a)?), Box::new(self.expr(b)?)),
-            RExpr::Bin(BinOp::Arrow(Mult::Set, Mult::Set), a, b) => Expr::product(self.expr(a)?, self.expr(b)?),
-            RExpr::Bin(BinOp::Arrow(_, _), _, _) => {
-                return Err(unsupported("arrow multiplicities outside a field declaration (M5.3)"))
+            RExpr::Bin(BinOp::Plus, a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Expr::union(self.expr(&a)?, self.expr(&b)?)
+            }
+            RExpr::Bin(BinOp::Minus, a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Expr::Difference(Box::new(self.expr(&a)?), Box::new(self.expr(&b)?))
+            }
+            RExpr::Bin(BinOp::Intersect, a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Expr::Intersection(Box::new(self.expr(&a)?), Box::new(self.expr(&b)?))
+            }
+            RExpr::Bin(BinOp::Override, a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Expr::Override(Box::new(self.expr(&a)?), Box::new(self.expr(&b)?))
+            }
+            RExpr::Bin(BinOp::Arrow(_, _), a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Expr::product(self.expr(&a)?, self.expr(&b)?)
             }
             RExpr::Bin(BinOp::DomainRestrict, a, b) => {
                 // a <: r = (a -> univ^(k)) & r, k = arity(r) - 1
@@ -478,7 +722,13 @@ impl<'a> Tr<'a> {
             }
             RExpr::Block(items) if items.len() == 1 => self.expr(&items[0])?,
             RExpr::Choice(cands) if cands.len() == 1 => self.expr(&cands[0])?,
-            RExpr::Choice(_) => return Err(unsupported("overloaded name (ExprChoice, M3.4)")),
+            RExpr::Choice(_) => {
+                let r = self.resolve(e, &Exp::Any)?;
+                if Self::is_choice(&r) {
+                    return Err(unsupported("overloaded name still ambiguous after type resolution (M3.4)"));
+                }
+                self.expr(&r)?
+            }
             RExpr::Quant(..) | RExpr::Block(_) | RExpr::Disj(_) | RExpr::TotalOrder(_) => {
                 return Err(other("formula used where an expression is expected"))
             }
@@ -535,36 +785,14 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) || is_numeric(b) => {
                 Formula::IntCompare(IntCmp::Eq, self.int_of(a)?, self.int_of(b)?)
             }
-            RExpr::Bin(BinOp::Equals, a, b) => Formula::Equal(self.expr(a)?, self.expr(b)?),
+            RExpr::Bin(BinOp::Equals, a, b) => {
+                let (a, b) = self.resolve_pair(a, b)?;
+                Formula::Equal(self.expr(&a)?, self.expr(&b)?)
+            }
             RExpr::Bin(BinOp::In, a, b) => {
-                let lhs = self.expr(a)?;
-                let mut out = vec![Formula::Subset(lhs.clone(), self.expr(b)?)];
-                // `r in L m1 -> m2 R`: r is inside L -> R and, per domain atom, m2 (r.x) holds (and m1 per range atom).
-                if let RExpr::Bin(BinOp::Arrow(ml, mr), l, r) = &**b {
-                    let (lx, rx) = (self.expr(l)?, self.expr(r)?);
-                    if self.arity(&lx)? != 1 || self.arity(&rx)? != 1 {
-                        return Err(unsupported("arrow multiplicity on non-unary columns (M5.3)"));
-                    }
-                    if let Some(m) = mult_of(Some(*mr)) {
-                        let x = self.fresh();
-                        let img = Expr::join(Expr::Var(x), lhs.clone());
-                        out.push(Formula::Quantified(
-                            Quantifier::All,
-                            vec![Decl { var: x, domain: lx.clone(), disjoint: false, set: false }],
-                            Box::new(Formula::Multiplicity(m, img)),
-                        ));
-                    }
-                    if let Some(m) = mult_of(Some(*ml)) {
-                        let y = self.fresh();
-                        let img = Expr::join(lhs.clone(), Expr::Var(y));
-                        out.push(Formula::Quantified(
-                            Quantifier::All,
-                            vec![Decl { var: y, domain: rx.clone(), disjoint: false, set: false }],
-                            Box::new(Formula::Multiplicity(m, img)),
-                        ));
-                    }
-                }
-                Formula::And(out)
+                let (a, b) = self.resolve_pair(a, b)?;
+                let lhs = self.expr(&a)?;
+                self.in_formula(lhs, &b)?
             }
             RExpr::Bin(BinOp::Lt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(a)?, self.int_of(b)?),
             RExpr::Bin(BinOp::Le, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?),
@@ -623,6 +851,9 @@ impl<'a> Tr<'a> {
                 // element is reachable from itself.
                 if args.len() != 3 {
                     return Err(other("pred/totalOrder takes exactly three arguments"));
+                }
+                if total_order_key(args).map_or(false, |k| self.pinned.contains(&k)) {
+                    return Ok(Formula::True);
                 }
                 let elem = self.expr(&args[0])?;
                 let first = self.expr(&args[1])?;
@@ -732,6 +963,74 @@ impl<'a> Tr<'a> {
         })
     }
 
+    /// `lhs in rhs` where `rhs` may carry arrow multiplicities (`L m1 -> m2 R`) or a multiplicity keyword
+    /// (Java `TranslateAlloyToKodkod.isIn`).
+    fn in_formula(&mut self, lhs: Expr, rhs: &RExpr) -> Result<Formula, AlloyError> {
+        match rhs {
+            RExpr::Block(items) if items.len() == 1 => self.in_formula(lhs, &items[0]),
+            RExpr::Bin(BinOp::Arrow(ml, mr), l, r) if *ml != Mult::Set || *mr != Mult::Set || has_arrow_mult(l) || has_arrow_mult(r) => {
+                let (l, r) = self.resolve_pair(l, r)?;
+                let (lx, rx) = (self.expr(&l)?, self.expr(&r)?);
+                let mut out = vec![Formula::Subset(lhs.clone(), Expr::product(lx.clone(), rx.clone()))];
+                // m2: every left tuple has m2 images.
+                if mr_is_mult(*mr) || has_arrow_mult(&r) {
+                    let x = self.fresh();
+                    let a = self.arity(&lx)?;
+                    self.local_arity.insert(x, a);
+                    let img = Expr::join(Expr::Var(x), lhs.clone());
+                    let body = if has_arrow_mult(&r) && !mr_is_mult(*mr) {
+                        self.in_formula(img, &r)?
+                    } else {
+                        let m = mult_of(Some(*mr)).unwrap();
+                        let mut parts = vec![Formula::Multiplicity(m, img.clone())];
+                        if has_arrow_mult(&r) {
+                            parts.push(self.in_formula(img, &r)?);
+                        }
+                        Formula::And(parts)
+                    };
+                    out.push(Formula::Quantified(
+                        Quantifier::All,
+                        vec![Decl { var: x, domain: lx.clone(), disjoint: false, set: false }],
+                        Box::new(body),
+                    ));
+                }
+                if mr_is_mult(*ml) || has_arrow_mult(&l) {
+                    let y = self.fresh();
+                    let a = self.arity(&rx)?;
+                    self.local_arity.insert(y, a);
+                    let img = Expr::join(lhs.clone(), Expr::Var(y));
+                    let body = if has_arrow_mult(&l) && !mr_is_mult(*ml) {
+                        self.in_formula(img, &l)?
+                    } else {
+                        let m = mult_of(Some(*ml)).unwrap();
+                        let mut parts = vec![Formula::Multiplicity(m, img.clone())];
+                        if has_arrow_mult(&l) {
+                            parts.push(self.in_formula(img, &l)?);
+                        }
+                        Formula::And(parts)
+                    };
+                    out.push(Formula::Quantified(
+                        Quantifier::All,
+                        vec![Decl { var: y, domain: rx.clone(), disjoint: false, set: false }],
+                        Box::new(body),
+                    ));
+                }
+                Ok(Formula::And(out))
+            }
+            RExpr::Un(op @ (UnOp::One | UnOp::Lone | UnOp::Some), x) => {
+                let m = match op {
+                    UnOp::One => Multiplicity::One,
+                    UnOp::Lone => Multiplicity::Lone,
+                    _ => Multiplicity::Some,
+                };
+                let inner = self.in_formula(lhs.clone(), x)?;
+                Ok(Formula::And(vec![inner, Formula::Multiplicity(m, lhs)]))
+            }
+            RExpr::Un(UnOp::Set, x) => self.in_formula(lhs, x),
+            other_r => Ok(Formula::Subset(lhs, self.expr(other_r)?)),
+        }
+    }
+
     /// Declares the variables of `decls` (one kodkod variable per Alloy variable) and returns the
     /// kodkod declarations plus the `disj` groups as lists of variable ids.
     fn decls(&mut self, decls: &[RDecl]) -> Result<(Vec<Decl>, Vec<Vec<u32>>), AlloyError> {
@@ -776,6 +1075,7 @@ impl<'a> Tr<'a> {
         let mut saved = Vec::new();
         for (l, e) in binds {
             let v = self.expr(e)?;
+            self.local_bound.insert(*l, e.clone());
             saved.push((*l, self.locals.insert(*l, v)));
         }
         Ok(saved)
@@ -809,8 +1109,14 @@ impl<'a> Tr<'a> {
             return Err(unsupported("recursive predicate/function (too deep to inline)"));
         }
         let mut vals = Vec::new();
-        for a in args {
-            vals.push(self.expr(a)?);
+        for (a, (_, pb)) in args.iter().zip(params) {
+            let a = if Self::is_choice(a) {
+                let exp = self.ty(pb).map_or(Exp::Any, Exp::Same);
+                self.resolve(a, &exp)?
+            } else {
+                a.clone()
+            };
+            vals.push(self.expr(&a)?);
         }
         let mut saved = Vec::new();
         for ((l, b), v) in params.iter().zip(vals) {
@@ -895,61 +1201,49 @@ impl<'a> Tr<'a> {
                 out.push(Formula::Equal(rel.clone(), rhs));
                 continue;
             }
-            // Arrow declaration `f: L m1 -> m2 R`: multiplicities apply per domain element.
-            if let RExpr::Bin(BinOp::Arrow(ml, mr), l, r) = &f.decl {
-                let lexpr = self.expr(l)?;
-                let rexpr = self.expr(r)?;
-                let product = Expr::product(lexpr.clone(), rexpr.clone());
-                out.push(Formula::Subset(rel.clone(), Expr::product(owner.clone(), product)));
-                let this = self.fresh();
-                let a = self.fresh();
-                let (ta, tb) = (self.arity(&lexpr)?, self.arity(&rexpr)?);
-                if ta != 1 || tb != 1 {
-                    return Err(unsupported("arrow multiplicity on non-unary columns (M5.3)"));
-                }
-                // all this: owner, a: L | m2 (this.f).a
-                if let Some(m) = mult_of(Some(*mr)) {
-                    // a.(this.f): the domain atom joins the first column of the field (Alloy `this.f[a]`).
-                    let img = Expr::join(Expr::Var(a), Expr::join(Expr::Var(this), rel.clone()));
-                    out.push(Formula::Quantified(
-                        Quantifier::All,
-                        vec![
-                            Decl { var: this, domain: owner.clone(), disjoint: false, set: false },
-                            Decl { var: a, domain: lexpr.clone(), disjoint: false, set: false },
-                        ],
-                        Box::new(Formula::Multiplicity(m, img)),
-                    ));
-                }
-                // all this: owner, b: R | m1 (this.f).b
-                if let Some(m) = mult_of(Some(*ml)) {
-                    let this2 = self.fresh();
-                    let b2 = self.fresh();
-                    let img = Expr::join(Expr::join(Expr::Var(this2), rel.clone()), Expr::Var(b2));
-                    out.push(Formula::Quantified(
-                        Quantifier::All,
-                        vec![
-                            Decl { var: this2, domain: owner.clone(), disjoint: false, set: false },
-                            Decl { var: b2, domain: rexpr.clone(), disjoint: false, set: false },
-                        ],
-                        Box::new(Formula::Multiplicity(m, img)),
-                    ));
-                }
-                continue;
-            }
-            // Plain declaration `f: m E`: f in owner -> E, and m (this.f) per owner atom.
-            let decl = self.expr(&f.decl)?;
-            out.push(Formula::Subset(rel.clone(), Expr::product(owner.clone(), decl)));
-            if let Some(m) = f.mult.and_then(|m| mult_of(Some(m))) {
-                let this = self.fresh();
-                let img = Expr::join(Expr::Var(this), rel.clone());
-                out.push(Formula::Quantified(
-                    Quantifier::All,
-                    vec![Decl { var: this, domain: owner, disjoint: false, set: false }],
-                    Box::new(Formula::Multiplicity(m, img)),
-                ));
-            }
+            // `all this: owner | this.f in decl` (the multiplicity keyword or arrow multiplicities apply per `this`).
+            let this = self.fresh();
+            self.local_arity.insert(this, 1);
+            self.locals.insert(f.this_local, Expr::Var(this));
+            self.local_bound.insert(f.this_local, RExpr::Sig(f.owner));
+            let lhs = Expr::join(Expr::Var(this), rel.clone());
+            let decl = match f.mult {
+                Some(m) => RExpr::Un(
+                    match m {
+                        Mult::One => UnOp::One,
+                        Mult::Lone => UnOp::Lone,
+                        Mult::Some => UnOp::Some,
+                        Mult::Set => UnOp::Set,
+                    },
+                    Box::new(f.decl.clone()),
+                ),
+                None => f.decl.clone(),
+            };
+            let body = self.in_formula(lhs, &decl);
+            self.locals.remove(&f.this_local);
+            self.local_bound.remove(&f.this_local);
+            let body = body?;
+            out.push(Formula::Subset(rel.clone(), Expr::product(owner.clone(), self.univ_pow(self.arity(&rel)? - 1))));
+            out.push(Formula::Quantified(
+                Quantifier::All,
+                vec![Decl { var: this, domain: owner, disjoint: false, set: false }],
+                Box::new(body),
+            ));
         }
         Ok(out)
+    }
+}
+
+fn mr_is_mult(m: Mult) -> bool {
+    mult_of(Some(m)).is_some()
+}
+
+/// Is `e` an arrow with a multiplicity somewhere inside?
+fn has_arrow_mult(e: &RExpr) -> bool {
+    match e {
+        RExpr::Bin(BinOp::Arrow(a, b), l, r) => *a != Mult::Set || *b != Mult::Set || has_arrow_mult(l) || has_arrow_mult(r),
+        RExpr::Block(items) if items.len() == 1 => has_arrow_mult(&items[0]),
+        _ => false,
     }
 }
 

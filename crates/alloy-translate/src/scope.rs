@@ -112,6 +112,8 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
         scope[i] = Some(rs.start);
         exact[i] = rs.exact;
     }
+    // `module m[exactly A]` parameters are forced exact (Java `cmd.additionalExactScopes`).
+    let forced_exact: Vec<usize> = model.exact_sigs.iter().map(|&s| s as usize).collect();
     // `one` sigs have exactly one atom; `lone` sigs at most one (unless their scope is 0).
     for i in 0..n {
         if !is_user(i) {
@@ -218,6 +220,12 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
     for i in 0..n {
         if is_user(i) && scope[i].is_none() && !is_subset[i] {
             scope[i] = Some(0);
+        }
+    }
+
+    for &i in &forced_exact {
+        if is_user(i) && model.sigs[i].subset_of.is_empty() {
+            exact[i] = true;
         }
     }
 

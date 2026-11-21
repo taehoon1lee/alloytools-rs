@@ -71,6 +71,8 @@ pub struct Field {
     pub owner: SigId,
     /// The declared bound (multiplicity keyword removed).
     pub decl: RExpr,
+    /// The local standing for `this` inside `decl`.
+    pub this_local: LocalId,
     /// `set` (None), `one`, `lone`, `some` multiplicity of the declared bound.
     pub mult: Option<Mult>,
     /// Defined field `f = e` (Java `EXACTLYOF`).
@@ -182,6 +184,8 @@ pub struct Model {
     pub commands: Vec<RCommand>,
     /// Sig facts (`sig A { ... }` appended blocks) per sig, as resolved expressions over `this`.
     pub sig_facts: Vec<(SigId, RExpr)>,
+    /// Sigs forced to have an exact scope by `module m[exactly A]` parameters (Java `exactSigs`).
+    pub exact_sigs: Vec<SigId>,
 }
 
 #[derive(Debug, Clone)]
@@ -345,6 +349,7 @@ impl<'a> Builder<'a> {
                                     name: f.clone(),
                                     owner: id,
                                     decl: RExpr::Num(0),
+                                    this_local: 0,
                                     mult: None,
                                     defined: false,
                                     is_private: d.is_private,
@@ -458,8 +463,19 @@ impl<'a> Builder<'a> {
                     );
                 }
                 let args = o.args.clone();
+                let exact_params = self.mods[target]
+                    .module
+                    .header
+                    .as_ref()
+                    .map(|h| h.exact_params.clone())
+                    .unwrap_or_default();
                 for (p, a) in params.iter().zip(args.iter()) {
                     let sym = self.resolve_sig_arg(i, a)?;
+                    if let Sym::Sig(sid) = &sym {
+                        if exact_params.contains(p) && !self.model.exact_sigs.contains(sid) {
+                            self.model.exact_sigs.push(*sid);
+                        }
+                    }
                     self.scopes[target].params.insert(p.clone(), sym);
                 }
             }
@@ -568,6 +584,7 @@ impl<'a> Builder<'a> {
                     let decl = decl?;
                     let f = &mut self.model.fields[fid as usize];
                     f.decl = decl;
+                    f.this_local = lid;
                     f.mult = mult;
                     f.defined = defined;
                 }

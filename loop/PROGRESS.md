@@ -65,3 +65,9 @@ next: ExprChoice on non-receiver positions, pred/totalOrder, decl-type errors (s
 Open: (1) overloaded box calls `f[x]` with several candidates -> ExprChoice by argument types (patch saved in tmp/overload_choice.patch;
 it is correct but makes dijkstra-K-state Closure (16 s) and addressBook1h delUndoesAdd (2.4 s) too slow for the harness budget;
 needs M6 perf first). (2) opt_spantree 4 cmds wrong (see NOTES). (3) temporal (M8, ~19 cmds), --count (M7), perf (M6).
+
+## 2026-11-21 typing/skolem/ordering — verdict 277/465 (gate green), perf 249/465, timeouts 21 -> 3
+Done: field decl types (this/Call/Compr), overload resolution by static atom-type (`Tr::ty/resolve/resolve_pair/resolve_join`),
+`in_formula` with nested arrow multiplicities (fields = `all this: O | this.f in decl`), Kodkod-style skolemization (depth 0; kodkod `skolemize`),
+`module m[exactly A]` params forced exact, `breakTotalOrder` port (util/ordering relations pinned to constants, Ord.First/Next 0 primary vars).
+next: overload ambiguity (einstein: `this.(prev+next)`, 56 cmds), `join arity 1,1` (philosophers, 28), flipflop "no candidate" (17), `min[..]` with args (12).

@@ -97,3 +97,8 @@
   Gate is flaky on this command (budget 3 s). Real fix: Kodkod-style simplification/sharing of whole-matrix formulas (M6).
 
 ## HARNESS ISSUES (write evidence here instead of editing harness/)
+- Overloads: `Tr::resolve(expr, Exp)` filters `RExpr::Choice` candidates by static atom-type overlap (arity + common tuple; JoinLeft/JoinRight use last/first column). Calls are filtered by arg-vs-param types.
+- Fields are translated as `all this: owner | this.f in decl` (`in_formula`, Java `isIn` arrow multiplicities); `Field.this_local` is the local id of `this`.
+- Skolemization (kodkod translator): `some`/negated `all` at positive polarity, not under a universal and not in Iff/ITE/comprehension -> fresh bits per variable (+ one-constraint). Matches Java skolemDepth=0 (primary vars +N).
+- `util/ordering`: Java BoundsComputer/SymmetryBreaker pin Ord.First/Next to constants when the elem atoms are interchangeable (alloy-translate `pin_total_orders`); module header `[exactly elem]` forces the sig exact (`Model.exact_sigs`).
+- Perf lesson: unrolled existentials (2700 leaves) were the cause of addressBook1h/dijkstra slowness; a fix in circuit shape beats solver tuning.

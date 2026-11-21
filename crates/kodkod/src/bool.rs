@@ -7,7 +7,40 @@
 //! used only negatively gets the clauses that force its output, and both sets are emitted only when both
 //! polarities occur. Constants are folded away, so no clause contains a constant.
 
-use std::collections::HashMap;
+use std::collections::HashMap as StdHashMap;
+
+/// FxHash-style hasher (the std SipHash is needlessly slow for the small integer keys used here).
+#[derive(Default, Clone, Copy)]
+pub struct FxHasher(u64);
+
+impl std::hash::Hasher for FxHasher {
+    fn finish(&self) -> u64 {
+        self.0
+    }
+    fn write(&mut self, bytes: &[u8]) {
+        for &b in bytes {
+            self.0 = (self.0.rotate_left(5) ^ b as u64).wrapping_mul(0x517cc1b727220a95);
+        }
+    }
+    fn write_u8(&mut self, i: u8) {
+        self.0 = (self.0.rotate_left(5) ^ i as u64).wrapping_mul(0x517cc1b727220a95);
+    }
+    fn write_u32(&mut self, i: u32) {
+        self.0 = (self.0.rotate_left(5) ^ i as u64).wrapping_mul(0x517cc1b727220a95);
+    }
+    fn write_i32(&mut self, i: i32) {
+        self.write_u32(i as u32);
+    }
+    fn write_u64(&mut self, i: u64) {
+        self.0 = (self.0.rotate_left(5) ^ i).wrapping_mul(0x517cc1b727220a95);
+    }
+    fn write_usize(&mut self, i: usize) {
+        self.write_u64(i as u64);
+    }
+}
+
+pub type FxBuild = std::hash::BuildHasherDefault<FxHasher>;
+pub type HashMap<K, V> = StdHashMap<K, V, FxBuild>;
 
 use satsolver::SatSolver;
 
@@ -63,8 +96,8 @@ impl<S: SatSolver> BoolFactory<S> {
         BoolFactory {
             sat,
             gates: Vec::new(),
-            by_key: HashMap::new(),
-            by_var: HashMap::new(),
+            by_key: HashMap::default(),
+            by_var: HashMap::default(),
             roots: Vec::new(),
             trivially_unsat: false,
             full_tseitin: false,
@@ -77,6 +110,10 @@ impl<S: SatSolver> BoolFactory<S> {
     }
 
     /// A fresh primary variable (no defining clauses).
+    pub fn num_gates(&self) -> usize {
+        self.gates.len()
+    }
+
     pub fn new_var(&mut self) -> BoolVal {
         self.sat.add_variables(1);
         BoolVal::Lit(self.sat.num_vars() as i32)

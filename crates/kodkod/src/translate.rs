@@ -6,7 +6,10 @@
 //! `LeafInterpreter` does). Expressions are evaluated bottom-up with the relational operators;
 //! quantifiers and comprehensions are unrolled over the tuples of their domains.
 
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
+use std::collections::HashMap as StdHashMap;
+
+use crate::bool::HashMap;
 
 use satsolver::{BatSat, SatSolver};
 
@@ -14,11 +17,38 @@ use crate::ast::{Const, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quan
 use crate::bool::{BoolFactory, BoolVal};
 use crate::instance::{Bounds, Instance, TupleSet};
 
+pub static T_JOIN: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static T_CLONE: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static T_EQ: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static N_EXPR: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static N_HIT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static N_FORM: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+pub static N_ENTRIES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
 /// Sparse boolean relation: absent tuples are FALSE.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BoolMatrix {
     pub arity: usize,
-    pub entries: BTreeMap<Vec<u32>, BoolVal>,
+    pub entries: BTreeMap<TKey, BoolVal>,
+}
+
+/// A tuple packed into a `u64`, 8 bits per atom, first column most significant (so numeric order is the
+/// lexicographic order of the tuples). Universes have at most 256 atoms and tuples at most 8 columns.
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+pub struct TKey(pub u64);
+
+impl TKey {
+    #[inline]
+    pub fn pack(t: &[u32]) -> TKey {
+        let mut k = 0u64;
+        for &a in t {
+            k = (k << 8) | a as u64;
+        }
+        TKey(k)
+    }
+    pub fn atoms(self, arity: usize) -> Vec<u32> {
+        (0..arity).map(|i| ((self.0 >> (8 * (arity - 1 - i))) & 0xFF) as u32).collect()
+    }
 }
 
 impl BoolMatrix {
@@ -29,14 +59,23 @@ impl BoolMatrix {
         }
     }
 
-    fn singleton(t: Vec<u32>) -> Self {
+    fn singleton(t: &[u32]) -> Self {
         let mut m = BoolMatrix::empty(t.len());
-        m.entries.insert(t, BoolVal::TRUE);
+        m.entries.insert(TKey::pack(t), BoolVal::TRUE);
         m
     }
 
+    fn insert(&mut self, t: &[u32], v: BoolVal) {
+        self.entries.insert(TKey::pack(t), v);
+    }
+
     fn get(&self, t: &[u32]) -> BoolVal {
-        self.entries.get(t).copied().unwrap_or(BoolVal::FALSE)
+        self.entries.get(&TKey::pack(t)).copied().unwrap_or(BoolVal::FALSE)
+    }
+
+    #[inline]
+    fn getk(&self, k: &TKey) -> BoolVal {
+        self.entries.get(k).copied().unwrap_or(BoolVal::FALSE)
     }
 }
 
@@ -83,7 +122,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     primary_vars += 1;
                     f.new_var()
                 };
-                m.entries.insert(t.clone(), v);
+                m.insert(t, v);
             }
             rels.push(m);
         }
@@ -92,8 +131,8 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             f,
             rels,
             env: Env::default(),
-            expr_cache: HashMap::new(),
-            fv_cache: HashMap::new(),
+            expr_cache: HashMap::default(),
+            fv_cache: HashMap::default(),
             no_cache: 0,
             skolem_vars: Vec::new(),
             skolem_rels: Vec::new(),
@@ -118,6 +157,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         if self.no_cache > 0 || matches!(e, Expr::Rel(_) | Expr::Var(_) | Expr::Const(_) | Expr::Literal(_)) {
             return self.expr_uncached(e);
         }
+        N_EXPR.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let ptr = e as *const Expr as usize;
         let fvs = match self.fv_cache.get(&ptr) {
             Some(v) => v.clone(),
@@ -131,7 +171,12 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         };
         let key: Vec<u64> = fvs.iter().map(|v| self.env.id(*v)).collect();
         if let Some(m) = self.expr_cache.get(&(ptr, key.clone())) {
-            return Ok(m.clone());
+            N_HIT.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            N_ENTRIES.fetch_add(m.entries.len() as u64, std::sync::atomic::Ordering::Relaxed);
+            let t0 = std::time::Instant::now();
+            let r = m.clone();
+            T_CLONE.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+            return Ok(r);
         }
         let m = self.expr_uncached(e)?;
         self.expr_cache.insert((ptr, key), m.clone());
@@ -153,14 +198,14 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Expr::Const(Const::Univ) => {
                 let mut m = BoolMatrix::empty(1);
                 for a in 0..self.n() {
-                    m.entries.insert(vec![a], BoolVal::TRUE);
+                    m.insert(&[a], BoolVal::TRUE);
                 }
                 m
             }
             Expr::Const(Const::Iden) => {
                 let mut m = BoolMatrix::empty(2);
                 for a in 0..self.n() {
-                    m.entries.insert(vec![a, a], BoolVal::TRUE);
+                    m.insert(&[a, a], BoolVal::TRUE);
                 }
                 m
             }
@@ -168,7 +213,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Expr::Literal(ts) => {
                 let mut m = BoolMatrix::empty(ts.arity);
                 for t in &ts.tuples {
-                    m.entries.insert(t.clone(), BoolVal::TRUE);
+                    m.insert(t, BoolVal::TRUE);
                 }
                 m
             }
@@ -177,9 +222,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 same_arity(&a, &b, "union")?;
                 let mut out = a.clone();
                 for (t, v) in &b.entries {
-                    let cur = out.get(t);
+                    let cur = out.getk(t);
                     let nv = self.f.or2(cur, *v);
-                    out.entries.insert(t.clone(), nv);
+                    out.entries.insert(*t, nv);
                 }
                 out
             }
@@ -188,9 +233,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 same_arity(&a, &b, "intersection")?;
                 let mut out = BoolMatrix::empty(a.arity);
                 for (t, v) in &a.entries {
-                    let w = b.get(t);
+                    let w = b.getk(t);
                     let nv = self.f.and2(*v, w);
-                    out.entries.insert(t.clone(), nv);
+                    out.entries.insert(*t, nv);
                 }
                 out
             }
@@ -199,9 +244,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 same_arity(&a, &b, "difference")?;
                 let mut out = BoolMatrix::empty(a.arity);
                 for (t, v) in &a.entries {
-                    let nb = self.f.not(b.get(t));
+                    let nb = self.f.not(b.getk(t));
                     let nv = self.f.and2(*v, nb);
-                    out.entries.insert(t.clone(), nv);
+                    out.entries.insert(*t, nv);
                 }
                 out
             }
@@ -213,14 +258,13 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 if a.arity == 1 {
                     return Ok(self.union_matrices(&a, &b));
                 }
-                let k = a.arity - 1;
-                let mut keys: BTreeMap<Vec<u32>, Vec<BoolVal>> = BTreeMap::new();
+                let mut keys: BTreeMap<u64, Vec<BoolVal>> = BTreeMap::new();
                 for (t, v) in &b.entries {
-                    keys.entry(t[..k].to_vec()).or_default().push(*v);
+                    keys.entry(t.0 >> 8).or_default().push(*v);
                 }
                 let mut out = b.clone();
                 for (t, v) in &a.entries {
-                    let kept = match keys.get(&t[..k]).cloned() {
+                    let kept = match keys.get(&(t.0 >> 8)).cloned() {
                         None => *v,
                         Some(vals) => {
                             let any = self.f.or(&vals);
@@ -228,9 +272,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                             self.f.and2(*v, nany)
                         }
                     };
-                    let cur = out.get(t);
+                    let cur = out.getk(t);
                     let nv = self.f.or2(cur, kept);
-                    out.entries.insert(t.clone(), nv);
+                    out.entries.insert(*t, nv);
                 }
                 out
             }
@@ -241,12 +285,14 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Expr::Product(a, b) => {
                 let (a, b) = (self.expr(a)?, self.expr(b)?);
                 let mut out = BoolMatrix::empty(a.arity + b.arity);
+                if a.arity + b.arity > 8 {
+                    return Err("tuples of more than 8 columns are not supported".into());
+                }
+                let shift = 8 * b.arity as u32;
                 for (ta, va) in &a.entries {
                     for (tb, vb) in &b.entries {
-                        let mut key = ta.clone();
-                        key.extend_from_slice(tb);
                         let v = self.f.and2(*va, *vb);
-                        out.entries.insert(key, v);
+                        out.entries.insert(TKey((ta.0 << shift) | tb.0), v);
                     }
                 }
                 out
@@ -258,7 +304,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 }
                 let mut out = BoolMatrix::empty(2);
                 for (t, v) in &a.entries {
-                    out.entries.insert(vec![t[1], t[0]], *v);
+                    out.entries.insert(TKey(((t.0 & 0xFF) << 8) | ((t.0 >> 8) & 0xFF)), *v);
                 }
                 out
             }
@@ -272,9 +318,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let iden = self.expr(&Expr::Const(Const::Iden))?;
                 let mut out = c;
                 for (t, v) in &iden.entries {
-                    let cur = out.get(t);
+                    let cur = out.getk(t);
                     let nv = self.f.or2(cur, *v);
-                    out.entries.insert(t.clone(), nv);
+                    out.entries.insert(*t, nv);
                 }
                 out
             }
@@ -285,13 +331,13 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let cond = cond?;
                 let (a, b) = (self.expr(a)?, self.expr(b)?);
                 same_arity(&a, &b, "if-then-else")?;
-                let mut keys: Vec<Vec<u32>> = a.entries.keys().cloned().collect();
-                keys.extend(b.entries.keys().cloned());
+                let mut keys: Vec<TKey> = a.entries.keys().copied().collect();
+                keys.extend(b.entries.keys().copied());
                 keys.sort();
                 keys.dedup();
                 let mut out = BoolMatrix::empty(a.arity);
                 for t in keys {
-                    let v = self.f.ite(cond, a.get(&t), b.get(&t));
+                    let v = self.f.ite(cond, a.getk(&t), b.getk(&t));
                     out.entries.insert(t, v);
                 }
                 out
@@ -304,7 +350,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     let value = self.bounds.int_min + k as i64;
                     let eqv = self.bits_eq_const(&bits, value);
                     if eqv != BoolVal::FALSE {
-                        out.entries.insert(vec![self.bounds.int_start + k as u32], eqv);
+                        out.insert(&[self.bounds.int_start + k as u32], eqv);
                     }
                 }
                 out
@@ -328,7 +374,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 for (k, v) in leaves {
                     let cur = out.get(&k);
                     let nv = self.f.or2(cur, v);
-                    out.entries.insert(k, nv);
+                    out.insert(&k, nv);
                 }
                 out
             }
@@ -367,7 +413,8 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let (start, min) = (self.bounds.int_start, self.bounds.int_min);
                 let n = 1u64 << w;
                 let mut acc = Self::const_bits(0, w);
-                let entries: Vec<(Vec<u32>, BoolVal)> = m.entries.iter().map(|(t, v)| (t.clone(), *v)).collect();
+                let entries: Vec<(Vec<u32>, BoolVal)> =
+                    m.entries.iter().map(|(t, v)| (t.atoms(m.arity), *v)).collect();
                 for (t, v) in entries {
                     let a = t[0] as u64;
                     if t[0] < start || a - start as u64 >= n {
@@ -553,19 +600,28 @@ impl<'a, S: SatSolver> Translator<'a, S> {
 
     /// Relational join of two evaluated matrices: `a.b`.
     fn join_m(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> Result<BoolMatrix, String> {
+        let t0 = std::time::Instant::now();
+        let r = self.join_m2(a, b);
+        T_JOIN.fetch_add(t0.elapsed().as_nanos() as u64, std::sync::atomic::Ordering::Relaxed);
+        r
+    }
+
+    fn join_m2(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> Result<BoolMatrix, String> {
         if a.arity + b.arity < 3 {
             return Err(format!("join needs an expression of arity 2 or more (arities {} and {})", a.arity, b.arity));
         }
-        let mut acc: BTreeMap<Vec<u32>, Vec<BoolVal>> = BTreeMap::new();
+        let mut acc: BTreeMap<TKey, Vec<BoolVal>> = BTreeMap::new();
+        let rest_bits = 8 * (b.arity as u32 - 1);
+        let rest_mask: u64 = if rest_bits == 0 { 0 } else { (1u64 << rest_bits) - 1 };
         for (ta, va) in &a.entries {
-            let last = *ta.last().unwrap();
-            for (tb, vb) in &b.entries {
-                if tb[0] != last {
-                    continue;
-                }
-                let mut key = ta[..ta.len() - 1].to_vec();
-                key.extend_from_slice(&tb[1..]);
+            let last = ta.0 & 0xFF;
+            let prefix = ta.0 >> 8;
+            // tuples of `b` starting with atom `last` are contiguous in the sorted map
+            let lo = TKey(last << rest_bits);
+            let hi = TKey((last + 1) << rest_bits);
+            for (tb, vb) in b.entries.range(lo..hi) {
                 let v = self.f.and2(*va, *vb);
+                let key = TKey((prefix << rest_bits) | (tb.0 & rest_mask));
                 acc.entry(key).or_default().push(v);
             }
         }
@@ -579,7 +635,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
 
     /// Static arity of a comprehension: the sum of its declarations' domain arities.
     fn comprehension_arity(&self, decls: &[Decl]) -> Result<usize, String> {
-        let mut vars = HashMap::new();
+        let mut vars: StdHashMap<VarId, usize> = StdHashMap::new();
         let mut total = 0;
         for d in decls {
             let a = self.static_arity(&d.domain, &mut vars)?;
@@ -590,7 +646,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     }
 
     /// Arity of an expression from the relation arities of the bounds (no evaluation).
-    pub fn static_arity(&self, e: &Expr, vars: &mut HashMap<VarId, usize>) -> Result<usize, String> {
+    pub fn static_arity(&self, e: &Expr, vars: &mut StdHashMap<VarId, usize>) -> Result<usize, String> {
         Ok(match e {
             Expr::Rel(r) => self.bounds.rel(*r).arity,
             Expr::Var(v) => match vars.get(v) {
@@ -624,15 +680,16 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     fn union_matrices(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> BoolMatrix {
         let mut out = a.clone();
         for (t, v) in &b.entries {
-            let cur = out.get(t);
+            let cur = out.getk(t);
             let nv = self.f.or2(cur, *v);
-            out.entries.insert(t.clone(), nv);
+            out.entries.insert(*t, nv);
         }
         out
     }
 
     /// Evaluates a formula to a boolean value.
     pub fn formula(&mut self, f: &Formula) -> Result<BoolVal, String> {
+        N_FORM.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         Ok(match f {
             Formula::True => BoolVal::TRUE,
             Formula::False => BoolVal::FALSE,
@@ -645,13 +702,13 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let (a, b) = (self.expr(a)?, self.expr(b)?);
                 same_arity(&a, &b, "=")?;
                 // One IFF per tuple of the union of the bounds (Kodkod's equality of boolean matrices).
-                let mut keys: Vec<Vec<u32>> = a.entries.keys().cloned().collect();
-                keys.extend(b.entries.keys().cloned());
+                let mut keys: Vec<TKey> = a.entries.keys().copied().collect();
+                keys.extend(b.entries.keys().copied());
                 keys.sort();
                 keys.dedup();
                 let mut vals = Vec::with_capacity(keys.len());
                 for t in &keys {
-                    vals.push(self.f.iff(a.get(t), b.get(t)));
+                    vals.push(self.f.iff(a.getk(t), b.getk(t)));
                 }
                 self.f.and(&vals)
             }
@@ -782,7 +839,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 if *v != BoolVal::TRUE {
                     cons.push(self.f.implies(bit, *v));
                 }
-                m.entries.insert(t.clone(), bit);
+                m.entries.insert(*t, bit);
                 bits.push(bit);
             }
             if !d.set {
@@ -817,7 +874,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     fn subset(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> BoolVal {
         let mut vals = Vec::new();
         for (t, v) in &a.entries {
-            let w = b.get(t);
+            let w = b.getk(t);
             vals.push(self.f.implies(*v, w));
         }
         self.f.and(&vals)
@@ -863,11 +920,11 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         let saved = self.env.get(&d.var).cloned();
         if d.set {
             if all {
-                let items: Vec<(Vec<u32>, BoolVal)> = dom
+                let items: Vec<(TKey, BoolVal)> = dom
                     .entries
                     .iter()
                     .filter(|(_, v)| **v != BoolVal::FALSE)
-                    .map(|(t, v)| (t.clone(), *v))
+                    .map(|(t, v)| (*t, *v))
                     .collect();
                 if items.len() > 12 {
                     return Err("universal quantification over a set of more than 12 possible tuples".into());
@@ -878,7 +935,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     for (j, (t, v)) in items.iter().enumerate() {
                         if mask & (1 << j) != 0 {
                             g = self.f.and2(g, *v);
-                            m.entries.insert(t.clone(), BoolVal::TRUE);
+                            m.entries.insert(*t, BoolVal::TRUE);
                         }
                     }
                     if g == BoolVal::FALSE {
@@ -893,7 +950,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                     let bit = self.f.new_var();
                     let w = self.f.and2(bit, *v);
                     if w != BoolVal::FALSE {
-                        m.entries.insert(t.clone(), w);
+                        m.entries.insert(*t, w);
                     }
                 }
                 self.env.insert(d.var, m);
@@ -905,9 +962,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 if g == BoolVal::FALSE {
                     continue;
                 }
-                self.env.insert(d.var, BoolMatrix::singleton(t.clone()));
+                let atoms = t.atoms(dom.arity);
+                self.env.insert(d.var, BoolMatrix::singleton(&atoms));
                 let mark = key.len();
-                key.extend_from_slice(t);
+                key.extend_from_slice(&atoms);
                 self.leaves(decls, i + 1, g, key, all, out, f)?;
                 key.truncate(mark);
             }
@@ -1135,7 +1193,7 @@ fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
     for (k, (name, m)) in tr.skolem_rels.iter().enumerate() {
         let mut reps = std::collections::BTreeSet::new();
         for t in m.entries.keys() {
-            for &a in t {
+            for a in t.atoms(m.arity) {
                 let ci = class_of[a as usize];
                 if ci != usize::MAX {
                     reps.insert(ci);
@@ -1167,12 +1225,13 @@ fn add_symmetry_breaking<S: SatSolver>(tr: &mut Translator<'_, S>, order: u8) {
                     continue;
                 }
                 let m = if *r < n_rel { &tr.rels[*r] } else { &tr.skolem_rels[*r - n_rel].1 };
-                for (t, v) in &m.entries {
+                for (tk, v) in &m.entries {
                     if *v == BoolVal::FALSE {
                         continue;
                     }
-                    let pt = swap(t);
-                    if pt == *t {
+                    let t = tk.atoms(m.arity);
+                    let pt = swap(&t);
+                    if pt == t {
                         continue;
                     }
                     let pv = m.get(&pt);
@@ -1214,8 +1273,8 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // 1. Java's symmetry-breaking predicate with a short budget: most commands finish here.
     {
         let mut sat = BatSat::configured(false, 0.0, 0, Some(true));
-        sat.set_conflict_limit(Some(6_000));
-        sat.set_time_limit(Some(std::time::Duration::from_millis(200)));
+        sat.set_conflict_limit(Some(2_000));
+        sat.set_time_limit(Some(std::time::Duration::from_millis(50)));
         let sol = solve_ordered(bounds, formula, sat, 0)?;
         if sol.sat.is_some() {
             return Ok(sol);
@@ -1288,6 +1347,10 @@ pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> R
 }
 
 fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order: u8) -> Result<Solution, String> {
+    if bounds.universe.size() > 256 || bounds.relations.iter().any(|r| r.arity > 8) {
+        return Err("universe of more than 256 atoms or relation of arity > 8 (compact tuple keys)".into());
+    }
+    let t_start = std::time::Instant::now();
     let mut tr = Translator::new(bounds, sat);
     let top = if std::env::var("KPROF").is_ok() {
         if let Formula::And(items) = formula {
@@ -1309,8 +1372,16 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
         tr.formula(formula)?
     };
     tr.f.assert_true(top);
+    let t_a = std::time::Instant::now();
+    if std::env::var("KTIME").is_ok() {
+        eprintln!("kodkod: new+formula {:?}", t_a - t_start);
+    }
     add_symmetry_breaking(&mut tr, order);
+    let t_b = std::time::Instant::now();
     tr.f.finish();
+    if std::env::var("KTIME").is_ok() {
+        eprintln!("kodkod: sbp {:?} finish(cnf) {:?} join {}ms cachehit-clone {}ms gates {} exprs {} hits {} hit-entries {} formulas {}", t_b - t_a, t_b.elapsed(), T_JOIN.load(std::sync::atomic::Ordering::Relaxed) / 1_000_000, T_CLONE.load(std::sync::atomic::Ordering::Relaxed) / 1_000_000, tr.f.num_gates(), N_EXPR.load(std::sync::atomic::Ordering::Relaxed), N_HIT.load(std::sync::atomic::Ordering::Relaxed), N_ENTRIES.load(std::sync::atomic::Ordering::Relaxed), N_FORM.load(std::sync::atomic::Ordering::Relaxed));
+    }
     // NOTE: Kodkod numbers skolem relations before gate variables; branching on them first (`set_priority`) made
     // some hard UNSAT models (ceilingsAndFloors) 3x slower and others slightly faster, so it is not enabled.
     if std::env::var("KSAT_PRIO").is_ok() {
@@ -1349,7 +1420,7 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
                     }
                 };
                 if val {
-                    ts.tuples.insert(t.clone());
+                    ts.tuples.insert(t.atoms(rb.arity));
                 }
             }
             inst.relations.insert(rb.name.clone(), ts);

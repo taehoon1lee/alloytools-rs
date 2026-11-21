@@ -48,6 +48,8 @@ pub struct Decl {
     pub domain: Expr,
     /// Disjoint declarations (`disj x, y: e`) are handled by the translator's caller.
     pub disjoint: bool,
+    /// `set` multiplicity: the variable ranges over the *subsets* of `domain` (Alloy `x: set e`).
+    pub set: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

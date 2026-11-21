@@ -242,7 +242,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let body: Formula = (**body).clone();
                 let mut key = Vec::new();
                 let mut leaves = Vec::new();
-                self.leaves(decls, 0, BoolVal::TRUE, &mut key, &mut leaves, &mut |t: &mut Self, g| {
+                if decls.iter().any(|d| d.set) {
+                    return Err("set declarations in comprehensions are not supported yet".into());
+                }
+                self.leaves(decls, 0, BoolVal::TRUE, &mut key, false, &mut leaves, &mut |t: &mut Self, g| {
                     let b = t.formula(&body)?;
                     Ok(t.f.and2(g, b))
                 })?;
@@ -403,11 +406,21 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 self.f.iff(a, b)
             }
             Formula::Quantified(q, decls, body) => {
+                // Duality for set declarations: all s ⊆ E. f  ==  not (some s ⊆ E. not f). The existential
+                // side is solved with witness bits, so no subset enumeration is needed.
+                if *q == Quantifier::All && decls.iter().any(|d| d.set) {
+                    let dual = Formula::Quantified(
+                        Quantifier::Some,
+                        decls.clone(),
+                        Box::new(Formula::Not(body.clone())),
+                    );
+                    return self.formula(&Formula::Not(Box::new(dual)));
+                }
                 let body = body.clone();
                 let mut key = Vec::new();
                 let mut leaves = Vec::new();
                 let all = *q == Quantifier::All;
-                self.leaves(decls, 0, BoolVal::TRUE, &mut key, &mut leaves, &mut |t: &mut Self, g| {
+                self.leaves(decls, 0, BoolVal::TRUE, &mut key, all, &mut leaves, &mut |t: &mut Self, g| {
                     let b = t.formula(&body)?;
                     Ok(if all { t.f.implies(g, b) } else { t.f.and2(g, b) })
                 })?;
@@ -446,12 +459,17 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     /// Enumerates the bindings of `decls` (each domain evaluated under the bindings so far).
     /// At every leaf the callback gets the guard (all memberships hold) and returns the leaf value;
     /// `out` collects `(key, value)` where the key is the concatenated tuples of the bound variables.
+    ///
+    /// Set declarations (`x: set e`): an existential one becomes free witness bits restricted to `e`
+    /// (the SAT solver chooses the witness, one set of bits per enclosing binding); a universal one
+    /// enumerates the subsets of the possible tuples of `e` (limited to 12 possible tuples).
     fn leaves(
         &mut self,
         decls: &[Decl],
         i: usize,
         guard: BoolVal,
         key: &mut Vec<u32>,
+        all: bool,
         out: &mut Vec<(Vec<u32>, BoolVal)>,
         f: &mut dyn FnMut(&mut Self, BoolVal) -> Result<BoolVal, String>,
     ) -> Result<(), String> {
@@ -463,16 +481,56 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         let d = &decls[i];
         let dom = self.expr(&d.domain)?;
         let saved = self.env.get(&d.var).cloned();
-        for (t, v) in &dom.entries {
-            let g = self.f.and2(guard, *v);
-            if g == BoolVal::FALSE {
-                continue;
+        if d.set {
+            if all {
+                let items: Vec<(Vec<u32>, BoolVal)> = dom
+                    .entries
+                    .iter()
+                    .filter(|(_, v)| **v != BoolVal::FALSE)
+                    .map(|(t, v)| (t.clone(), *v))
+                    .collect();
+                if items.len() > 12 {
+                    return Err("universal quantification over a set of more than 12 possible tuples".into());
+                }
+                for mask in 0u32..(1u32 << items.len()) {
+                    let mut g = guard;
+                    let mut m = BoolMatrix::empty(dom.arity);
+                    for (j, (t, v)) in items.iter().enumerate() {
+                        if mask & (1 << j) != 0 {
+                            g = self.f.and2(g, *v);
+                            m.entries.insert(t.clone(), BoolVal::TRUE);
+                        }
+                    }
+                    if g == BoolVal::FALSE {
+                        continue;
+                    }
+                    self.env.insert(d.var, m);
+                    self.leaves(decls, i + 1, g, key, all, out, f)?;
+                }
+            } else {
+                let mut m = BoolMatrix::empty(dom.arity);
+                for (t, v) in &dom.entries {
+                    let bit = self.f.new_var();
+                    let w = self.f.and2(bit, *v);
+                    if w != BoolVal::FALSE {
+                        m.entries.insert(t.clone(), w);
+                    }
+                }
+                self.env.insert(d.var, m);
+                self.leaves(decls, i + 1, guard, key, all, out, f)?;
             }
-            self.env.insert(d.var, BoolMatrix::singleton(t.clone()));
-            let mark = key.len();
-            key.extend_from_slice(t);
-            self.leaves(decls, i + 1, g, key, out, f)?;
-            key.truncate(mark);
+        } else {
+            for (t, v) in &dom.entries {
+                let g = self.f.and2(guard, *v);
+                if g == BoolVal::FALSE {
+                    continue;
+                }
+                self.env.insert(d.var, BoolMatrix::singleton(t.clone()));
+                let mark = key.len();
+                key.extend_from_slice(t);
+                self.leaves(decls, i + 1, g, key, all, out, f)?;
+                key.truncate(mark);
+            }
         }
         match saved {
             Some(m) => self.env.insert(d.var, m),
@@ -624,7 +682,7 @@ mod tests {
         let body = some(Expr::join(Expr::Var(x), Expr::Rel(r)));
         let f = Formula::Quantified(
             Quantifier::All,
-            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false }],
+            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false, set: false }],
             Box::new(body),
         );
         assert_eq!(solve(&b, &f).unwrap().sat, Some(true));
@@ -639,12 +697,12 @@ mod tests {
         let x = 0;
         let f = Formula::Quantified(
             Quantifier::Some,
-            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false }],
+            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false, set: false }],
             Box::new(Formula::Subset(Expr::Var(x), Expr::Rel(a))),
         );
         assert_eq!(solve(&b, &f).unwrap().sat, Some(true));
         let comp = Expr::Comprehension(
-            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false }],
+            vec![Decl { var: x, domain: Expr::Rel(a), disjoint: false, set: false }],
             Box::new(some(Expr::Var(x))),
         );
         let mut vars = std::collections::HashMap::new();

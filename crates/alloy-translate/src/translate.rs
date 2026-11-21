@@ -67,10 +67,9 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     }
     // Relations of the fields: upper = owner × (type of the declaration).
     let mut field_rel: Vec<Option<u32>> = vec![None; model.fields.len()];
+    let mut memo: Vec<Option<TupleSet>> = vec![None; model.fields.len()];
     for (fi, f) in model.fields.iter().enumerate() {
-        let owner_up = unary(sig_upper(model, &lay, f.owner, n_atoms)?);
-        let decl_ty = type_of(model, &lay, n_atoms, &f.decl)?;
-        let upper = owner_up.product(&decl_ty);
+        let upper = field_upper(model, &lay, n_atoms, fi as FieldId, &mut memo, &mut Vec::new())?;
         let lower = TupleSet::empty(upper.arity);
         let id = bounds.bound(&f.label, lower, upper).map_err(other)?;
         field_rel[fi] = Some(id);
@@ -144,24 +143,63 @@ fn sig_upper(model: &Model, lay: &Layout, s: SigId, n_atoms: u32) -> Result<Vec<
     Ok(lay.upper(s))
 }
 
+/// Upper bound of a field: `owner × type(decl)` (Java `BoundsComputer` for fields). Fields used inside
+/// other declarations contribute their own (memoized) upper bound, so `children: nodes -> nodes` works.
+fn field_upper(
+    model: &Model,
+    lay: &Layout,
+    n_atoms: u32,
+    f: FieldId,
+    memo: &mut Vec<Option<TupleSet>>,
+    stack: &mut Vec<FieldId>,
+) -> Result<TupleSet, AlloyError> {
+    if let Some(t) = &memo[f as usize] {
+        return Ok(t.clone());
+    }
+    if stack.contains(&f) {
+        return Err(unsupported("recursive field declaration types"));
+    }
+    stack.push(f);
+    let fld = &model.fields[f as usize];
+    let owner = unary(sig_upper(model, lay, fld.owner, n_atoms)?);
+    let decl = type_of(model, lay, n_atoms, &fld.decl, memo, stack)?;
+    stack.pop();
+    let upper = owner.product(&decl);
+    memo[f as usize] = Some(upper.clone());
+    Ok(upper)
+}
+
 /// Type (upper-bound tuples) of a declaration expression, used for field bounds.
-fn type_of(model: &Model, lay: &Layout, n_atoms: u32, e: &RExpr) -> Result<TupleSet, AlloyError> {
+fn type_of(
+    model: &Model,
+    lay: &Layout,
+    n_atoms: u32,
+    e: &RExpr,
+    memo: &mut Vec<Option<TupleSet>>,
+    stack: &mut Vec<FieldId>,
+) -> Result<TupleSet, AlloyError> {
+    macro_rules! t {
+        ($x:expr) => {
+            type_of(model, lay, n_atoms, $x, memo, stack)?
+        };
+    }
     Ok(match e {
         RExpr::Sig(s) => unary(sig_upper(model, lay, *s, n_atoms)?),
+        RExpr::Field(f) => field_upper(model, lay, n_atoms, *f, memo, stack)?,
         RExpr::Const(Const::Univ) => unary((0..n_atoms).collect()),
         RExpr::Const(Const::None) => TupleSet::empty(1),
-        RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some, x) => type_of(model, lay, n_atoms, x)?,
-        RExpr::Bin(BinOp::Plus, a, b) => type_of(model, lay, n_atoms, a)?.union(&type_of(model, lay, n_atoms, b)?),
+        RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some, x) => t!(x),
+        RExpr::Bin(BinOp::Plus, a, b) => t!(a).union(&t!(b)),
         RExpr::Bin(BinOp::Intersect, a, b) => {
-            let (a, b) = (type_of(model, lay, n_atoms, a)?, type_of(model, lay, n_atoms, b)?);
+            let (a, b) = (t!(a), t!(b));
             TupleSet {
                 arity: a.arity,
                 tuples: a.tuples.intersection(&b.tuples).cloned().collect(),
             }
         }
-        RExpr::Bin(BinOp::Minus, a, b) => type_of(model, lay, n_atoms, a)?.difference(&type_of(model, lay, n_atoms, b)?),
-        RExpr::Bin(BinOp::Arrow(_, _), a, b) => type_of(model, lay, n_atoms, a)?.product(&type_of(model, lay, n_atoms, b)?),
-        RExpr::Bin(BinOp::Join, a, b) => join_ts(&type_of(model, lay, n_atoms, a)?, &type_of(model, lay, n_atoms, b)?)?,
+        RExpr::Bin(BinOp::Minus, a, b) => t!(a).difference(&t!(b)),
+        RExpr::Bin(BinOp::Arrow(_, _), a, b) => t!(a).product(&t!(b)),
+        RExpr::Bin(BinOp::Join, a, b) => join_ts(&t!(a), &t!(b))?,
         _ => return Err(unsupported("declaration type that is not a sig expression")),
     })
 }
@@ -442,7 +480,16 @@ impl<'a> Tr<'a> {
         let mut out = Vec::new();
         let mut disj = Vec::new();
         for d in decls {
-            let domain = self.expr(&d.bound)?;
+            // `x: set e` ranges over subsets, `x: one e` (the default) over the tuples of `e`.
+            let (bound, is_set) = match &d.bound {
+                RExpr::Un(UnOp::Set, x) => (&**x, true),
+                RExpr::Un(UnOp::One, x) => (&**x, false),
+                RExpr::Un(UnOp::Lone | UnOp::Some, _) => {
+                    return Err(unsupported("lone/some declaration multiplicities (M5.4)"))
+                }
+                other => (other, false),
+            };
+            let domain = self.expr(bound)?;
             let mut group = Vec::new();
             for &l in &d.vars {
                 let v = self.fresh();
@@ -453,6 +500,7 @@ impl<'a> Tr<'a> {
                     var: v,
                     domain: domain.clone(),
                     disjoint: d.disjoint,
+                    set: is_set,
                 });
                 group.push(v);
             }
@@ -602,8 +650,8 @@ impl<'a> Tr<'a> {
                     out.push(Formula::Quantified(
                         Quantifier::All,
                         vec![
-                            Decl { var: this, domain: owner.clone(), disjoint: false },
-                            Decl { var: a, domain: lexpr.clone(), disjoint: false },
+                            Decl { var: this, domain: owner.clone(), disjoint: false, set: false },
+                            Decl { var: a, domain: lexpr.clone(), disjoint: false, set: false },
                         ],
                         Box::new(Formula::Multiplicity(m, img)),
                     ));
@@ -616,8 +664,8 @@ impl<'a> Tr<'a> {
                     out.push(Formula::Quantified(
                         Quantifier::All,
                         vec![
-                            Decl { var: this2, domain: owner.clone(), disjoint: false },
-                            Decl { var: b2, domain: rexpr.clone(), disjoint: false },
+                            Decl { var: this2, domain: owner.clone(), disjoint: false, set: false },
+                            Decl { var: b2, domain: rexpr.clone(), disjoint: false, set: false },
                         ],
                         Box::new(Formula::Multiplicity(m, img)),
                     ));
@@ -632,7 +680,7 @@ impl<'a> Tr<'a> {
                 let img = Expr::join(Expr::Var(this), rel.clone());
                 out.push(Formula::Quantified(
                     Quantifier::All,
-                    vec![Decl { var: this, domain: owner, disjoint: false }],
+                    vec![Decl { var: this, domain: owner, disjoint: false, set: false }],
                     Box::new(Formula::Multiplicity(m, img)),
                 ));
             }

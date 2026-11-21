@@ -54,3 +54,9 @@ Fixes: set declarations (witness bits; `all` by duality), arrow-multiplicity joi
 name lookup + type-based choice of overloaded names (Java getRawNQS/ExprChoice), param bounds for typing.
 Kodkod: Plaisted-Greenbaum polarity encoding (BoolFactory::finish), lex-leader symmetry breaking on interchangeable atoms.
 next: integers (Card/IntNext/comparisons/sum: ~80 cmds), pred/totalOrder, arrow mults in expressions, lone/some decls, perf (M6).
+
+## 2026-11-21 integers + name/arity fixes — verdict 154/465 (gate green, 0 wrong answers)
+Integers (bit-vector Int in kodkod, IntExpr/IntCmp, numbers as singleton atoms); dot/box calls need matching arity;
+commands resolved after all functions (param counts known at declaration); higher-order `some x: set S` nested under
+universal quantifiers reported as Java's ERROR (polarity tracked in alloy-translate); abstract sig scope from children.
+next: ExprChoice on non-receiver positions, pred/totalOrder, decl-type errors (syncimpl), arrow mults in expressions, lone/some decls.

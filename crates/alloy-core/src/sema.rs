@@ -83,6 +83,8 @@ pub struct Field {
 pub struct Func {
     pub label: String,
     pub name: String,
+    /// Number of parameters (receiver included), known at declaration time (before bodies are resolved).
+    pub nparams: usize,
     /// Receiver sig for `fun A.f`; the receiver is the first parameter (`this`).
     pub owner: Option<SigId>,
     pub is_pred: bool,
@@ -241,6 +243,16 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     for i in 0..mods.len() {
         b.resolve(i)?;
     }
+    // Commands last: their formulas inline predicates, whose bodies are resolved above.
+    // Only the root module's commands are run (Java `World::commands`).
+    if let Some(root) = mods.first() {
+        for p in &root.module.paragraphs {
+            if let Paragraph::Command(c) = p {
+                let cmd = b.resolve_command(0, c)?;
+                b.model.commands.push(cmd);
+            }
+        }
+    }
     // Java `CompModule.addDefaultCommand`: a root module without commands runs `Run Default` (formula TRUE).
     if b.model.commands.is_empty() && !mods.is_empty() {
         let has_command = mods[0].module.paragraphs.iter().any(|p| matches!(p, Paragraph::Command(_)));
@@ -343,9 +355,11 @@ impl<'a> Builder<'a> {
                 Paragraph::Fun(f) | Paragraph::Pred(f) => {
                     let (owner, name) = split_owner(&f.name);
                     let fid = self.model.funcs.len() as FuncId;
+                    let nparams = f.params.iter().map(|d| d.names.len()).sum::<usize>() + owner.is_some() as usize;
                     self.model.funcs.push(Func {
                         label: f.name.clone(),
                         name: name.to_string(),
+                        nparams,
                         owner: None,
                         is_pred: matches!(p, Paragraph::Pred(_)),
                         params: Vec::new(),
@@ -496,13 +510,7 @@ impl<'a> Builder<'a> {
                     self.model.asserts[assert_next].body = body;
                     assert_next += 1;
                 }
-                Paragraph::Command(c) => {
-                    // Only the root module's commands are run (Java `World::commands`).
-                    if i == 0 {
-                        let cmd = self.resolve_command(i, c)?;
-                        self.model.commands.push(cmd);
-                    }
-                }
+                Paragraph::Command(_) => {}
                 Paragraph::Open(_) | Paragraph::Macro(_) => {}
             }
         }
@@ -856,12 +864,15 @@ impl<'a> Builder<'a> {
                 // `f[a, b]`: a call when `f` names a function, else a join `b.a` (Java BoxJoin).
                 if let ExprKind::Name(n) = &f.kind {
                     if let Some(v) = self.lookup(i, n) {
+                        // `f[a, b]` is a call only when `f` takes exactly that many parameters; otherwise it is a join.
                         if let Some(Sym::Func(fid)) = v.first() {
-                            let mut a = Vec::new();
-                            for x in args {
-                                a.push(self.expr(i, x)?);
+                            if self.model.funcs[*fid as usize].nparams == args.len() {
+                                let mut a = Vec::new();
+                                for x in args {
+                                    a.push(self.expr(i, x)?);
+                                }
+                                return Ok(RExpr::Call(*fid, a));
                             }
-                            return Ok(RExpr::Call(*fid, a));
                         }
                         // `m[a, b]` is a call only when `m` takes that many parameters; a parameterless
                         // macro (a relation) boxed with arguments is a join, as in Java.
@@ -953,7 +964,7 @@ impl<'a> Builder<'a> {
     fn func_with_params(&self, i: usize, e: &Expr) -> Option<FuncId> {
         let ExprKind::Name(n) = &e.kind else { return None };
         match self.lookup(i, n)?.first()? {
-            Sym::Func(fid) if !self.model.funcs[*fid as usize].params.is_empty() => Some(*fid),
+            Sym::Func(fid) if self.model.funcs[*fid as usize].nparams > 0 => Some(*fid),
             _ => None,
         }
     }
@@ -989,7 +1000,7 @@ impl<'a> Builder<'a> {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
                 Sym::Field(id) => Ok(RExpr::Field(*id)),
                 Sym::Func(fid) => {
-                    if self.model.funcs[*fid as usize].params.is_empty() {
+                    if self.model.funcs[*fid as usize].nparams == 0 {
                         Ok(RExpr::Call(*fid, Vec::new()))
                     } else {
                         err(i, self.mods, e.loc.line, e.loc.col, format!("Function \"{n}\" needs arguments."))
@@ -1007,7 +1018,7 @@ impl<'a> Builder<'a> {
                     cands.push(match sym {
                         Sym::Sig(id) => RExpr::Sig(*id),
                         Sym::Field(id) => RExpr::Field(*id),
-                        Sym::Func(fid) if self.model.funcs[*fid as usize].params.is_empty() => RExpr::Call(*fid, Vec::new()),
+                        Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => RExpr::Call(*fid, Vec::new()),
                         _ => return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)"))),
                     });
                 }

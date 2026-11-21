@@ -86,6 +86,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         field_rel,
         locals: HashMap::new(),
         local_bound: HashMap::new(),
+        pol: !cmd.check,
+        under_universal: false,
         n_atoms,
         local_arity: HashMap::new(),
         next_var: 0,
@@ -248,6 +250,10 @@ struct Tr<'a> {
     locals: HashMap<LocalId, Expr>,
     /// Declared bound of quantifier variables (for typing overloaded names).
     local_bound: HashMap<LocalId, RExpr>,
+    /// Polarity of the formula being translated (true = positive). A `check` is translated negated.
+    pol: bool,
+    /// An effectively universal quantifier encloses the current formula (Kodkod cannot skolemize below it).
+    under_universal: bool,
     n_atoms: u32,
     /// Arity of kodkod variables (their domain's arity).
     local_arity: HashMap<u32, usize>,
@@ -483,7 +489,12 @@ impl<'a> Tr<'a> {
             RExpr::Block(items) => Formula::And(items.iter().map(|x| self.formula(x)).collect::<Result<_, _>>()?),
             RExpr::Bin(BinOp::And, a, b) => Formula::And(vec![self.formula(a)?, self.formula(b)?]),
             RExpr::Bin(BinOp::Or, a, b) => Formula::Or(vec![self.formula(a)?, self.formula(b)?]),
-            RExpr::Bin(BinOp::Implies, a, b) => Formula::Implies(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
+            RExpr::Bin(BinOp::Implies, a, b) => {
+                self.pol = !self.pol;
+                let a = self.formula(a);
+                self.pol = !self.pol;
+                Formula::Implies(Box::new(a?), Box::new(self.formula(b)?))
+            }
             RExpr::Bin(BinOp::Iff, a, b) => Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
             RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) || is_numeric(b) => {
                 Formula::IntCompare(IntCmp::Eq, self.int_of(a)?, self.int_of(b)?)
@@ -523,7 +534,12 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::Le, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?),
             RExpr::Bin(BinOp::Gt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(b)?, self.int_of(a)?),
             RExpr::Bin(BinOp::Ge, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(b)?, self.int_of(a)?),
-            RExpr::Un(UnOp::Not, x) => Formula::Not(Box::new(self.formula(x)?)),
+            RExpr::Un(UnOp::Not, x) => {
+                self.pol = !self.pol;
+                let r = self.formula(x);
+                self.pol = !self.pol;
+                Formula::Not(Box::new(r?))
+            }
             RExpr::Un(UnOp::No, x) => Formula::Multiplicity(Multiplicity::No, self.expr(x)?),
             RExpr::Un(UnOp::Some, x) => Formula::Multiplicity(Multiplicity::Some, self.expr(x)?),
             RExpr::Un(UnOp::One, x) => Formula::Multiplicity(Multiplicity::One, self.expr(x)?),
@@ -569,12 +585,31 @@ impl<'a> Tr<'a> {
             RExpr::Choice(cands) if cands.len() == 1 => self.formula(&cands[0])?,
             RExpr::Choice(_) => return Err(unsupported("overloaded name (ExprChoice, M3.4)")),
             other_e => {
-                return Err(other(format!("expression used as a formula: {:?}", kind_name(other_e))))
+                let dbg = format!("{other_e:?} :: {}", self.model.funcs.iter().enumerate().filter(|(i, _)| [35usize, 36, 138].contains(i)).map(|(i, f)| format!("{i}={} params={}", f.label, f.params.len())).collect::<Vec<_>>().join(", "));
+                return Err(other(format!("expression used as a formula: {} {}", kind_name(other_e), &dbg[..dbg.len().min(400)])))
             }
         })
     }
 
     fn quantified(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
+        // Effective quantifier after polarity: `all` in positive position (or `some` in negative) is universal.
+        let eff_universal = (q == Quant::All) == self.pol;
+        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set, _)));
+        if has_set && (eff_universal || self.under_universal) {
+            return Err(AlloyError::new(
+                ErrorKind::Type,
+                None,
+                "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized.",
+            ));
+        }
+        let saved_under = self.under_universal;
+        self.under_universal |= eff_universal;
+        let r = self.quantified_body(q, decls, body);
+        self.under_universal = saved_under;
+        r
+    }
+
+    fn quantified_body(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
         let (kdecls, disj) = self.decls(decls)?;
         let b = self.formula(body)?;
         let b = with_disjointness(b, &disj);
@@ -686,7 +721,7 @@ impl<'a> Tr<'a> {
         body: impl FnOnce(&mut Self) -> Result<T, AlloyError>,
     ) -> Result<T, AlloyError> {
         if params.len() != args.len() {
-            return Err(other("call with the wrong number of arguments"));
+            return Err(other(format!("call with {} arguments, but the callee takes {}", args.len(), params.len())));
         }
         if self.depth >= MAX_CALL_DEPTH {
             return Err(unsupported("recursive predicate/function (too deep to inline)"));

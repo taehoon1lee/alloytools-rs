@@ -16,7 +16,7 @@ The per-iteration procedure is in `loop/PROMPT.md`. The task list is `loop/TASKS
 | `docs/JAVA_MAP.md` | Java→Rust file map | YES (add what you learn) |
 | `harness/**` (scripts, goldens, oracle) | the judge | **NO — never** |
 | `reference/**` | Java source + sample models (read-only reference) | **NO** |
-| `loop/PROMPT.md`, `loop/run-loop.*` | loop driver | **NO** |
+| `loop/PROMPT.md`, `loop/run-loop.ps1`, `loop/haiku-settings.json`, `CLAUDE.md`, `.claude/` | loop driver + rules | **NO** |
 
 Java reference source root: `reference/alloy-java/` (see `docs/JAVA_MAP.md`). Key entry points:
 - Grammar: `reference/alloy-java/org.alloytools.alloy.core/parser/Alloy.cup` (+ `Alloy.lex`)
@@ -24,7 +24,7 @@ Java reference source root: `reference/alloy-java/` (see `docs/JAVA_MAP.md`). Ke
 - `.../edu/mit/csail/sdg/translator/TranslateAlloyToKodkod.java`, `ScopeComputer.java`, `BoundsComputer.java`
 - `reference/alloy-java/org.alloytools.pardinus.core/src/main/java/kodkod/...`
 
-## Commands (run from repo root `D:\sw\alloytoolRS`)
+## Commands (run from the repo root = the directory containing this file)
 ```
 cargo build --release                      # binary: target/release/alloy-rs.exe
 cargo test -q                              # unit tests (add tests for every ported piece)

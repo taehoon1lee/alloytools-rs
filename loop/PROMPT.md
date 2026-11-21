@@ -1,6 +1,7 @@
 You are one iteration of an autonomous engineering loop that ports the Alloy Analyzer from Java to Rust.
 Your memory does not survive this iteration: everything you need is in files, and everything you learn
-must be written back to files. Work in `D:\sw\alloytoolRS`. Read `CLAUDE.md` first (rules + commands).
+must be written back to files. Work ONLY inside the current working directory (the repo root that contains
+`CLAUDE.md`); never `cd` to or modify any other checkout. Read `CLAUDE.md` first (rules + commands).
 
 ## Procedure (follow in order, do ONE task, then stop)
 
@@ -53,7 +54,7 @@ must be written back to files. Work in `D:\sw\alloytoolRS`. Read `CLAUDE.md` fir
   changes (never commit a regression), write what you learned + a smaller next step into `loop/NOTES.md`
   and `loop/TASKS.md`, append a PROGRESS entry marked `(no commit)`, commit only those notes, and stop.
 - Build errors you cannot fix in 3 attempts → revert and split the task.
-- Never edit `harness/`, `reference/`, `loop/PROMPT.md`, `loop/run-loop.*`. If you believe the harness is
+- Never edit `harness/`, `reference/`, `loop/PROMPT.md`, `loop/run-loop.ps1`, `loop/haiku-settings.json`, `CLAUDE.md`. If you believe the harness is
   wrong, write the evidence in `loop/NOTES.md` under "HARNESS ISSUES" and work on something else.
 
 ## Reminders

@@ -18,17 +18,6 @@
       "Edit(/loop/NOTES.md)",
       "Edit(/docs/**)",
       "Write(/tmp/**)"
-    ],
-    "deny": [
-      "Edit(/harness/**)",
-      "Write(/harness/**)",
-      "Edit(/reference/**)",
-      "Write(/reference/**)",
-      "Edit(/loop/PROMPT.md)",
-      "Edit(/loop/run-loop.ps1)",
-      "Edit(/CLAUDE.md)",
-      "Bash(git push:*)",
-      "Bash(git reset --hard:*)"
     ]
   }
 }

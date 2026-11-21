@@ -37,8 +37,40 @@ docs/JAVA_MAP.md              Java 파일 ↔ Rust 모듈 매핑
 | perf | verdict 일치 **그리고** `rust_ms ≤ 1.1 × java_ms + 20ms` |
 | --count | (M7) symmetry=0에서 해 개수가 같음 |
 
-현재 상태: 모든 점수 0 (아직 파서 없음). 드라이버 검증 중 Haiku가 실제로 2회 실행되어 **M1.1 lexer, M1.2 surface AST는
-이미 완료·커밋**되어 있습니다(`git log` 참고). 다음 작업은 M1.3 표현식 파서입니다.
+## 현재 상태 (2026-11-22)
+| 항목 | 결과 |
+|---|---|
+| parse / commands | 199/199, 199/199 |
+| verdict | 465/465 (SAT/UNSAT/ERROR가 Java와 동일) |
+| perf (순차 `--perf`) | 465/465, 총 시간 Rust 43.8s vs Java 285.7s (약 0.15배) |
+| `--count` (symmetry=0) | 432/432 (Java 타임아웃 34개 제외) |
+| 시간 논리(temporal, `var`/LTL/steps) | 구현 완료, 코퍼스의 temporal 명령 전부 일치 |
+
+- `--gate`는 8개 명령을 병렬로 돌리므로 경계선 명령의 perf 점수가 부하에 따라 흔들립니다(409~465/465).
+  속도는 순차 `python harness/check.py --perf`로 확인하세요.
+- `--count` 모드에서 `check.py`가 출력하는 "REGRESSIONS vs best.json"은 Java가 타임아웃이라 count에서
+  채점되지 않는 명령이 verdict용 best.json에는 있기 때문에 나오는 표시이며 실제 회귀가 아닙니다.
+- 디버그 환경변수: `KTIME`, `KPROF`, `KSAT_CONFIGS`, `KSAT_STATS`, `KCOUNT`.
+
+## 구현 메모: 시간 논리 (Alloy 6 temporal)
+(`crates/alloy-translate/src/translate.rs`, `lib.rs`)
+- 길이 k의 trace를 k = min..max steps(기본 1..10)로 차례로 풀고 처음 SAT에서 멈춥니다. `N..`처럼 상한이 없으면
+  Java와 같은 ERROR("Bounded engines do not support complete model checking.").
+- 시간 원자 `$time$i`를 각각 정확한(exact) 관계로 두고, 자유 관계 `$loop`(정확히 1개)가 loop 시작 상태를 가리킵니다.
+  `var` sig/field는 마지막에 시간 열이 붙습니다.
+- 모든 식은 시점 `Tp{level, state}`에서 번역됩니다. level 1 = 첫 통과, level 2 = loop 구간(loop 시작이 해당 상태 이전일 때만 도달).
+  `always/eventually/after/before/historically/once/until/since/releases/triggered`는 도달 가능한 시점들에 대한 And/Or로 펼치고,
+  `e'`는 마지막 상태에서 loop 목표들에 대한 ITE로 만듭니다. fact와 명령 식은 `Tp{1,0}`에서 평가하며,
+  var sig/field 선언 제약과 sig-fact는 매 상태마다 걸립니다.
+- 무작위 시간식 240개를 Java와 차분 테스트(until/since/releases/triggered 등가식 포함)해 불일치 0건이었습니다.
+
+## 구현 메모: `--count` (해 열거)
+(`alloy_translate::count_solutions`, `kodkod::translate::{count_all, count_projected, first_instance}`)
+- 비시간 모델: 대칭 제거 없이 기본(primary)+skolem 변수를 막는 절을 추가하며 해를 하나씩 셉니다(상한 N, `count_capped`).
+- 시간 모델은 Pardinus `next()` 의미를 따릅니다. 첫 해가 정적 관계를 고정하고, 이후 trace 길이를 늘려가며 서로 다른
+  lasso trace만 셉니다(각 trace는 최소 prefix·최소 loop 주기로 한 번만 계산: `canonical_lasso`).
+- Java의 개수는 첫 해(MiniSat의 false 우선)에 의존하므로, 정적 관계 변수는 사전식 최솟값이 되도록 고릅니다
+  (`first_instance` + `SatSolver::solve_assuming`). 코퍼스에서는 Java와 모두 일치하지만 Java 솔버를 그대로 복제한 것은 아닙니다.
 
 ## Haiku 루프 실행 방법
 

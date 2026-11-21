@@ -138,6 +138,39 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
             _ => {}
         }
     }
+    // 1b. Java `derive_abstract_scope`: an abstract sig's scope is the sum of its children's scopes
+    // (or, if one child is unscoped and the parent is scoped, the remainder).
+    let mut changed = true;
+    while changed {
+        changed = false;
+        for i in 0..n {
+            if !is_user(i) || !model.sigs[i].is_abstract || children[i].is_empty() {
+                continue;
+            }
+            let mut sum = 0;
+            let mut missing = Vec::new();
+            for &c in &children[i] {
+                match scope[c as usize] {
+                    Some(v) => sum += v,
+                    None => missing.push(c as usize),
+                }
+            }
+            if missing.len() > 1 {
+                continue;
+            }
+            match (scope[i], missing.first()) {
+                (None, None) => {
+                    scope[i] = Some(sum);
+                    changed = true;
+                }
+                (Some(sn), Some(&m)) => {
+                    scope[m] = Some(if sn < sum { 0 } else { sn - sum });
+                    changed = true;
+                }
+                _ => {}
+            }
+        }
+    }
     // 2. implicit scopes: top-level sigs get the overall scope (3 when nothing was given)
     let overall = if cmd.overall.is_none() && cmd.scopes.is_empty() {
         Some(3)

@@ -431,7 +431,36 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::Implies, a, b) => Formula::Implies(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
             RExpr::Bin(BinOp::Iff, a, b) => Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
             RExpr::Bin(BinOp::Equals, a, b) => Formula::Equal(self.expr(a)?, self.expr(b)?),
-            RExpr::Bin(BinOp::In, a, b) => Formula::Subset(self.expr(a)?, self.expr(b)?),
+            RExpr::Bin(BinOp::In, a, b) => {
+                let lhs = self.expr(a)?;
+                let mut out = vec![Formula::Subset(lhs.clone(), self.expr(b)?)];
+                // `r in L m1 -> m2 R`: r is inside L -> R and, per domain atom, m2 (r.x) holds (and m1 per range atom).
+                if let RExpr::Bin(BinOp::Arrow(ml, mr), l, r) = &**b {
+                    let (lx, rx) = (self.expr(l)?, self.expr(r)?);
+                    if self.arity(&lx)? != 1 || self.arity(&rx)? != 1 {
+                        return Err(unsupported("arrow multiplicity on non-unary columns (M5.3)"));
+                    }
+                    if let Some(m) = mult_of(Some(*mr)) {
+                        let x = self.fresh();
+                        let img = Expr::join(Expr::Var(x), lhs.clone());
+                        out.push(Formula::Quantified(
+                            Quantifier::All,
+                            vec![Decl { var: x, domain: lx.clone(), disjoint: false, set: false }],
+                            Box::new(Formula::Multiplicity(m, img)),
+                        ));
+                    }
+                    if let Some(m) = mult_of(Some(*ml)) {
+                        let y = self.fresh();
+                        let img = Expr::join(lhs.clone(), Expr::Var(y));
+                        out.push(Formula::Quantified(
+                            Quantifier::All,
+                            vec![Decl { var: y, domain: rx.clone(), disjoint: false, set: false }],
+                            Box::new(Formula::Multiplicity(m, img)),
+                        ));
+                    }
+                }
+                Formula::And(out)
+            }
             RExpr::Bin(op @ (BinOp::Lt | BinOp::Le | BinOp::Gt | BinOp::Ge), _, _) => {
                 return Err(unsupported(format!("integer comparison {op:?} (integers not ported yet)")))
             }

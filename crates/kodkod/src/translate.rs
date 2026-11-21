@@ -46,7 +46,13 @@ pub struct Translator<'a, S: SatSolver> {
     pub f: BoolFactory<S>,
     /// Matrix of every relation, indexed by relation id.
     rels: Vec<BoolMatrix>,
-    env: HashMap<VarId, BoolMatrix>,
+    env: Env,
+    /// Memo of translated sub-expressions: (node address, binding ids of its free variables) -> matrix
+    /// (Kodkod's `FOL2BoolCache`). Nodes are never freed while they are translated, so addresses are stable.
+    expr_cache: HashMap<(usize, Vec<u64>), BoolMatrix>,
+    fv_cache: HashMap<usize, std::rc::Rc<Vec<VarId>>>,
+    /// > 0 while translating temporary expressions (no caching by address).
+    no_cache: u32,
     /// Number of primary variables (free upper-bound tuples).
     pub primary_vars: usize,
     /// Polarity of the formula being translated (true = positive).
@@ -79,7 +85,10 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             bounds,
             f,
             rels,
-            env: HashMap::new(),
+            env: Env::default(),
+            expr_cache: HashMap::new(),
+            fv_cache: HashMap::new(),
+            no_cache: 0,
             primary_vars,
             pol: true,
             no_skolem: 0,
@@ -91,8 +100,32 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         self.bounds.universe.size() as u32
     }
 
-    /// Evaluates a relational expression.
+    /// Evaluates a relational expression (memoized per free-variable binding).
     pub fn expr(&mut self, e: &Expr) -> Result<BoolMatrix, String> {
+        if self.no_cache > 0 || matches!(e, Expr::Rel(_) | Expr::Var(_) | Expr::Const(_) | Expr::Literal(_)) {
+            return self.expr_uncached(e);
+        }
+        let ptr = e as *const Expr as usize;
+        let fvs = match self.fv_cache.get(&ptr) {
+            Some(v) => v.clone(),
+            None => {
+                let mut out = std::collections::BTreeSet::new();
+                fv_expr(e, &mut Vec::new(), &mut out);
+                let v = std::rc::Rc::new(out.into_iter().collect::<Vec<VarId>>());
+                self.fv_cache.insert(ptr, v.clone());
+                v
+            }
+        };
+        let key: Vec<u64> = fvs.iter().map(|v| self.env.id(*v)).collect();
+        if let Some(m) = self.expr_cache.get(&(ptr, key.clone())) {
+            return Ok(m.clone());
+        }
+        let m = self.expr_uncached(e)?;
+        self.expr_cache.insert((ptr, key), m.clone());
+        Ok(m)
+    }
+
+    fn expr_uncached(&mut self, e: &Expr) -> Result<BoolMatrix, String> {
         Ok(match e {
             Expr::Rel(r) => self
                 .rels
@@ -264,7 +297,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 out
             }
             Expr::Comprehension(decls, body) => {
-                let body: Formula = (**body).clone();
+                let body: &Formula = body;
                 let mut key = Vec::new();
                 let mut leaves = Vec::new();
                 if decls.iter().any(|d| d.set) {
@@ -366,7 +399,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let mut key = Vec::new();
                 let mut leaves: Vec<(Vec<u32>, BoolVal)> = Vec::new();
                 let mut terms: Vec<Vec<BoolVal>> = Vec::new();
-                let body = (**body).clone();
+                let body: &IntExpr = body;
                 self.leaves(decls, 0, BoolVal::TRUE, &mut key, false, &mut leaves, &mut |t: &mut Self, g| {
                     let v = t.int_expr(&body)?;
                     let masked: Vec<BoolVal> = v.iter().map(|b| t.f.and2(g, *b)).collect();
@@ -682,9 +715,13 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                         decls.clone(),
                         Box::new(Formula::Not(body.clone())),
                     );
-                    return self.formula(&Formula::Not(Box::new(dual)));
+                    // the temporary tree must not be cached by address
+                    self.no_cache += 1;
+                    let r = self.formula(&Formula::Not(Box::new(dual)));
+                    self.no_cache -= 1;
+                    return r;
                 }
-                let body = body.clone();
+                let body: &Formula = body;
                 let mut key = Vec::new();
                 let mut leaves = Vec::new();
                 let all = *q == Quantifier::All;
@@ -866,6 +903,114 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     }
 }
 
+/// Variable environment with a unique id per binding (used as cache key).
+#[derive(Default)]
+struct Env {
+    m: HashMap<VarId, (BoolMatrix, u64)>,
+    next: u64,
+}
+
+impl Env {
+    fn get(&self, v: &VarId) -> Option<&BoolMatrix> {
+        self.m.get(v).map(|(m, _)| m)
+    }
+    fn id(&self, v: VarId) -> u64 {
+        self.m.get(&v).map_or(0, |(_, i)| *i)
+    }
+    fn insert(&mut self, v: VarId, m: BoolMatrix) -> Option<BoolMatrix> {
+        self.next += 1;
+        self.m.insert(v, (m, self.next)).map(|(m, _)| m)
+    }
+    fn remove(&mut self, v: &VarId) -> Option<BoolMatrix> {
+        self.m.remove(v).map(|(m, _)| m)
+    }
+}
+
+fn fv_expr(e: &Expr, bound: &mut Vec<VarId>, out: &mut std::collections::BTreeSet<VarId>) {
+    match e {
+        Expr::Rel(_) | Expr::Const(_) | Expr::Literal(_) => {}
+        Expr::Var(v) => {
+            if !bound.contains(v) {
+                out.insert(*v);
+            }
+        }
+        Expr::Union(a, b)
+        | Expr::Intersection(a, b)
+        | Expr::Difference(a, b)
+        | Expr::Override(a, b)
+        | Expr::Join(a, b)
+        | Expr::Product(a, b) => {
+            fv_expr(a, bound, out);
+            fv_expr(b, bound, out);
+        }
+        Expr::Transpose(a) | Expr::Closure(a) | Expr::ReflexiveClosure(a) => fv_expr(a, bound, out),
+        Expr::IfThenElse(c, a, b) => {
+            fv_formula(c, bound, out);
+            fv_expr(a, bound, out);
+            fv_expr(b, bound, out);
+        }
+        Expr::Comprehension(decls, body) => fv_decls(decls, body, bound, out),
+        Expr::IntToExpr(i) => fv_int(i, bound, out),
+    }
+}
+
+fn fv_decls(decls: &[Decl], body: &Formula, bound: &mut Vec<VarId>, out: &mut std::collections::BTreeSet<VarId>) {
+    let mark = bound.len();
+    for d in decls {
+        fv_expr(&d.domain, bound, out);
+        bound.push(d.var);
+    }
+    fv_formula(body, bound, out);
+    bound.truncate(mark);
+}
+
+fn fv_int(i: &IntExpr, bound: &mut Vec<VarId>, out: &mut std::collections::BTreeSet<VarId>) {
+    match i {
+        IntExpr::Const(_) => {}
+        IntExpr::Card(e) | IntExpr::Sum(e) => fv_expr(e, bound, out),
+        IntExpr::Add(a, b) | IntExpr::Sub(a, b) | IntExpr::Mul(a, b) | IntExpr::Div(a, b) | IntExpr::Rem(a, b) => {
+            fv_int(a, bound, out);
+            fv_int(b, bound, out);
+        }
+        IntExpr::Neg(a) => fv_int(a, bound, out),
+        IntExpr::SumOver(decls, body) => {
+            let mark = bound.len();
+            for d in decls {
+                fv_expr(&d.domain, bound, out);
+                bound.push(d.var);
+            }
+            fv_int(body, bound, out);
+            bound.truncate(mark);
+        }
+    }
+}
+
+fn fv_formula(f: &Formula, bound: &mut Vec<VarId>, out: &mut std::collections::BTreeSet<VarId>) {
+    match f {
+        Formula::True | Formula::False => {}
+        Formula::Subset(a, b) | Formula::Equal(a, b) => {
+            fv_expr(a, bound, out);
+            fv_expr(b, bound, out);
+        }
+        Formula::Multiplicity(_, e) => fv_expr(e, bound, out),
+        Formula::Not(a) => fv_formula(a, bound, out),
+        Formula::And(items) | Formula::Or(items) => {
+            for x in items {
+                fv_formula(x, bound, out);
+            }
+        }
+        Formula::Implies(a, b) | Formula::Iff(a, b) => {
+            fv_formula(a, bound, out);
+            fv_formula(b, bound, out);
+        }
+        Formula::Quantified(_, decls, body) => fv_decls(decls, body, bound, out),
+        Formula::IntCompare(_, a, b) => {
+            fv_int(a, bound, out);
+            fv_int(b, bound, out);
+        }
+    }
+}
+
 fn same_arity(a: &BoolMatrix, b: &BoolMatrix, op: &str) -> Result<(), String> {
     if a.arity == b.arity {
         Ok(())
@@ -1038,9 +1183,10 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // Restart portfolio: SAT search time is heavy-tailed in the symmetry-breaking predicate (it helps UNSAT
     // proofs but can make satisfiable puzzles much harder), so a short attempt without it is followed by
     // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
-    // (symmetry-breaking order, conflict limit, time limit)
-    const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 4] =
-        [(NO_SBP, Some(60_000), Some(1_200)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
+    // (symmetry-breaking order, conflict limit, time limit). Java's predicate first (most commands, UNSAT proofs
+    // profit from it), a short no-SBP attempt for satisfiable puzzles it makes hard, then unlimited.
+    const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 3] =
+        [(0, None, Some(300)), (NO_SBP, None, Some(1_000)), (0, None, None)];
     for (order, conflicts, limit_ms) in ATTEMPTS {
         let mut sat = BatSat::new();
         sat.set_conflict_limit(conflicts);
@@ -1067,7 +1213,7 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
                 let v = tr.formula(it)?;
                 let dt = t0.elapsed();
                 if dt.as_millis() > 20 {
-                    eprintln!("conjunct {k}: {:?} {:.120}", dt, format!("{it:?}"));
+                    eprintln!("conjunct {k}: {:?} {:.1800}", dt, format!("{it:?}"));
                 }
                 vals.push(v);
             }

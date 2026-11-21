@@ -1270,8 +1270,9 @@ pub struct Solution {
 
 /// Translates `formula` under `bounds`, solves with the default SAT backend and decodes the model.
 pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
-    // 1. Java's symmetry-breaking predicate with a short budget: most commands finish here.
-    {
+    // With several cores the configurations race from the start (no wasted sequential attempt); with one core a short
+    // attempt with Java's symmetry-breaking predicate comes first.
+    if std::thread::available_parallelism().map_or(1, |n| n.get()) < 2 {
         let mut sat = BatSat::configured(false, 0.0, 0, Some(true));
         sat.set_conflict_limit(Some(2_000));
         sat.set_time_limit(Some(std::time::Duration::from_millis(50)));
@@ -1286,13 +1287,13 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // (symmetry-breaking order, luby restarts, random-decision frequency, seed, initial polarity)
     const CONFIGS: [(u8, bool, f64, u32, Option<bool>); 8] = [
         (0, false, 0.0, 0, Some(true)),
-        (NO_SBP, false, 0.0, 0, None),
+        (NO_SBP, true, 0.0, 0, Some(true)),
         (0, true, 0.0, 0, None),
+        (NO_SBP, false, 0.0, 0, None),
         (1, true, 0.0, 0, Some(true)),
         (0, false, 0.0, 0, None),
         (1, false, 0.0, 0, None),
         (0, false, 0.01, 7, None),
-        (NO_SBP, true, 0.0, 0, Some(true)),
     ];
     let cores = std::thread::available_parallelism().map_or(1, |n| n.get());
     if cores < 2 {

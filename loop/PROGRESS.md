@@ -94,3 +94,9 @@ Remaining 23: temporal (21 cmds in extra/examples/temporal: buffer, leader, lead
 Done: file-level type errors (`alloy_translate::check_types`, run for `--no-solve`; implicit integer/sequniv opens always come from the library, path-based skip),
 parallel portfolio race (4 SAT configs after a 200ms SBP attempt), initial branching polarity TRUE (biggest SAT win: total time 0.24-0.5x of Java, ceilingsAndFloors 17s->1.7s).
 Remaining: temporal M8 (21 cmds in extra/), `--count` M7, small perf margins (firewire#4 2.3s vs 1.2s, handshake P14/P16, life Show).
+
+## 2026-11-22 skolem SBP + packed keys — verdict 444/465, perf 444/465 (sequential), models/ 248/248 verdict AND perf
+Key finding (from reading Java `SymmetryBreaker.generateSBP`): skolem relations (`$name`) are part of the lex-leader predicate and sort first,
+so witnesses of negated assertions are canonicalized. Adding them: p306-hotel#2 >60s -> 2.5s, firewire#4 2.3s -> 0.6s, iolus 3s -> 1.6s.
+Then translation cost: tuple keys packed into u64 (8 bits/atom), fx hasher, ranged join (190ms -> 79ms on p306#1); race configs start immediately.
+Remaining failures are only temporal (extra/examples/temporal, 21 cmds) and the `--count` milestone.

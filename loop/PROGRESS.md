@@ -89,3 +89,8 @@ Remaining 40: temporal (~21), hotel3/4 (4 overload), javatypes_soundness (4), IN
 Done: Java size constraints (`#sig <= n` / `= n`), string literals (String atoms + per-literal relations), `seq` keyword (+implicit sequniv open), sig links pre-pass,
 penalty-aware ExprChoice (one-element Choice marks penalty 1), `run f` on functions, first-column field constraint as join (not a univ^k product: 15 s -> ms), portfolio clock starts at solve().
 Remaining 23: temporal (21 cmds in extra/examples/temporal: buffer, leader, leader_events, trash), p306-hotel NoIntruder (perf, Java 24 s).
+
+## 2026-11-22 type_error files, polarity/portfolio — parse 199/199, commands 199/199, verdict 442/465, perf 427+/465 (gate green)
+Done: file-level type errors (`alloy_translate::check_types`, run for `--no-solve`; implicit integer/sequniv opens always come from the library, path-based skip),
+parallel portfolio race (4 SAT configs after a 200ms SBP attempt), initial branching polarity TRUE (biggest SAT win: total time 0.24-0.5x of Java, ceilingsAndFloors 17s->1.7s).
+Remaining: temporal M8 (21 cmds in extra/), `--count` M7, small perf margins (firewire#4 2.3s vs 1.2s, handshake P14/P16, life Show).

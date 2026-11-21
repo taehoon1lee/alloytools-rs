@@ -110,3 +110,6 @@
 - Java merges module instances (same file, same resolved params): `util/ordering[Tick]` opened in two files is ONE ordering (`CompModule.resolveModules`). Ported in `loader::merge_instances`.
 - `ty()` must iterate `local_bound` in sorted order (HashMap order made overload resolution nondeterministic).
 - Portfolio budgets are load-sensitive (time-based limits under -j8); keep the first attempt small (15k conflicts / 800ms).
+- SAT: initial polarity TRUE (batsat `new_var(lbool::TRUE, true)`) is ~3-10x faster than the default on the hard UNSAT corpus models (likely SAT4J's default phase); best single config = SBP order0 + geometric restarts + pol TRUE.
+- Portfolio: after a 200ms conflict-capped SBP attempt, 4 configs race on threads (first answer sets a stop flag). Heavy-tailed SAT time makes this the practical lever; keep thread count <= 4 (gate runs -j8).
+- File-level type errors: Java type-checks the root module at load; `--no-solve` runs `sema::build` and reports only `ErrorKind::Type` errors (identical-signature overloads etc.).

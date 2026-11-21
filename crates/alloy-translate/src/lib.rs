@@ -86,6 +86,15 @@ impl Solution {
     }
 }
 
+/// Java type-checks the whole root module when it loads. Runs the semantic pass and reports the *type errors* it
+/// finds (other failures, e.g. not-yet-supported features, are not file-level errors).
+pub fn check_types(world: &World) -> Result<(), AlloyError> {
+    match sema::build(&world.modules) {
+        Err(e) if e.kind == ErrorKind::Type => Err(e),
+        _ => Ok(()),
+    }
+}
+
 /// Execute command number `index` of `world` (the root module's `index`-th command).
 pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Solution, AlloyError> {
     let t0 = Instant::now();

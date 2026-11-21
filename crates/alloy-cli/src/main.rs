@@ -211,6 +211,23 @@ fn main() {
             std::process::exit(101);
         }
     };
+    // Java reports type errors of the root module at load time, before any command runs.
+    if a.no_solve {
+        let w = world.clone();
+        let r = std::thread::Builder::new()
+            .stack_size(SOLVER_STACK)
+            .spawn(move || alloy_translate::check_types(&w))
+            .expect("spawn")
+            .join();
+        if let Ok(Err(e)) = r {
+            doc.insert("status".into(), json!(e.status_str()));
+            doc.insert("error".into(), err_json(&e));
+            doc.insert("parse_ms".into(), json!(ms(p0)));
+            doc.insert("commands".into(), json!([]));
+            println!("{}", Value::Object(doc));
+            return;
+        }
+    }
     doc.insert("status".into(), json!("ok"));
     doc.insert("error".into(), Value::Null);
     doc.insert("parse_ms".into(), json!(ms(p0)));

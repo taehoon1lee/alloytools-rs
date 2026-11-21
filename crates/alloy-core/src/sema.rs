@@ -190,6 +190,9 @@ pub struct Model {
     pub exact_sigs: Vec<SigId>,
     /// Every string literal of the model (without quotes), in order of first use.
     pub strings: Vec<String>,
+    /// Uses of a bare name that denotes a parameterless function of this module and also functions of the same
+    /// name in opened modules (Java sees all of them; identical declared types make the use ambiguous).
+    pub shadowed_uses: Vec<Vec<FuncId>>,
     /// `disj f, g: e` field declarations: the fields of each group are pairwise disjoint.
     pub field_disjoint: Vec<Vec<FieldId>>,
 }
@@ -568,10 +571,23 @@ impl<'a> Builder<'a> {
             }
         }
         let mut found: Option<Vec<FuncId>> = None;
-        for f in self.model.funcs.iter().filter(|f| f.module == 0) {
+        for group in &self.model.shadowed_uses {
+            let first = &self.model.funcs[group[0] as usize];
+            if std::env::var("KDBG_SEMA").is_ok() { eprintln!("group {:?} ret0={:?}", group, first.ret); }
+            if first.ret.is_some()
+                && group.iter().all(|f| {
+                    let g = &self.model.funcs[*f as usize];
+                    g.ret == first.ret && g.is_pred == first.is_pred
+                })
+            {
+                found = Some(group.clone());
+                break;
+            }
+        }
+        for f in self.model.funcs.iter() {
             walk(&f.body, &mut found, &self.model.funcs);
         }
-        for f in self.model.facts.iter().filter(|f| f.module == 0) {
+        for f in self.model.facts.iter() {
             walk(&f.body, &mut found, &self.model.funcs);
         }
         if let Some(calls) = found {
@@ -1249,6 +1265,26 @@ impl<'a> Builder<'a> {
                 Sym::Field(id) => Ok(if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) }),
                 Sym::Func(fid) => {
                     if self.model.funcs[*fid as usize].nparams == 0 {
+                        if self.scopes[i].names.contains_key(n) && !n.contains('/') {
+                            let mut visited = vec![i];
+                            let mut extra: Vec<Sym> = Vec::new();
+                            for (_, t) in &self.scopes[i].opens {
+                                self.collect_public(*t, n, &mut visited, &mut extra);
+                            }
+                            let mut group = vec![*fid];
+                            for x in extra {
+                                if let Sym::Func(g) = x {
+                                    if self.model.funcs[g as usize].nparams == 0
+                                        && !group.iter().any(|o| *o == g || self.same_instance_func(&Sym::Func(*o), &Sym::Func(g)))
+                                    {
+                                        group.push(g);
+                                    }
+                                }
+                            }
+                            if group.len() > 1 {
+                                self.model.shadowed_uses.push(group);
+                            }
+                        }
                         Ok(RExpr::Call(*fid, Vec::new()))
                     } else {
                         err(i, self.mods, e.loc.line, e.loc.col, format!("Function \"{n}\" needs arguments."))

@@ -22,7 +22,7 @@ Reference: `org.alloytools.alloy.core/parser/Alloy.lex`, `.../parser/Alloy.cup` 
       var/private, extends/in, fields with multiplicities, appended fact), `enum`, `fact`, `pred`, `fun`,
       `assert`, `run`/`check` (label, body or name, scopes, `but`, `exactly`, `int`, `seq`, `steps`, `expect`),
       macros (`let` at top level), expressions (all operators of Alloy 6 incl. temporal).
-- [ ] M1.3 Expression parser (Pratt / precedence climbing) mirroring the precedence in Alloy.cup
+- [x] M1.3 Expression parser (Pratt / precedence climbing) mirroring the precedence in Alloy.cup
       (`||`/or < `<=>` < `=>`/else < `&&` < `!` < temporal binary < … < `.` / `[]` box join). Unit tests that
       check the parse tree of tricky expressions (`a.b[c]`, `all x: A | p => q else r`, `x' = y`, `#a + 1`).
 - [ ] M1.4 Declarations/paragraph parser. `parse_everything_from_file` returns `Ok(World)` with commands

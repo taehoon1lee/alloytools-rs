@@ -209,8 +209,21 @@ pub enum Const {
     SigInt,
     /// The `String` signature keyword.
     SigString,
-    /// The `seq/Int` signature (keyword `seq` used as a unary prefix is `UnOp::Seq`).
+    /// The `this` keyword (`this/A` is a `Name`).
     This,
+    /// `fun/min`, `fun/max`, `fun/next` (Java `ExprConstant.Op.MIN/MAX/NEXT`).
+    IntMin,
+    IntMax,
+    IntNext,
+}
+
+/// Multiplicity written on one side of an arrow (`A one -> lone B`). `Set` is the default.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Mult {
+    Set,
+    One,
+    Lone,
+    Some,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -228,6 +241,8 @@ pub enum UnOp {
     Closure,
     ReflClosure,
     Neg,
+    /// `sum e` / `int e` (Java `CAST2SIGINT(CAST2INT(e))`); also `int[e]`, `sum[e]`.
+    IntCast,
     /// postfix `'`
     Prime,
     Always,
@@ -259,9 +274,13 @@ pub enum BinOp {
     Mul,
     Div,
     Rem,
+    /// `fun/add`, `fun/sub`: integer addition/subtraction (Java `IPLUS`/`IMINUS`).
+    IntPlus,
+    IntMinus,
     Intersect,
     Override,
-    Arrow,
+    /// `->` with the multiplicities written on the left and right side (`Set, Set` = plain `->`).
+    Arrow(Mult, Mult),
     Join,
     DomainRestrict,
     RangeRestrict,

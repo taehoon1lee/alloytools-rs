@@ -26,9 +26,25 @@
 - `Version.experimental = true`, so string literals are accepted. Java keeps the quote chars inside the string
   value; our `Tok::Str` stores the content without quotes (keep this in mind when comparing string constants).
 
+- Expression precedence (CUP call chain, loosest first): `;` (trace seq, right) < `||` < `<=>` < `=>`/`else` (right)
+  < `&&` < `until/since/releases/triggered` < prefix `!` `always`.. < `=` `in` `<` `>` `<=` `>=` (+ `!` forms)
+  < `<<` `>>` `>>>` < `+` `-` (+ `fun/add`,`fun/sub`) < `fun/mul`,`fun/div`,`fun/rem` < prefix `#`/`sum`/`int`
+  < `++` < `&` < `->` (right) < `<:` < `:>` < `.` and `[]` (same level, left) < prefix `~` `*` `^` < postfix `'`.
+  So `a + b & c` = `a + (b & c)` and `a.b[c]` = `c.(a.b)`.
+- Quantifier keywords (`all no some lone one sum`) are quantifiers only when a `[private] [disj] names :` follows
+  and the previous token is not `:` / `disj` (CompFilter). Otherwise they are multiplicity prefixes (`x: one A`).
+- `A set -> some B`: multiplicity keywords between/after `->` are merged into the arrow (CompFilter). `A -> set B` == `A -> B`.
+- `-1` merges into a number literal only in primary position (CompFilter rule: not after `) ] } ID NUMBER ...`).
+
 ## Design decisions
 - Surface AST (`syntax.rs`): `c => a else b` is `ExprKind::IfElse`; `a !in b` / `a != b` have no own BinOp —
   build `Unary(Not, Binary(In|Equals))` like Java's `ExprUnary.Op.NOT` wrapping. `a[b]` stays `BoxJoin` until M3.
 - SAT backend: `satsolver::BatSat` (pure-Rust MiniSat-like). Java baseline uses SAT4J (Java MiniSat-like).
+
+- Expression parser (`parser.rs`): one method per CUP level, no precedence table. Surface conventions are listed in
+  the module doc (e.g. `{}` = TRUE, `disj[..]`/`pred/totalOrder[..]` = `BoxJoin(Name(..))`, `int[e]`/`e.int` = `IntCast`).
+- Known gaps (not ported yet): `int[a, b]` multi-argument form (error for now); the `x = e` declaration form
+  (`Declb EQUALS`, used for fields); multiplicity on `in`/`=` right operands is not rewritten to `*Of` forms (M3 must
+  apply `CompModule.mult`).
 
 ## HARNESS ISSUES (write evidence here instead of editing harness/)

@@ -11,7 +11,7 @@ Sizes are Java line counts (to plan how many iterations a port takes). Update th
 | `org.alloytools.alloy.core/parser/Alloy.cup` | 1159 | `parser.rs` | CUP grammar; precedence table at the top; actions call CompModule |
 | `CORE/parser/CompModule.java` | 2721 | `module.rs`, `resolve.rs` | module building, opens, sig/func/fact/command resolution |
 | `CORE/parser/CompUtil.java` | 484 | `lib.rs` | `parseEverything_fromFile`, recursive file loading |
-| `CORE/parser/CompFilter.java` | 465 | `lexer.rs` | token stream post-processing (e.g. merges `!in`, detects `run`/`check` labels) |
+| `CORE/parser/CompFilter.java` | 465 | `lexer.rs`, `parser.rs` | token post-processing: `!in` merge in `parser.rs` (`compare_level`), quantifier detection and `one ->` arrows in `parser.rs`; `run`/`check` labels still TODO (M2) |
 | `CORE/parser/Macro.java` | ~150 | `resolve.rs` | `let` macros |
 | `CORE/ast/Expr*.java` | ~4000 | `ast.rs` | resolved expression IR + `resolve()` typing |
 | `CORE/ast/Type.java` | 1305 | `types.rs` | relational types (union of product types) |

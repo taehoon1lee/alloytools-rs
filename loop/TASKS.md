@@ -28,13 +28,13 @@ Reference: `org.alloytools.alloy.core/parser/Alloy.lex`, `.../parser/Alloy.cup` 
 - [x] M1.4a Paragraph parser (`parser.rs` `parse_module`): module header, `open` (args, alias, `private`), `enum`,
       `sig` (qualifiers, `extends`/`in`/`=`, fields, appended fact), `fact`/`assert` (name or string), `pred`/`fun`
       (sig-local `Sig.name`, params, return type). Syntax errors -> `ErrorKind::Syntax` with Pos. 26 unit tests.
-- [ ] M1.4b Commands and macros: `run`/`check` (anonymous, named, labelled `L: run`, `{ }` body, `for`/`but`/`exactly`/
+- [x] M1.4b Commands and macros (done: `command`, `scope` with Java `c(...)` extraction, `type_number`, `macro_decl`, `f = e` fields; `parse_everything_from_file` now returns the root module's commands): `run`/`check` (anonymous, named, labelled `L: run`, `{ }` body, `for`/`but`/`exactly`/
       `N int`/`N seq`/`N steps`/`min..max`, `expect`), top-level `let` macros (`MacroBody`: `{..}` or `= expr`).
       Then `parse_everything_from_file` returns `Ok(World)` with commands (scope details approximate until M2).
       Also: the field form `f = e` (Alloy.cup `Declb EQUALS`, currently a syntax error in `Parser::decl`) and
       `Macro` needs `is_private` + `Decl`-or-name params (Java uses `Names`). Tighten `corpus_parses_apart_from_unsupported_paragraphs`
       once run/check no longer return Unsupported (it currently hides errors after the first run/check).
-- [ ] M1.5 Make every corpus file parse: `python harness/check.py` → **parse ≥ 194/199** (only the
+- [x] M1.5 (met: parse 194/199, the 5 misses are M2.1/M3 errors) Make every corpus file parse: `python harness/check.py` → **parse ≥ 194/199** (only the
       type_error files may still differ).
 
 ## M2 — Modules + command headers (parity of the `commands` level)

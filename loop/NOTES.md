@@ -47,7 +47,13 @@
   `a` and `after({b; c})` (Java `SuperP`), NOT by `expr()` (which would make `after(b)` and leave `c` at time 0).
   `pred`/`fun` bodies are `Block(conjuncts)`; `{}` = `Block([])` = TRUE. Sig-local names are kept as `Sig.name`.
   `sig A = B` is `SigExtends::Equal` (Java marker `"="`), `in` is `SigExtends::In`, `extends` is `SigExtends::Extends`.
-- Labelled commands (`L: run {..}`) exist in the corpus (Alloy 6 syntax); they return Unsupported until M1.4b.
+- Labelled commands (`L: run {..}`) exist in the corpus (Alloy 6 syntax); now parsed (M1.4b).
+- Labelled commands: CompFilter rewrites `L: run` to `run L ...`; the label is the ID before the colon. `run L foo` / `run L {`
+  means label L; `run foo` alone is a target. A following `Id :` is the next labelled paragraph, not a name.
+- Scopes: `for N` is overall only when followed by nothing or `but`; `for 5 int`/`for 3 seq`/`for 2..4 steps` are typescopes.
+  `int` and `Int` both set bitwidth. `N..M` is exact when N==M. `3:2 Node` = increment 2, end MAX (increment comes before the sig).
+  The Java `c(...)` extraction (univ/int/seq/steps out of the list, dup errors) is done in the parser (`Parser::scope`).
+- Labels for CommandInfo: explicit label, else the target name, else `run$N`/`check$N` (N = 1 + commands before it).
 - Known gaps (not ported yet): `int[a, b]` multi-argument form (error for now); the `x = e` declaration form
   (`Declb EQUALS`, used for fields); multiplicity on `in`/`=` right operands is not rewritten to `*Of` forms (M3 must
   apply `CompModule.mult`).

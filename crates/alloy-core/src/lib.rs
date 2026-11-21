@@ -49,8 +49,44 @@ impl World {
 
 /// Parse `path` (and every module it opens, including the embedded `util/*` library),
 /// resolve names and type-check. Mirrors `CompUtil.parseEverything_fromFile`.
+///
+/// Currently only the root file is parsed (modules/`open` are M2.1) and `CommandInfo` is filled from the
+/// parsed commands with Java's defaults; `scope_string` is still empty (M2.3: `Command.toString()`).
 pub fn parse_everything_from_file(path: &Path) -> Result<World, AlloyError> {
-    let _src = std::fs::read_to_string(path)
+    let src = std::fs::read_to_string(path)
         .map_err(|e| AlloyError::new(ErrorKind::Other, None, format!("cannot read {}: {e}", path.display())))?;
-    Err(AlloyError::unsupported("parser not implemented yet (milestone M1)"))
+    let module = parser::parse_module(&path.display().to_string(), &src)?;
+    Ok(World {
+        commands: command_infos(&module),
+    })
+}
+
+/// `CommandInfo` for every command of the root module, in source order.
+/// Java: `CompModule.addCommand` (anonymous labels `run$N`/`check$N`, N = 1 + commands before it).
+fn command_infos(module: &syntax::Module) -> Vec<CommandInfo> {
+    let mut out = Vec::new();
+    for p in &module.paragraphs {
+        let syntax::Paragraph::Command(c) = p else { continue };
+        let n = out.len() + 1;
+        let label = match (&c.label, &c.target) {
+            (Some(l), _) => l.clone(),
+            (None, syntax::CommandTarget::Name(name)) => name.clone(),
+            (None, syntax::CommandTarget::Block(_)) => {
+                format!("{}${n}", if c.check { "check" } else { "run" })
+            }
+        };
+        let steps = c.scopes.steps;
+        out.push(CommandInfo {
+            label,
+            check: c.check,
+            expects: c.expect.unwrap_or(-1),
+            scope_string: String::new(),
+            overall: c.scopes.overall.unwrap_or(-1),
+            bitwidth: c.scopes.bitwidth.unwrap_or(-1),
+            maxseq: c.scopes.maxseq.unwrap_or(-1),
+            minprefix: steps.and_then(|s| s.min).unwrap_or(-1),
+            maxprefix: steps.map_or(-1, |s| s.max),
+        });
+    }
+    out
 }

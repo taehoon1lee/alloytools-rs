@@ -22,3 +22,8 @@ parse 0/199, commands 0/199, verdict 0/465, perf 0/465 (`parse_everything_from_f
 Fixed M1.3 bug: `pred/totalOrder[..]` in primary position bumped 2 tokens instead of 3.
 Corpus test: every file parses except run/check/let/labelled commands (Unsupported). Errors after the first command are not checked yet.
 next: M1.4b run/check/labelled commands + `let` macros + `x = e` field form, then wire `parse_everything_from_file` (`World::commands`)
+
+## 2026-11-21 M1.4b/M1.5 — commands, macros, `f = e` fields; parse 194/199 (acceptance met)
+parse 194/199, commands 0/199, verdict 0/465, perf 0/465 (`parse_everything_from_file` = root module only; `scope_string` empty)
+Parse misses are Java module/type errors (natural dup alias = M2.1; integer/seqrel/sequniv/sequence type errors = M3). 30 alloy-core tests; strict corpus parse test; gate exit 0.
+next: M2.1 module loading (`open`, params, aliases) then M2.2/M2.3 commands (labels, Command.toString)

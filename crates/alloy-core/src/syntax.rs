@@ -136,11 +136,13 @@ pub struct Assert {
     pub body: Vec<Expr>,
 }
 
+/// `let name[a, b] = e` or `let name[a, b] { conjuncts }` (Java `CompModule.addMacro`; params are plain names).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Macro {
     pub loc: Loc,
+    pub is_private: bool,
     pub name: String,
-    pub params: Vec<Decl>,
+    pub params: Vec<String>,
     pub body: Expr,
 }
 
@@ -152,13 +154,16 @@ pub enum CommandTarget {
     Block(Vec<Expr>),
 }
 
-/// `N [sig]` or `exactly N [sig]` inside a `for ... but` list (`Command.java` `CommandScope`).
+/// `N [sig]`, `exactly N [sig]`, `N..M [sig]`, `N:I [sig]`, ... inside a `for` list (Java `CommandScope`).
+/// `sig` is the user sig name, or `int` / `seq` / `steps` / `String` for the built-in scopes.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeScope {
     pub loc: Loc,
     pub sig: String,
     pub exactly: bool,
-    pub size: i32,
+    pub start: i32,
+    pub end: i32,
+    pub increment: i32,
 }
 
 /// Everything after `for` / `but` / `expect` (surface form; defaults applied in M2).
@@ -185,7 +190,7 @@ pub struct Steps {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Command {
     pub loc: Loc,
-    /// Explicit label (`run foo { }` form uses `Name` target; a leading `foo:` is not Alloy syntax).
+    /// Label: `L: run ...` (the `ID : RUN` rewrite of `CompFilter`) or `run L foo` / `run L { }`.
     pub label: Option<String>,
     pub check: bool,
     pub target: CommandTarget,
@@ -250,6 +255,8 @@ pub enum UnOp {
     IntCast,
     /// postfix `'`
     Prime,
+    /// Java `EXACTLYOF`: the right side of a defined field `f = e`.
+    ExactlyOf,
     Always,
     Eventually,
     Historically,

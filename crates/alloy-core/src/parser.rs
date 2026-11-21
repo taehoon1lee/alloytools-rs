@@ -779,6 +779,25 @@ impl Parser {
         while self.eat(&Tok::Comma) {
             names.push(self.name()?);
         }
+        if self.eat(&Tok::Equals) {
+            // Java `Declb ::= Names EQUALS Expr`: a defined field `f = e` (no `var`, no `disj`).
+            if disjoint || *self.peek() == Tok::Disj {
+                return self.err_at(loc, "Defined fields cannot be disjoint.");
+            }
+            if var {
+                return self.err_at(loc, "Syntax error: defined fields cannot be 'var'.");
+            }
+            let e = self.expr()?;
+            let expr = un(loc, UnOp::ExactlyOf, e);
+            return Ok(Decl {
+                loc,
+                is_private,
+                disjoint: false,
+                var: false,
+                names,
+                expr,
+            });
+        }
         self.expect(&Tok::Colon)?;
         disjoint |= self.eat(&Tok::Disj);
         let expr = self.expr()?;
@@ -810,6 +829,14 @@ pub fn parse_module(file: &str, src: &str) -> PResult<Module> {
     Ok(Module { header, paragraphs })
 }
 
+/// Result of a Java `TypeNumber` production (`CommandScope` start/end/increment/isExact).
+struct TypeNum {
+    exactly: bool,
+    start: i32,
+    end: i32,
+    increment: i32,
+}
+
 // ---- paragraphs (Alloy.cup `Spec`, `Sig`, `Function`, `Predicate`, `Super`) -----------------
 impl Parser {
     /// `module Name [ [exactly] A, B ]` (Java `Spec MODULE Name [Namex]`).
@@ -836,34 +863,325 @@ impl Parser {
     fn paragraph(&mut self) -> PResult<Paragraph> {
         let start = self.pos;
         let is_private = self.eat(&Tok::Private);
-        // `label: run ...` / `label: check ...` (Alloy 6 labelled commands) are commands (M1.4b).
-        let labelled = matches!(self.peek(), Tok::Id(_)) && *self.tok(1) == Tok::Colon;
-        if labelled {
-            return Err(AlloyError::unsupported(
-                "labelled run/check paragraphs are not parsed yet (M1.4b)",
-            ));
-        }
-        let p = match self.peek() {
-            Tok::Open => Paragraph::Open(self.open(is_private)?),
-            Tok::Enum => Paragraph::Enum(self.enum_decl(is_private)?),
-            Tok::Fact => Paragraph::Fact(self.fact()?),
-            Tok::Assert => Paragraph::Assert(self.assert()?),
-            Tok::Pred => Paragraph::Pred(self.func(is_private, false)?),
-            Tok::Fun => Paragraph::Fun(self.func(is_private, true)?),
-            Tok::Run | Tok::Check | Tok::Let => {
-                return Err(AlloyError::unsupported(
-                    "run/check/let paragraphs are not parsed yet (M1.4b)",
-                ))
-            }
-            _ => {
-                self.pos = start;
-                Paragraph::Sig(self.sig()?)
+        // `label: run ...` / `label: check ...` (Alloy 6): CompFilter rewrites it to `run label ...`.
+        let labelled = matches!(self.peek(), Tok::Id(_))
+            && *self.tok(1) == Tok::Colon
+            && matches!(self.tok(2), Tok::Run | Tok::Check);
+        let p = if labelled {
+            let Tok::Id(label) = self.peek().clone() else {
+                unreachable!("checked above")
+            };
+            self.bump_n(2);
+            Paragraph::Command(self.command(Some(label))?)
+        } else {
+            match self.peek() {
+                Tok::Open => Paragraph::Open(self.open(is_private)?),
+                Tok::Enum => Paragraph::Enum(self.enum_decl(is_private)?),
+                Tok::Fact => Paragraph::Fact(self.fact()?),
+                Tok::Assert => Paragraph::Assert(self.assert()?),
+                Tok::Pred => Paragraph::Pred(self.func(is_private, false)?),
+                Tok::Fun => Paragraph::Fun(self.func(is_private, true)?),
+                Tok::Let => Paragraph::Macro(self.macro_decl(is_private)?),
+                Tok::Run | Tok::Check => Paragraph::Command(self.command(None)?),
+                _ => {
+                    self.pos = start;
+                    Paragraph::Sig(self.sig()?)
+                }
             }
         };
         Ok(p)
     }
 
-    /// `[private] open Name [ '[' SigRefs ']' ] [as Name]`.
+    /// `[private] let Name [ (names) | [names] ] (= Expr | Super)` (Java `Macro`, `MacroBody`).
+    fn macro_decl(&mut self, is_private: bool) -> PResult<Macro> {
+        let loc = self.loc();
+        self.expect(&Tok::Let)?;
+        let name = self.name()?;
+        let params = if self.eat(&Tok::LParen) {
+            let v = self.name_list(&Tok::RParen)?;
+            self.expect(&Tok::RParen)?;
+            v
+        } else if self.eat(&Tok::LBracket) {
+            let v = self.name_list(&Tok::RBracket)?;
+            self.expect(&Tok::RBracket)?;
+            v
+        } else {
+            Vec::new()
+        };
+        let body = if self.eat(&Tok::Equals) {
+            self.expr()?
+        } else {
+            let bl = self.loc();
+            Expr::new(bl, ExprKind::Block(self.super_block()?))
+        };
+        Ok(Macro {
+            loc,
+            is_private,
+            name,
+            params,
+            body,
+        })
+    }
+
+    /// Possibly empty `name (, name)*` ending before `close` (not consumed).
+    fn name_list(&mut self, close: &Tok) -> PResult<Vec<String>> {
+        let mut out = Vec::new();
+        while self.peek() != close {
+            out.push(self.name()?);
+            if !self.eat(&Tok::Comma) {
+                break;
+            }
+        }
+        Ok(out)
+    }
+
+    /// `run|check [Name] [Name|{Super}] [Scope] [Expects]` (Java `Command`, `c(...)` action).
+    /// The label is passed in by `paragraph` for `L: run ...`; `run L foo` / `run L { }` set it here.
+    fn command(&mut self, label: Option<String>) -> PResult<Command> {
+        let loc = self.loc();
+        let check = *self.peek() == Tok::Check;
+        self.bump();
+        let mut label = label;
+        let target = if *self.peek() == Tok::LBrace {
+            CommandTarget::Block(self.super_block()?)
+        } else {
+            let first = self.name()?;
+            let has_label = label.is_some();
+            if *self.peek() == Tok::LBrace || self.name_follows() {
+                if has_label {
+                    return self.err("a command can have only one label");
+                }
+                label = Some(first);
+                if *self.peek() == Tok::LBrace {
+                    CommandTarget::Block(self.super_block()?)
+                } else {
+                    CommandTarget::Name(self.name()?)
+                }
+            } else {
+                CommandTarget::Name(first)
+            }
+        };
+        let scopes = self.scope()?;
+        let expect = if self.eat(&Tok::Expect) {
+            Some(self.number()?)
+        } else {
+            None
+        };
+        if *self.peek() == Tok::Implies {
+            return Err(AlloyError::unsupported(
+                "follow-up commands (`cmd => cmd`) are not parsed yet",
+            ));
+        }
+        Ok(Command {
+            loc,
+            label,
+            check,
+            target,
+            scopes,
+            expect,
+        })
+    }
+
+    /// True if the next token starts another name of the same command (`run L foo`).
+    /// `Id :` is the next labelled paragraph, not a name.
+    fn name_follows(&self) -> bool {
+        matches!(self.peek(), Tok::Id(_)) && *self.tok(1) != Tok::Colon
+    }
+
+    fn number(&mut self) -> PResult<i32> {
+        match *self.peek() {
+            Tok::Num(n) => {
+                self.bump();
+                Ok(n)
+            }
+            _ => self.err("expected a number"),
+        }
+    }
+
+    /// `[for [N] [but] TypeScope, ...]` (Java `Scope`, `Typescopes`) followed by the parse-time
+    /// extraction of `univ`/`int`/`seq`/`steps` done by `Alloy.cup` `c(...)`.
+    fn scope(&mut self) -> PResult<Scopes> {
+        let mut overall = None;
+        let mut raw = Vec::new();
+        if self.eat(&Tok::For) {
+            let overall_only = match *self.tok(0) {
+                Tok::Num(_) => {
+                    let after = self.tok(1);
+                    !(matches!(after, Tok::Dot | Tok::Colon) || self.type_name_start(1))
+                }
+                _ => false,
+            };
+            if overall_only {
+                overall = Some(self.number()?);
+                if self.eat(&Tok::But) {
+                    raw = self.typescopes()?;
+                }
+            } else {
+                raw = self.typescopes()?;
+            }
+        }
+        let mut sc = Scopes {
+            overall,
+            ..Scopes::default()
+        };
+        // Java processes the list from the end; `univ` and `int`/`seq`/`steps` are removed from it.
+        let mut kept = Vec::new();
+        for ts in raw {
+            match ts.sig.as_str() {
+                "int" => {
+                    if sc.bitwidth.is_some() {
+                        return self.err_at(ts.loc, "The bitwidth cannot be specified more than once.");
+                    }
+                    sc.bitwidth = Some(ts.start);
+                }
+                "seq" => {
+                    if sc.maxseq.is_some() {
+                        return self.err_at(
+                            ts.loc,
+                            "The maximum sequence length cannot be specified more than once.",
+                        );
+                    }
+                    sc.maxseq = Some(ts.start);
+                }
+                "steps" => {
+                    if ts.end == i32::MAX && ts.start != 1 {
+                        return self.err_at(ts.loc, "Unbounded time scope must start at 1.");
+                    }
+                    if ts.increment != 1 {
+                        return self.err_at(ts.loc, "Step scopes must be incremented by 1.");
+                    }
+                    if ts.start < 1 {
+                        return self.err_at(ts.loc, "Trace solutions must contain at least one step.");
+                    }
+                    if sc.steps.is_some() {
+                        return self.err_at(ts.loc, "Steps scope cannot be specified more than once.");
+                    }
+                    sc.steps = Some(if ts.exactly {
+                        Steps {
+                            min: Some(ts.start),
+                            max: ts.start,
+                        }
+                    } else if ts.end != ts.start {
+                        Steps {
+                            min: Some(ts.start),
+                            max: ts.end,
+                        }
+                    } else {
+                        Steps {
+                            min: None,
+                            max: ts.start,
+                        }
+                    });
+                }
+                _ => kept.push(ts),
+            }
+        }
+        sc.typescopes = kept;
+        Ok(sc)
+    }
+
+    /// Does a sig-name scope keyword (`Name`, `Int`, `int`, `seq`, `String`, `steps`) start at offset `k`?
+    fn type_name_start(&self, k: usize) -> bool {
+        matches!(
+            self.tok(k),
+            Tok::Id(_) | Tok::SigInt | Tok::Int | Tok::Seq | Tok::StringKw | Tok::Time | Tok::Univ | Tok::NoneKw
+        )
+    }
+
+    /// `TypeScope (, TypeScope)*`.
+    fn typescopes(&mut self) -> PResult<Vec<TypeScope>> {
+        let mut out = vec![self.typescope()?];
+        while self.eat(&Tok::Comma) {
+            out.push(self.typescope()?);
+        }
+        Ok(out)
+    }
+
+    /// `TypeNumber sig` with the `Typescope` checks of `Alloy.cup` (growing/exact rules for int/seq).
+    fn typescope(&mut self) -> PResult<TypeScope> {
+        let loc = self.loc();
+        let tn = self.type_number()?;
+        let (sig, start, end, exactly, increment) = match self.peek() {
+            Tok::Univ => return self.err_at(loc, "You cannot set a scope on univ."),
+            Tok::NoneKw => return self.err_at(loc, "You cannot set a scope on none."),
+            Tok::SigInt | Tok::Int => {
+                self.bump();
+                self.builtin_scope(loc, "int", tn, "Cannot specify a growing scope for \"Int\"", "The exactly keyword is redundant here since the integer bitwidth must be exact.")?
+            }
+            Tok::Seq if *self.tok(1) != Tok::Slash => {
+                self.bump();
+                self.builtin_scope(loc, "seq", tn, "Cannot specify a growing scope for \"seq\"", "The exactly keyword is redundant here since the number of sequence index has to be exact.")?
+            }
+            Tok::StringKw => {
+                self.bump();
+                ("String".to_string(), tn.start, tn.end, tn.exactly, tn.increment)
+            }
+            Tok::Time => {
+                self.bump();
+                ("steps".to_string(), tn.start, tn.end, tn.exactly, tn.increment)
+            }
+            _ => (self.name()?, tn.start, tn.end, tn.exactly, tn.increment),
+        };
+        Ok(TypeScope {
+            loc,
+            sig,
+            exactly,
+            start,
+            end,
+            increment,
+        })
+    }
+
+    /// `int` / `Int` / `seq` scopes: a single exact value (no range, no `exactly`).
+    #[allow(clippy::type_complexity)]
+    fn builtin_scope(
+        &self,
+        loc: Loc,
+        sig: &str,
+        tn: TypeNum,
+        growing: &str,
+        redundant: &str,
+    ) -> PResult<(String, i32, i32, bool, i32)> {
+        if tn.end > tn.start {
+            return self.err_at(loc, growing);
+        }
+        if tn.exactly {
+            return self.err_at(loc, redundant);
+        }
+        Ok((sig.to_string(), tn.start, tn.start, false, 1))
+    }
+
+    /// Java `TypeNumber`: `[exactly] N [.. [M]] [: I]`. `N..M` is exact when N == M.
+    fn type_number(&mut self) -> PResult<TypeNum> {
+        let exactly = self.eat(&Tok::Exactly);
+        let start = self.number()?;
+        let mut end = start;
+        let mut increment = 1;
+        let mut range = false;
+        if self.eat(&Tok::Dot) {
+            self.expect(&Tok::Dot)?;
+            range = true;
+            end = if let Tok::Num(m) = *self.peek() {
+                self.bump();
+                m
+            } else {
+                i32::MAX
+            };
+        } else if *self.peek() == Tok::Colon {
+            end = i32::MAX;
+        }
+        if self.eat(&Tok::Colon) {
+            increment = self.number()?;
+        }
+        Ok(TypeNum {
+            exactly: exactly || (range && start == end),
+            start,
+            end,
+            increment,
+        })
+    }
+
+    /// `[private] open
     fn open(&mut self, is_private: bool) -> PResult<Open> {
         let loc = self.loc();
         self.expect(&Tok::Open)?;
@@ -1464,8 +1782,8 @@ mod tests {
         }
     }
 
-    /// Every corpus file must parse, except for the paragraphs that are still unsupported
-    /// (`run`/`check`/`let`). Reports the other failures so the next step is obvious.
+    /// Every corpus file must parse; the only allowed exception is the not-yet-ported follow-up
+    /// command form (`cmd => cmd`). Lists every failure so the next step is obvious.
     #[test]
     fn corpus_parses_apart_from_unsupported_paragraphs() {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../reference");
@@ -1477,7 +1795,7 @@ mod tests {
             let src = std::fs::read_to_string(f).unwrap_or_default();
             match parse_module(&f.display().to_string(), &src) {
                 Ok(_) => {}
-                Err(e) if e.kind == ErrorKind::Unsupported => {}
+                Err(e) if e.kind == ErrorKind::Unsupported && e.msg.contains("follow-up") => {}
                 Err(e) => failures.push(format!("{}: {e}", f.display())),
             }
         }
@@ -1489,10 +1807,101 @@ mod tests {
         );
     }
 
+    fn command_of(src: &str) -> Command {
+        let m = module(src);
+        match m.paragraphs.into_iter().next() {
+            Some(Paragraph::Command(c)) => c,
+            other => panic!("{src}: not a command: {other:?}"),
+        }
+    }
+
     #[test]
-    fn run_check_let_are_not_parsed_yet() {
-        let e = parse_module("t.als", "run { }").unwrap_err();
+    fn command_forms_and_labels() {
+        let c = command_of("run {} for 3");
+        assert!(!c.check && c.label.is_none());
+        assert!(matches!(c.target, CommandTarget::Block(ref b) if b.is_empty()));
+        assert_eq!(c.scopes.overall, Some(3));
+
+        let c = command_of("check A_ok for 4 but 2 B, exactly 1 C expect 0");
+        assert!(c.check);
+        assert_eq!(c.expect, Some(0));
+        assert!(matches!(c.target, CommandTarget::Name(ref n) if n == "A_ok"));
+        assert_eq!(c.scopes.overall, Some(4));
+        assert_eq!(c.scopes.typescopes.len(), 2);
+        assert_eq!(c.scopes.typescopes[1].sig, "C");
+        assert!(c.scopes.typescopes[1].exactly);
+
+        let c = command_of("WriteRead: check { some A } for 3");
+        assert_eq!(c.label.as_deref(), Some("WriteRead"));
+        assert!(matches!(c.target, CommandTarget::Block(_)));
+
+        let c = command_of("run L foo for 2");
+        assert_eq!(c.label.as_deref(), Some("L"));
+        assert!(matches!(c.target, CommandTarget::Name(ref n) if n == "foo"));
+
+        let c = command_of("example: run {}");
+        assert_eq!(c.label.as_deref(), Some("example"));
+    }
+
+    #[test]
+    fn scope_extraction_like_java_c_action() {
+        let c = command_of("run f for 6 but 5 int, 3 seq, 2..4 steps, 7 Node, 2 String");
+        assert_eq!(c.scopes.overall, Some(6));
+        assert_eq!(c.scopes.bitwidth, Some(5));
+        assert_eq!(c.scopes.maxseq, Some(3));
+        let st = c.scopes.steps.unwrap();
+        assert_eq!((st.min, st.max), (Some(2), 4));
+        let names: Vec<&str> = c.scopes.typescopes.iter().map(|t| t.sig.as_str()).collect();
+        assert_eq!(names, vec!["Node", "String"]);
+
+        let c = command_of("run f for exactly 3 Node, 1..1 steps");
+        let t = &c.scopes.typescopes[0];
+        assert!(t.exactly && t.start == 3 && t.end == 3 && t.increment == 1);
+        let st = c.scopes.steps.unwrap();
+        assert_eq!((st.min, st.max), (Some(1), 1));
+
+        let c = command_of("run f for 3:2 Node");
+        assert_eq!(c.scopes.typescopes[0].end, i32::MAX);
+        assert_eq!(c.scopes.typescopes[0].increment, 2);
+    }
+
+    #[test]
+    fn scope_errors_are_syntax_errors() {
+        for src in [
+            "run f for 3 int, 4 int",
+            "run f for 2..5 int",
+            "run f for exactly 3 int",
+            "run f for univ",
+            "run f for 3 none",
+            "run f for 3 steps, 2 steps",
+            "run f for 0 steps",
+        ] {
+            let e = parse_module("t.als", &format!("{src} expect 1 ")).unwrap_err();
+            assert_eq!(e.kind, ErrorKind::Syntax, "{src}");
+        }
+    }
+
+    #[test]
+    fn follow_up_commands_are_unsupported_for_now() {
+        let e = parse_module("t.als", "run {} => check {}").unwrap_err();
         assert_eq!(e.kind, ErrorKind::Unsupported);
+    }
+
+    #[test]
+    fn let_macros_and_defined_fields() {
+        let m = module("let twice(a, b) = a.b\nprivate let m[] { some A }\nlet k = 3\nsig S { f = A -> B }");
+        let Paragraph::Macro(t) = &m.paragraphs[0] else { panic!() };
+        assert_eq!(t.params, vec!["a", "b"]);
+        assert!(matches!(t.body.kind, ExprKind::Binary(_, _, _)));
+        let Paragraph::Macro(mm) = &m.paragraphs[1] else { panic!() };
+        assert!(mm.is_private && mm.params.is_empty());
+        let Paragraph::Macro(k) = &m.paragraphs[2] else { panic!() };
+        assert!(matches!(k.body.kind, ExprKind::Num(3)));
+        let Paragraph::Sig(s) = &m.paragraphs[3] else { panic!() };
+        let f = &s.fields[0];
+        assert_eq!(f.names, vec!["f"]);
+        assert!(matches!(f.expr.kind, ExprKind::Unary(UnOp::ExactlyOf, _)));
+        assert!(parse_module("t.als", "sig S { disj f = A }").is_err());
     }
 
     #[test]

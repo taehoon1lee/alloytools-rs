@@ -1231,11 +1231,15 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
         }
         unreachable!("the last attempt is unlimited");
     }
-    let n = CONFIGS.len().min(cores.max(2)).min(4);
+    // Debug knob: KSAT_CONFIGS=3,5 races only the listed configurations.
+    let selected: Vec<usize> = match std::env::var("KSAT_CONFIGS") {
+        Ok(v) => v.split(',').filter_map(|x| x.trim().parse().ok()).filter(|i| *i < CONFIGS.len()).collect(),
+        Err(_) => (0..CONFIGS.len().min(cores.max(2)).min(4)).collect(),
+    };
     let stop = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
     let (tx, rx) = std::sync::mpsc::channel::<Result<Solution, String>>();
     std::thread::scope(|scope| {
-        for &(order, luby, rnd, seed, pol) in CONFIGS.iter().take(n) {
+        for &(order, luby, rnd, seed, pol) in selected.iter().map(|i| &CONFIGS[*i]) {
             let tx = tx.clone();
             let stop = stop.clone();
             scope.spawn(move || {

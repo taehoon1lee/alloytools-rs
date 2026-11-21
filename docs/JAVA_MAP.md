@@ -50,3 +50,18 @@ Sizes are Java line counts (to plan how many iterations a port takes). Update th
 | `KK/engine/TemporalPardinusSolver.java` | 1112 | `engine_temporal.rs` | trace-length iteration |
 | `KK/engine/satlab/SATSolver.java` | | `crates/satsolver` | done (trait + BatSat) |
 | `KK/util/ints/*` | | `util.rs` | IntSet/IntVector → Rust Vec/bitsets |
+
+## Where things actually live now (2026-11-22; supersedes the guessed file names above)
+| Java | Rust |
+|---|---|
+| `CompModule.resolveModules` (merge identical instances) | `alloy-core/src/loader.rs` `merge_instances` |
+| `CompModule.populate` (name resolution, penalties, `this.f`) | `alloy-core/src/sema.rs` `name`, `field_ref`, `lookup_any`; penalty marker = one-element `RExpr::Choice` |
+| `ExprChoice` resolution by type | `alloy-translate/src/translate.rs` `Tr::ty/resolve/resolve_pair/resolve_join` |
+| `BoundsComputer.allocatePrimSig` / `size` | `translate.rs` `allocate_prim_sig`, `Tr::size_formula` |
+| `ScopeComputer` (+ string atoms, exact params) | `alloy-translate/src/scope.rs` |
+| `TranslateAlloyToKodkod.isIn` (arrow multiplicities) | `translate.rs` `Tr::in_formula` |
+| `SymmetryBreaker.breakTotalOrder` | `translate.rs` `pin_total_orders` |
+| `SymmetryBreaker.generateSBP` | `kodkod/src/translate.rs` `add_symmetry_breaking`, `symmetry_classes` |
+| `Skolemizer` (depth 0) | `kodkod/src/translate.rs` `Translator::skolemize` |
+| `FOL2BoolCache` | `kodkod/src/translate.rs` `Translator::expr` (+ `fv_expr`) |
+| SAT4J (Java solver) | `satsolver` (batsat; geometric restarts, polarity TRUE) + `kodkod::translate::solve` portfolio |

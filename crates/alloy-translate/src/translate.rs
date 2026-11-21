@@ -708,6 +708,21 @@ impl<'a> Tr<'a> {
         Ok((a, b))
     }
 
+    /// Overloads of `a <: r` (domain = true: `a` against the first column of `r`) and `r :> b`.
+    fn resolve_restrict(&mut self, a: &RExpr, b: &RExpr, domain: bool) -> Result<(RExpr, RExpr), AlloyError> {
+        let (mut a, mut b) = (a.clone(), b.clone());
+        if domain {
+            if Self::is_choice(&b) {
+                let exp = self.ty(&a).map(|t| Exp::JoinRight(t.tuples.iter().map(|x| x[0]).collect()));
+                b = self.resolve(&b, &exp.unwrap_or(Exp::Any))?;
+            }
+        } else if Self::is_choice(&a) {
+            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
+            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
+        }
+        Ok((a, b))
+    }
+
     /// Resolves the operands of a join `a.b`: last column of `a` against first column of `b`.
     fn resolve_join(&mut self, a: &RExpr, b: &RExpr) -> Result<(RExpr, RExpr), AlloyError> {
         let (mut a, mut b) = (a.clone(), b.clone());
@@ -788,13 +803,15 @@ impl<'a> Tr<'a> {
             }
             RExpr::Bin(BinOp::DomainRestrict, a, b) => {
                 // a <: r = (a -> univ^(k)) & r, k = arity(r) - 1
-                let (a, r) = (self.expr(a)?, self.expr(b)?);
+                let (a, b) = self.resolve_restrict(a, b, true)?;
+                let (a, r) = (self.expr(&a)?, self.expr(&b)?);
                 let k = self.arity(&r)? - 1;
                 Expr::Intersection(Box::new(Expr::product(a, self.univ_pow(k))), Box::new(r))
             }
             RExpr::Bin(BinOp::RangeRestrict, r, b) => {
                 // r :> b = (univ^(k) -> b) & r, k = arity(r) - 1
-                let (r, b) = (self.expr(r)?, self.expr(b)?);
+                let (r, b) = self.resolve_restrict(r, b, false)?;
+                let (r, b) = (self.expr(&r)?, self.expr(&b)?);
                 let k = self.arity(&r)? - 1;
                 Expr::Intersection(Box::new(Expr::product(self.univ_pow(k), b)), Box::new(r))
             }

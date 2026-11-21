@@ -229,6 +229,8 @@ struct Builder<'a> {
     /// Sigs whose body is being resolved (field declarations, appended facts, sig-local functions).
     /// Inside them a field name of the sig (or an ancestor) means `this.field` (Java implicit `this`).
     this_sigs: Vec<SigId>,
+    /// Resolving a field declaration: only fields of the sig itself and its ancestors are visible, no functions.
+    in_field_decl: bool,
 }
 
 /// Builds the resolved model for the loaded modules (index 0 = root).
@@ -241,6 +243,7 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
         locals: Vec::new(),
         depth: 0,
         this_sigs: Vec::new(),
+        in_field_decl: false,
     };
     b.builtins();
     for _ in mods {
@@ -583,7 +586,9 @@ impl<'a> Builder<'a> {
                     let lid = self.new_local("this");
                     self.locals.push(("this".into(), lid));
                     self.this_sigs.push(sid);
+                    self.in_field_decl = true;
                     let decl = self.expr(i, &inner);
+                    self.in_field_decl = false;
                     self.this_sigs.pop();
                     self.locals.truncate(mark);
                     let decl = decl?;
@@ -1037,11 +1042,7 @@ impl<'a> Builder<'a> {
             return None;
         }
         // Same lookup as `name`: an ambiguous name stays a choice (resolved by type later).
-        let found = if n.contains('/') {
-            self.lookup(i, n)
-        } else {
-            self.lookup_unqualified(i, n)
-        };
+        let found = self.lookup_any(i, n);
         match found?.as_slice() {
             [Sym::Field(fid)] => Some(*fid),
             _ => None,
@@ -1106,11 +1107,7 @@ impl<'a> Builder<'a> {
             "seq/Int" => return Ok(RExpr::Sig(SIG_SEQINT)),
             _ => {}
         }
-        let found = if n.contains('/') {
-            self.lookup(i, n)
-        } else {
-            self.lookup_unqualified(i, n)
-        };
+        let found = self.lookup_any(i, n);
         match found {
             Some(v) if v.len() == 1 => match &v[0] {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
@@ -1141,6 +1138,39 @@ impl<'a> Builder<'a> {
                 Ok(RExpr::Choice(cands))
             }
             None => err(i, self.mods, e.loc.line, e.loc.col, format!("The name \"{n}\" cannot be found.")),
+        }
+    }
+
+    /// Name lookup as Java `populate`: qualified or unqualified; inside a field declaration only the sig's own
+    /// (and ancestors') fields and no functions are visible.
+    fn lookup_any(&self, i: usize, n: &str) -> Option<Vec<Sym>> {
+        let found = if n.contains('/') { self.lookup(i, n) } else { self.lookup_unqualified(i, n) };
+        if !self.in_field_decl {
+            return found;
+        }
+        let this_sig = *self.this_sigs.last()?;
+        let kept: Vec<Sym> = found?
+            .into_iter()
+            .filter(|sym| match sym {
+                Sym::Func(_) => false,
+                Sym::Field(f) => {
+                    let owner = self.model.fields[*f as usize].owner;
+                    let mut p = Some(this_sig);
+                    while let Some(x) = p {
+                        if x == owner {
+                            return true;
+                        }
+                        p = self.model.sigs[x as usize].parent;
+                    }
+                    false
+                }
+                _ => true,
+            })
+            .collect();
+        if kept.is_empty() {
+            None
+        } else {
+            Some(kept)
         }
     }
 

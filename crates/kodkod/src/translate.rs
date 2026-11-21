@@ -349,11 +349,63 @@ impl<'a, S: SatSolver> Translator<'a, S> {
                 let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
                 self.mul_bits(&a, &b)
             }
+            IntExpr::Div(a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                self.divrem_bits(&a, &b).0
+            }
+            IntExpr::Rem(a, b) => {
+                let (a, b) = (self.int_expr(a)?, self.int_expr(b)?);
+                self.divrem_bits(&a, &b).1
+            }
             IntExpr::Neg(a) => {
                 let a = self.int_expr(a)?;
                 self.neg_bits(&a)
             }
         })
+    }
+
+    /// Signed division (truncating toward zero) and remainder (sign of the dividend) by shift-and-subtract
+    /// on absolute values.
+    fn divrem_bits(&mut self, a: &[BoolVal], b: &[BoolVal]) -> (Vec<BoolVal>, Vec<BoolVal>) {
+        let w = a.len();
+        if w == 0 {
+            return (Vec::new(), Vec::new());
+        }
+        let (sa, sb) = (a[w - 1], b[w - 1]);
+        let na = self.neg_bits(a);
+        let nb = self.neg_bits(b);
+        let abs_a: Vec<BoolVal> = (0..w).map(|i| self.f.ite(sa, na[i], a[i])).collect();
+        let abs_b: Vec<BoolVal> = (0..w).map(|i| self.f.ite(sb, nb[i], b[i])).collect();
+        let mut bext = abs_b.clone();
+        bext.push(BoolVal::FALSE);
+        let mut rem: Vec<BoolVal> = vec![BoolVal::FALSE; w + 1];
+        let mut q = vec![BoolVal::FALSE; w];
+        for i in (0..w).rev() {
+            rem.insert(0, abs_a[i]);
+            rem.truncate(w + 1);
+            // rem - b = rem + !b + 1; the final carry says rem >= b
+            let mut carry = BoolVal::TRUE;
+            let mut diff = Vec::with_capacity(w + 1);
+            for k in 0..=w {
+                let nbk = self.f.not(bext[k]);
+                let x = self.f.ite(rem[k], self.f.not(nbk), nbk);
+                let nc = self.f.not(carry);
+                diff.push(self.f.ite(x, nc, carry));
+                let ab = self.f.and2(rem[k], nbk);
+                let aob = self.f.or2(rem[k], nbk);
+                let cab = self.f.and2(carry, aob);
+                carry = self.f.or2(ab, cab);
+            }
+            q[i] = carry;
+            rem = (0..=w).map(|k| self.f.ite(carry, diff[k], rem[k])).collect();
+        }
+        rem.truncate(w);
+        let nq = self.neg_bits(&q);
+        let nr = self.neg_bits(&rem);
+        let diff_sign = self.f.ite(sa, self.f.not(sb), sb);
+        let quot = (0..w).map(|i| self.f.ite(diff_sign, nq[i], q[i])).collect();
+        let remd = (0..w).map(|i| self.f.ite(sa, nr[i], rem[i])).collect();
+        (quot, remd)
     }
 
     fn add_bits(&mut self, a: &[BoolVal], b: &[BoolVal]) -> Vec<BoolVal> {
@@ -968,12 +1020,15 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // Restart portfolio: SAT search time is heavy-tailed in the symmetry-breaking predicate (it helps UNSAT
     // proofs but can make satisfiable puzzles much harder), so a short attempt without it is followed by
     // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
-    const ATTEMPTS: [(u8, Option<u64>); 4] = [(NO_SBP, Some(400)), (0, Some(8_000)), (1, Some(8_000)), (0, None)];
-    for (order, limit_ms) in ATTEMPTS {
+    // (symmetry-breaking order, conflict limit, time limit)
+    const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 4] =
+        [(NO_SBP, Some(25_000), Some(1_500)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
+    for (order, conflicts, limit_ms) in ATTEMPTS {
         let mut sat = BatSat::new();
+        sat.set_conflict_limit(conflicts);
         sat.set_time_limit(limit_ms.map(std::time::Duration::from_millis));
         let sol = solve_ordered(bounds, formula, sat, order)?;
-        if sol.sat.is_some() || limit_ms.is_none() {
+        if sol.sat.is_some() || (conflicts.is_none() && limit_ms.is_none()) {
             return Ok(sol);
         }
     }

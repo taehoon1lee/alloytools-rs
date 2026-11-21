@@ -769,7 +769,7 @@ impl<'a> Tr<'a> {
             e @ (RExpr::Num(_) | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)) => {
                 Expr::IntToExpr(Box::new(self.int_of(e)?))
             }
-            RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul, _, _) => {
+            RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
                 Expr::IntToExpr(Box::new(self.int_of(e)?))
             }
             RExpr::Un(UnOp::Set, x) => self.expr(x)?,
@@ -883,9 +883,8 @@ impl<'a> Tr<'a> {
             RExpr::Bin(BinOp::IntPlus, a, b) => IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::IntMinus, a, b) => IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::Mul, a, b) => IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
-            RExpr::Bin(op @ (BinOp::Div | BinOp::Rem), _, _) => {
-                return Err(unsupported(format!("integer {op:?} (M5.5)")))
-            }
+            RExpr::Bin(BinOp::Div, a, b) => IntExpr::Div(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
+            RExpr::Bin(BinOp::Rem, a, b) => IntExpr::Rem(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             other => IntExpr::Sum(Box::new(self.expr(other)?)),
         })
     }
@@ -1042,7 +1041,7 @@ impl<'a> Tr<'a> {
     fn quantified(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
         // Effective quantifier after polarity: `all` in positive position (or `some` in negative) is universal.
         let eff_universal = (q == Quant::All) == self.pol;
-        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set, _)) || self.ty(&d.bound).map_or(false, |t| t.arity > 1));
+        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set | UnOp::Lone | UnOp::Some, _)) || self.ty(&d.bound).map_or(false, |t| t.arity > 1));
         if has_set && (eff_universal || self.under_universal) {
             return Err(AlloyError::new(
                 ErrorKind::Type,
@@ -1066,24 +1065,22 @@ impl<'a> Tr<'a> {
             Quant::Some => Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)),
             Quant::No => Formula::Not(Box::new(Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)))),
             Quant::Lone | Quant::One => {
-                // "at most one": for all x,y in dom: f(x) & f(y) => x = y. Needs one copy per variable.
-                if decls.iter().map(|d| d.vars.len()).sum::<usize>() != 1 {
-                    return Err(unsupported("lone/one quantifier over several variables (M5.4)"));
-                }
-                let (kdecls2, _, _) = self.decls(decls)?;
-                let x = kdecls[0].var;
-                let y = kdecls2[0].var;
+                // "at most one": for all bindings x, y: f(x) & f(y) => x = y (one copy of the declarations per side).
+                let (kdecls2, disj2, guards2) = self.decls(decls)?;
                 let bx = b.clone();
                 let by = self.formula(body)?;
-                let by = with_disjointness(by, &disj, &guards, false);
-                let eq = Formula::Equal(Expr::Var(x), Expr::Var(y));
+                let by = with_disjointness(by, &disj2, &guards2, false);
+                let mut eqs = Vec::new();
+                for (d1, d2) in kdecls.iter().zip(&kdecls2) {
+                    eqs.push(Formula::Equal(Expr::Var(d1.var), Expr::Var(d2.var)));
+                }
+                let eq = Formula::And(eqs);
+                let mut all_decls = kdecls.clone();
+                all_decls.extend(kdecls2.iter().cloned());
                 let uniq = Formula::Quantified(
                     Quantifier::All,
-                    vec![kdecls[0].clone(), kdecls2[0].clone()],
-                    Box::new(Formula::Implies(
-                        Box::new(Formula::And(vec![bx, by])),
-                        Box::new(eq),
-                    )),
+                    all_decls,
+                    Box::new(Formula::Implies(Box::new(Formula::And(vec![bx, by])), Box::new(eq))),
                 );
                 if q == Quant::Lone {
                     uniq
@@ -1175,11 +1172,18 @@ impl<'a> Tr<'a> {
         for d in decls {
             // `x: set e` ranges over subsets, `x: one e` (the default) over the tuples of `e`; a bound of
             // arity > 1 (`x: A -> one B`) is a relation-valued variable constrained by its multiplicities.
+            let mut mult_guard: Option<Multiplicity> = None;
             let (bound, mut is_set) = match &d.bound {
                 RExpr::Un(UnOp::Set, x) => (&**x, true),
                 RExpr::Un(UnOp::One, x) => (&**x, false),
-                RExpr::Un(UnOp::Lone | UnOp::Some, _) => {
-                    return Err(unsupported("lone/some declaration multiplicities (M5.4)"))
+                // `x: lone e` / `x: some e`: a set-valued variable with at most / at least one tuple
+                RExpr::Un(UnOp::Lone, x) => {
+                    mult_guard = Some(Multiplicity::Lone);
+                    (&**x, true)
+                }
+                RExpr::Un(UnOp::Some, x) => {
+                    mult_guard = Some(Multiplicity::Some);
+                    (&**x, true)
                 }
                 other => (other, false),
             };
@@ -1199,6 +1203,9 @@ impl<'a> Tr<'a> {
                 self.locals.insert(l, Expr::Var(v));
                 if higher_arity && has_arrow_mult(bound) {
                     guards.push(self.in_formula(Expr::Var(v), bound)?);
+                }
+                if let Some(m) = mult_guard {
+                    guards.push(Formula::Multiplicity(m, Expr::Var(v)));
                 }
                 out.push(Decl {
                     var: v,

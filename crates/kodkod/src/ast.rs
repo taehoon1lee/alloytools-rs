@@ -54,6 +54,10 @@ pub enum IntExpr {
     Add(Box<IntExpr>, Box<IntExpr>),
     Sub(Box<IntExpr>, Box<IntExpr>),
     Mul(Box<IntExpr>, Box<IntExpr>),
+    /// Signed division truncating toward zero.
+    Div(Box<IntExpr>, Box<IntExpr>),
+    /// Remainder with the sign of the dividend.
+    Rem(Box<IntExpr>, Box<IntExpr>),
     Neg(Box<IntExpr>),
 }
 

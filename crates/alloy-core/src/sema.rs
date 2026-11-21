@@ -1057,18 +1057,24 @@ impl<'a> Builder<'a> {
     /// must be such a function; locals shadow). Several candidates form a type-resolved overload.
     fn func_cands(&self, i: usize, e: &Expr, nargs: usize) -> Vec<FuncId> {
         let ExprKind::Name(n) = &e.kind else { return Vec::new() };
-        if n.starts_with('@') || self.locals.iter().any(|(name, _)| name == n) {
+        let n = n.strip_prefix('@').unwrap_or(n);
+        if self.locals.iter().any(|(name, _)| name == n) {
             return Vec::new();
         }
-        let found = if n.contains('/') { self.lookup(i, n) } else { self.lookup_unqualified(i, n) };
-        let Some(v) = found else { return Vec::new() };
+        let Some(v) = self.lookup_any(i, n) else { return Vec::new() };
         let mut out = Vec::new();
+        let mut others = false;
         for sym in &v {
             match sym {
                 Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == nargs && nargs > 0 => out.push(*fid),
                 Sym::Func(_) => {}
-                _ => return Vec::new(),
+                // a field of the same name: with two or more box arguments only the function can fit
+                Sym::Field(_) if nargs >= 2 => {}
+                _ => others = true,
             }
+        }
+        if others {
+            return Vec::new();
         }
         out
     }
@@ -1127,8 +1133,16 @@ impl<'a> Builder<'a> {
                         Sym::Sig(id) => RExpr::Sig(*id),
                         Sym::Field(id) => if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) },
                         Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => RExpr::Call(*fid, Vec::new()),
+                        // a function that needs arguments cannot be this bare name (Java ExprBadCall)
+                        Sym::Func(_) => continue,
                         _ => return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)"))),
                     });
+                }
+                if cands.is_empty() {
+                    return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)")));
+                }
+                if cands.len() == 1 {
+                    return Ok(cands.remove(0));
                 }
                 Ok(RExpr::Choice(cands))
             }

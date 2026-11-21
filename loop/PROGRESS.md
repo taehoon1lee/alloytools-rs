@@ -27,3 +27,7 @@ next: M1.4b run/check/labelled commands + `let` macros + `x = e` field form, the
 parse 194/199, commands 0/199, verdict 0/465, perf 0/465 (`parse_everything_from_file` = root module only; `scope_string` empty)
 Parse misses are Java module/type errors (natural dup alias = M2.1; integer/seqrel/sequniv/sequence type errors = M3). 30 alloy-core tests; strict corpus parse test; gate exit 0.
 next: M2.1 module loading (`open`, params, aliases) then M2.2/M2.3 commands (labels, Command.toString)
+
+## 2026-11-21 M2.2/M2.3/M2.4 — command headers: Command.toString, default `Run Default`, labels; commands 194/199 (acceptance met)
+parse 194/199, commands 194/199, verdict 0/465, perf 0/465 (`command_to_string`/`scope_entry_to_string` in lib.rs mirror Command.java toString + CommandScope.toString; no-command module gets Java's `Default`)
+next: M2.1 module loading (natural.als dup alias; `open` resolution), then M3 semantics

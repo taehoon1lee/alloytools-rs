@@ -43,11 +43,11 @@ Reference: `CORE/parser/CompModule.java` (`addCommand`, `addOpen`, `resolveComma
 `CORE/ast/CommandScope.java`.
 - [ ] M2.1 Module loading: `open a/b[X] as c` relative to the root file's directory, else the embedded
       `alloy_core::stdlib`; module parameters; aliases; detect duplicate aliases (natural.als → syntax_error).
-- [ ] M2.2 Commands: anonymous labels exactly as Java (`run$N`/`check$N` where N = 1 + number of commands
+- [x] M2.2 Commands: anonymous labels exactly as Java (`run$N`/`check$N` where N = 1 + number of commands
       before it), only the root module's commands, `expect`, `CommandInfo` fields equal to Java
       (`overall`, `bitwidth`, `maxseq`, `minprefix`, `maxprefix` defaults = -1 when not given).
-- [ ] M2.3 `scope_string` == Java `Command.toString()` (incl. `exactly`, sig names without `this/`, `steps`).
-- [ ] M2.4 Acceptance: **commands ≥ 194/199**.
+- [x] M2.3 `scope_string` == Java `Command.toString()` (incl. `exactly`, sig names without `this/`, `steps`).
+- [x] M2.4 Acceptance: **commands ≥ 194/199** (met: 194/199).
 
 ## M3 — Semantic model: sigs, fields, name resolution, type checking
 Reference: `CORE/ast/{Sig,Field,Decl,Func,Expr*,Type}.java`, `CORE/parser/CompModule.java`

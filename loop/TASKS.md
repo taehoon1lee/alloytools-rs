@@ -52,11 +52,11 @@ Reference: `CORE/parser/CompModule.java` (`addCommand`, `addOpen`, `resolveComma
 ## M3 — Semantic model: sigs, fields, name resolution, type checking
 Reference: `CORE/ast/{Sig,Field,Decl,Func,Expr*,Type}.java`, `CORE/parser/CompModule.java`
 (`resolveSigs`, `resolveFieldDecl`, `resolveFuncDecls`, `resolveFacts`, `resolveAssertions`), `ExprBadCall`, `ExprChoice`.
-- [ ] M3.1 Resolved sig hierarchy (`univ`, `Int`, `seq/Int`, `String`, `none`; abstract/one/lone/some/var; `extends`/`in`
+- [~] M3.1 (sema.rs: sigs, extends/in/=, mult, abstract, enums, fields, root params; sig-field typing pending) Resolved sig hierarchy (`univ`, `Int`, `seq/Int`, `String`, `none`; abstract/one/lone/some/var; `extends`/`in`
       subset sigs; enum sigs); field declarations with multiplicity; module parameter instantiation.
-- [ ] M3.2 Resolved expression IR (separate from surface AST): ExprVar, ExprUnary, ExprBinary, ExprList,
+- [~] M3.2 (sema.rs `RExpr`; string constants and temporal ops still Unsupported) Resolved expression IR (separate from surface AST): ExprVar, ExprUnary, ExprBinary, ExprList,
       ExprQt, ExprLet, ExprITE, ExprCall, ExprConstant, Sig/Field references, temporal operators.
-- [ ] M3.3 Name resolution incl. overloading (`ExprChoice`), implicit `this` in sig facts/fields, `@` names,
+- [~] M3.3 (sema.rs: locals, opens/aliases, implicit `integer` open, calls with receiver, macros, `Choice` for overloads; `Choice` is resolved by type in M3.4) Name resolution incl. overloading (`ExprChoice`), implicit `this` in sig facts/fields, `@` names,
       function/predicate calls with box join `f[x]`, macros.
 - [ ] M3.4 Type checking (`Type.java`): relation arity/types; ambiguity and unresolved-name errors as `Type`
       errors. Acceptance: the 4 `type_error` files match; parse = 199/199.
@@ -113,3 +113,14 @@ Reference: `KK/engine/ltl2fol/{LTL2FOLTranslator,TemporalTranslator,TemporalBoun
 ## M9 — Error parity & polish
 - [ ] M9.1 Syntax/type error line+col equal to Java (check `error_line_match` in results/latest.json).
 - [ ] M9.2 Everything green: parse/commands/verdict/perf all at 100% of what Java decides; `--count` green.
+
+## M3/M4/M5 design (decided in the M2.1 session; keep consistent)
+- `sema.rs` (alloy-core): resolved IR `RExpr` (Rel = Sig|Field|Local|Univ|Iden|None|Int, Un, Bin, Quant, Compr, Ite, Let,
+  Call, IntConst); one `Sig` per (loaded module instance, sig name); `Field` typed as owner -> decl expr.
+  Name lookup: locals, then the root module, then (unqualified) public names of opens, then `alias/name`.
+- Each `open` instance is its own copy (Java re-parses per open); params substitute to the actual argument names.
+- `kodkod` crate: Universe/Tuple/TupleSet/Bounds (ast+instance), BooleanFactory with structural hashing, boolean-matrix
+  FOL2Bool, Tseitin CNF -> satsolver::BatSat, decode instance. Mirror Java (primary variable order) for M6 parity.
+- `alloy-translate`: ScopeComputer (default 3, one/lone/some, abstract, subsigs), BoundsComputer (atoms `Sig$i`),
+  TranslateAlloyToKodkod (facts, sig/field constraints, run = facts & body, check = facts & !assert).
+- Milestone order: M3.1 sigs/fields -> M3.2 expression IR -> M3.3 names/calls -> M4 engine -> M5 translate.

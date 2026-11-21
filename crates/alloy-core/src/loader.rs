@@ -35,7 +35,13 @@ pub struct ResolvedOpen {
     pub alias: String,
     /// Index of the opened module instance in the loaded list.
     pub target: usize,
+    /// Index of the `Paragraph::Open` in the module, or `None` for the implicit `open util/integer as integer`
+    /// that Java adds to every module (it is what makes `minus[a, b]` resolve without an `open`).
+    pub paragraph: Option<usize>,
 }
+
+/// Alias of the implicit integer library open.
+pub const IMPLICIT_INTEGER_ALIAS: &str = "integer";
 
 /// Loads the root file and, recursively, every module it opens.
 pub fn load_root(root: &Path) -> Result<Vec<LoadedModule>, AlloyError> {
@@ -67,14 +73,30 @@ fn load_one(
         .map(|h| h.name.clone())
         .unwrap_or_default();
     check_open_order(path, &module)?;
-    let opens: Vec<Open> = module
+    let open_at: Vec<(usize, Open)> = module
         .paragraphs
         .iter()
-        .filter_map(|p| match p {
-            Paragraph::Open(o) => Some(o.clone()),
+        .enumerate()
+        .filter_map(|(k, p)| match p {
+            Paragraph::Open(o) => Some((k, o.clone())),
             _ => None,
         })
         .collect();
+    let opens: Vec<Open> = open_at.iter().map(|(_, o)| o.clone()).collect();
+    // Java: an explicit `open ... as integer` clashes with the implicit integer library.
+    let implicit = name != "util/integer";
+    if implicit {
+        if let Some((_, o)) = open_at.iter().find(|(_, o)| o.alias.as_deref() == Some(IMPLICIT_INTEGER_ALIAS)) {
+            return Err(AlloyError::syntax(
+                Pos {
+                    file: path.to_string(),
+                    line: o.loc.line,
+                    col: o.loc.col,
+                },
+                "You cannot import two different modules\nusing the same alias.",
+            ));
+        }
+    }
 
     let idx = out.len();
     out.push(LoadedModule {
@@ -85,7 +107,21 @@ fn load_one(
     });
 
     let mut resolved = Vec::new();
-    for o in &opens {
+    if implicit {
+        let (child_path, child_src) = find_module("util/integer", &name, path)?;
+        chain.push(child_path.clone());
+        let target = load_one(&child_path, &child_src, chain, out)?;
+        chain.pop();
+        resolved.push(ResolvedOpen {
+            loc: Loc { line: 1, col: 1 },
+            is_private: true,
+            alias: IMPLICIT_INTEGER_ALIAS.to_string(),
+            target,
+            paragraph: None,
+        });
+    }
+    let first_explicit = resolved.len();
+    for (o, (k, _)) in opens.iter().zip(open_at.iter()) {
         let (child_path, child_src) = find_module(&o.name, &name, path)?;
         if chain.contains(&child_path) {
             return Err(AlloyError::new(
@@ -109,9 +145,10 @@ fn load_one(
             is_private: o.is_private,
             alias: o.alias.clone().unwrap_or_default(),
             target,
+            paragraph: Some(*k),
         });
     }
-    default_aliases(&opens, &mut resolved);
+    default_aliases(&opens, &mut resolved[first_explicit..]);
     out[idx].opens = resolved;
     Ok(idx)
 }
@@ -274,7 +311,8 @@ mod tests {
         let mods = load_root(&root).unwrap();
         assert_eq!(mods[0].name, "m");
         let aliases: Vec<&str> = mods[0].opens.iter().map(|o| o.alias.as_str()).collect();
-        assert_eq!(aliases, vec!["ord", "boolean"]);
+        // The implicit `integer` open comes first (Java adds it to every module).
+        assert_eq!(aliases, vec!["integer", "ord", "boolean"]);
         assert!(mods.len() >= 3, "ordering and boolean (and what they open) are loaded");
     }
 

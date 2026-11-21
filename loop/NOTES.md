@@ -64,4 +64,11 @@
   and no alias; `open util/ordering as integer` after `open util/integer as bar` is also rejected. The clash source is not in addOpen's
   visible state; investigate the `opens` map seeding in CompModule (~l.1370 `opens.clear()` pass) before porting.
 
+- IMPLICIT `integer` OPEN (Java): every module except util/integer implicitly has `open util/integer as integer`; that is why
+  `minus[a,b]` and `integer/minus` resolve without an open, and why an explicit `open ... as integer` is a syntax error (natural.als).
+- Macros: `m[a,b]` is a call only if arity matches; `x.m[a]` passes the receiver first; a parameterless macro boxed with args is a join.
+- Funcs: `x.f` / `x.f[a]` with f taking params = call with the receiver first (`p.grandpas`).
+- Root module parameters (`module m[Addr]` as root) become free sigs.
+- Corpus survey (`cargo test corpus_resolution_survey -- --nocapture`): 113 resolved, 2 unsupported (string constants, overloads with args), 1 expected Java error.
+
 ## HARNESS ISSUES (write evidence here instead of editing harness/)

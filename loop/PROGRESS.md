@@ -36,3 +36,8 @@ next: M2.1 module loading (natural.als dup alias; `open` resolution), then M3 se
 parse 194/199, commands 194/199, verdict 0/465, perf 0/465 (opened modules are loaded into `World::modules`; no semantics yet)
 Embedded `examples/algorithms/messaging` (ringlead needs it). natural.als alias error still open (see NOTES).
 next: M3.1 resolved sig hierarchy / fields (semantic model)
+
+## 2026-11-21 M3.1-3.3 — resolved model (`sema.rs`) + implicit `integer` open; parse 195/199, commands 195/199
+parse 195/199, commands 195/199, verdict 0/465, perf 0/465 (no typing/translation yet). Survey: 113/116 models resolve.
+Also: loader adds Java's implicit `open util/integer as integer` (explains natural.als syntax error; now matches Java).
+next: M3.4 typing (arity, Choice resolution by type), then M4 kodkod core

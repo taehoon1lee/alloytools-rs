@@ -509,9 +509,16 @@ impl<'a, S: SatSolver> Translator<'a, S> {
             Formula::Equal(a, b) => {
                 let (a, b) = (self.expr(a)?, self.expr(b)?);
                 same_arity(&a, &b, "=")?;
-                let ab = self.subset(&a, &b);
-                let ba = self.subset(&b, &a);
-                self.f.and2(ab, ba)
+                // One IFF per tuple of the union of the bounds (Kodkod's equality of boolean matrices).
+                let mut keys: Vec<Vec<u32>> = a.entries.keys().cloned().collect();
+                keys.extend(b.entries.keys().cloned());
+                keys.sort();
+                keys.dedup();
+                let mut vals = Vec::with_capacity(keys.len());
+                for t in &keys {
+                    vals.push(self.f.iff(a.get(t), b.get(t)));
+                }
+                self.f.and(&vals)
             }
             Formula::Multiplicity(m, e) => {
                 let e = self.expr(e)?;
@@ -603,12 +610,13 @@ impl<'a, S: SatSolver> Translator<'a, S> {
 
     /// At most one of the values is true (pairwise).
     fn at_most_one(&mut self, vals: &[BoolVal]) -> BoolVal {
+        // Linear encoding: v_i -> no earlier value holds (a running OR), instead of all pairs.
         let mut parts = Vec::new();
-        for i in 0..vals.len() {
-            for j in i + 1..vals.len() {
-                let both = self.f.and2(vals[i], vals[j]);
-                parts.push(self.f.not(both));
-            }
+        let mut earlier = BoolVal::FALSE;
+        for &v in vals {
+            let ne = self.f.not(earlier);
+            parts.push(self.f.implies(v, ne));
+            earlier = self.f.or2(earlier, v);
         }
         self.f.and(&parts)
     }

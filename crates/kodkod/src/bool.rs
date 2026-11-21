@@ -1,10 +1,11 @@
 //! Port of `kodkod/engine/bool/BooleanFactory` + `engine/fol2sat/Bool2CNFTranslator`.
 //!
-//! Gates are hash-consed on their (sorted) inputs, so structurally equal formulas share one node, as in
-//! Kodkod's `CBCFactory`. The circuit is built first; [`BoolFactory::finish`] then encodes the asserted
-//! roots to CNF with Plaisted–Greenbaum polarity: a gate used only positively gets just the clauses
-//! `g -> input`, a gate used only negatively gets `inputs -> g`, and both directions are emitted only
-//! when both polarities occur. Constants are folded away, so no clause contains a constant.
+//! Gates are hash-consed on their inputs, so structurally equal formulas share one node, as in Kodkod's
+//! `CBCFactory`. Kinds: AND, OR (n-ary), IFF and ITE (one gate each, like Kodkod's `IFF`/`ITE`).
+//! The circuit is built first; [`BoolFactory::finish`] then encodes the asserted roots to CNF with
+//! Plaisted–Greenbaum polarity: a gate used only positively gets the clauses that force its inputs, a gate
+//! used only negatively gets the clauses that force its output, and both sets are emitted only when both
+//! polarities occur. Constants are folded away, so no clause contains a constant.
 
 use std::collections::HashMap;
 
@@ -26,15 +27,19 @@ impl BoolVal {
 enum GateKind {
     And,
     Or,
+    /// inputs `[a, b]` (sorted): `g <-> (a <-> b)`.
+    Iff,
+    /// inputs `[c, t, e]`: `g <-> (c ? t : e)`.
+    Ite,
 }
 
 struct Gate {
     kind: GateKind,
-    /// Sorted, deduplicated, non-constant inputs.
+    /// Non-constant inputs (sorted for AND/OR/IFF; `[c, t, e]` order for ITE).
     inputs: Vec<i32>,
     /// SAT variable of the gate output.
     var: i32,
-    /// Which directions were already emitted: `g -> inputs` (positive) and `inputs -> g` (negative).
+    /// Which directions were already emitted: `g -> f(inputs)` (positive) and `f(inputs) -> g` (negative).
     pos_done: bool,
     neg_done: bool,
 }
@@ -61,6 +66,11 @@ impl<S: SatSolver> BoolFactory<S> {
             roots: Vec::new(),
             trivially_unsat: false,
         }
+    }
+
+    /// Number of distinct gates built so far (diagnostics).
+    pub fn gate_count(&self) -> usize {
+        self.gates.len()
     }
 
     /// A fresh primary variable (no defining clauses).
@@ -103,23 +113,47 @@ impl<S: SatSolver> BoolFactory<S> {
         self.or2(na, b)
     }
 
+    /// `a <-> b` as one gate (Kodkod `IFF`).
     pub fn iff(&mut self, a: BoolVal, b: BoolVal) -> BoolVal {
-        let ab = self.implies(a, b);
-        let ba = self.implies(b, a);
-        self.and2(ab, ba)
+        match (a, b) {
+            (BoolVal::Const(true), _) => b,
+            (BoolVal::Const(false), _) => self.not(b),
+            (_, BoolVal::Const(true)) => a,
+            (_, BoolVal::Const(false)) => self.not(a),
+            (BoolVal::Lit(x), BoolVal::Lit(y)) if x == y => BoolVal::TRUE,
+            (BoolVal::Lit(x), BoolVal::Lit(y)) if x == -y => BoolVal::FALSE,
+            (BoolVal::Lit(x), BoolVal::Lit(y)) => {
+                let mut ins = vec![x, y];
+                ins.sort_unstable();
+                self.gate(GateKind::Iff, ins)
+            }
+        }
     }
 
-    /// `c ? t : e`.
+    /// `c ? t : e` as one gate (Kodkod `ITE`), with the constant cases folded into AND/OR.
     pub fn ite(&mut self, c: BoolVal, t: BoolVal, e: BoolVal) -> BoolVal {
         match c {
-            BoolVal::Const(true) => t,
-            BoolVal::Const(false) => e,
-            _ if t == e => t,
-            _ => {
+            BoolVal::Const(true) => return t,
+            BoolVal::Const(false) => return e,
+            _ => {}
+        }
+        if t == e {
+            return t;
+        }
+        match (t, e) {
+            (BoolVal::Const(true), _) => self.or2(c, e),
+            (BoolVal::Const(false), _) => {
                 let nc = self.not(c);
-                let x = self.and2(c, t);
-                let y = self.and2(nc, e);
-                self.or2(x, y)
+                self.and2(nc, e)
+            }
+            (_, BoolVal::Const(true)) => {
+                let nc = self.not(c);
+                self.or2(nc, t)
+            }
+            (_, BoolVal::Const(false)) => self.and2(c, t),
+            (BoolVal::Lit(tl), BoolVal::Lit(el)) => {
+                let BoolVal::Lit(cl) = c else { unreachable!("constant condition folded above") };
+                self.gate(GateKind::Ite, vec![cl, tl, el])
             }
         }
     }
@@ -146,92 +180,142 @@ impl<S: SatSolver> BoolFactory<S> {
         }
     }
 
-    /// Emits the clauses needed for literal `lit` to be true (`pos`) or false (`!pos`) under its gate.
+    /// Emits the clauses needed for literal `lit` to hold (`pos`) or to be false (`!pos`).
     fn encode(&mut self, lit: i32, pos: bool) {
-        // Iterative worklist: (literal, polarity) pairs still to be encoded.
         let mut work = vec![(lit, pos)];
         while let Some((l, p)) = work.pop() {
-            let var = l.abs();
+            if self.trivially_unsat {
+                return;
+            }
             // A primary variable (not a gate output): its value is free, nothing to emit.
-            let Some(&gi) = self.by_var.get(&var) else { continue };
-            // literal polarity relative to the gate output
+            let Some(&gi) = self.by_var.get(&l.abs()) else { continue };
             let gate_pos = if l > 0 { p } else { !p };
-            let (kind, inputs, var_out, need_pos, need_neg) = {
+            let (kind, inputs, out, need_pos, need_neg) = {
                 let g = &self.gates[gi];
-                let need_pos = gate_pos && !g.pos_done;
-                let need_neg = !gate_pos && !g.neg_done;
-                (g.kind, g.inputs.clone(), g.var, need_pos, need_neg)
+                (
+                    g.kind,
+                    g.inputs.clone(),
+                    g.var,
+                    gate_pos && !g.pos_done,
+                    !gate_pos && !g.neg_done,
+                )
             };
             if !need_pos && !need_neg {
                 continue;
             }
             {
                 let g = &mut self.gates[gi];
-                if need_pos {
-                    g.pos_done = true;
-                }
-                if need_neg {
-                    g.neg_done = true;
-                }
+                g.pos_done |= need_pos;
+                g.neg_done |= need_neg;
             }
             match kind {
-                GateKind::And => {
-                    if need_pos {
-                        // g -> l_i
-                        for &x in &inputs {
-                            self.clause(&[-var_out, x]);
-                            if self.trivially_unsat {
-                                return;
-                            }
-                            work.push((x, true));
-                        }
-                    }
-                    if need_neg {
-                        // l_1 & ... & l_n -> g
-                        let mut c: Vec<i32> = inputs.iter().map(|&x| -x).collect();
-                        c.push(var_out);
-                        self.clause(&c);
-                        if self.trivially_unsat {
-                            return;
-                        }
-                        for &x in &inputs {
-                            work.push((x, false));
-                        }
-                    }
-                }
-                GateKind::Or => {
-                    if need_pos {
-                        // g -> (l_1 | ... | l_n)
-                        let mut c = vec![-var_out];
-                        c.extend(inputs.iter().copied());
-                        self.clause(&c);
-                        if self.trivially_unsat {
-                            return;
-                        }
-                        for &x in &inputs {
-                            work.push((x, true));
-                        }
-                    }
-                    if need_neg {
-                        // l_i -> g
-                        for &x in &inputs {
-                            self.clause(&[var_out, -x]);
-                            if self.trivially_unsat {
-                                return;
-                            }
-                            work.push((x, false));
-                        }
-                    }
-                }
+                GateKind::And => self.encode_and(out, &inputs, need_pos, need_neg, &mut work),
+                GateKind::Or => self.encode_or(out, &inputs, need_pos, need_neg, &mut work),
+                GateKind::Iff => self.encode_iff(out, &inputs, need_pos, need_neg, &mut work),
+                GateKind::Ite => self.encode_ite(out, &inputs, need_pos, need_neg, &mut work),
             }
         }
+    }
+
+    fn encode_and(&mut self, g: i32, ins: &[i32], pos: bool, neg: bool, work: &mut Vec<(i32, bool)>) {
+        if pos {
+            // g -> l_i
+            for &x in ins {
+                self.clause(&[-g, x]);
+                work.push((x, true));
+            }
+        }
+        if neg {
+            // l_1 & ... & l_n -> g
+            let mut c: Vec<i32> = ins.iter().map(|&x| -x).collect();
+            c.push(g);
+            self.clause(&c);
+            for &x in ins {
+                work.push((x, false));
+            }
+        }
+    }
+
+    fn encode_or(&mut self, g: i32, ins: &[i32], pos: bool, neg: bool, work: &mut Vec<(i32, bool)>) {
+        if pos {
+            // g -> (l_1 | ... | l_n)
+            let mut c = vec![-g];
+            c.extend(ins.iter().copied());
+            self.clause(&c);
+            for &x in ins {
+                work.push((x, true));
+            }
+        }
+        if neg {
+            // l_i -> g
+            for &x in ins {
+                self.clause(&[g, -x]);
+                work.push((x, false));
+            }
+        }
+    }
+
+    fn encode_iff(&mut self, g: i32, ins: &[i32], pos: bool, neg: bool, work: &mut Vec<(i32, bool)>) {
+        let (a, b) = (ins[0], ins[1]);
+        if pos {
+            // g -> (a <-> b)
+            self.clause(&[-g, -a, b]);
+            self.clause(&[-g, a, -b]);
+        }
+        if neg {
+            // (a <-> b) -> g
+            self.clause(&[g, a, b]);
+            self.clause(&[g, -a, -b]);
+        }
+        // Both inputs appear in both polarities.
+        for &x in ins {
+            work.push((x, true));
+            work.push((x, false));
+        }
+    }
+
+    fn encode_ite(&mut self, g: i32, ins: &[i32], pos: bool, neg: bool, work: &mut Vec<(i32, bool)>) {
+        let (c, t, e) = (ins[0], ins[1], ins[2]);
+        if pos {
+            // g -> (c ? t : e)
+            self.clause(&[-g, -c, t]);
+            self.clause(&[-g, c, e]);
+        }
+        if neg {
+            // (c ? t : e) -> g
+            self.clause(&[g, -c, -t]);
+            self.clause(&[g, c, -e]);
+        }
+        for &x in ins {
+            work.push((x, true));
+            work.push((x, false));
+        }
+    }
+
+    /// Output literal of the hash-consed gate `kind(inputs)`.
+    fn gate(&mut self, kind: GateKind, inputs: Vec<i32>) -> BoolVal {
+        if let Some(&g) = self.by_key.get(&(kind, inputs.clone())) {
+            return BoolVal::Lit(self.gates[g].var);
+        }
+        let BoolVal::Lit(var) = self.new_var() else { unreachable!() };
+        let idx = self.gates.len();
+        self.gates.push(Gate {
+            kind,
+            inputs: inputs.clone(),
+            var,
+            pos_done: false,
+            neg_done: false,
+        });
+        self.by_key.insert((kind, inputs), idx);
+        self.by_var.insert(var, idx);
+        BoolVal::Lit(var)
     }
 
     fn connective(&mut self, kind: GateKind, items: &[BoolVal]) -> BoolVal {
         // Identity / absorbing constants of AND (true, false) and OR (false, true).
         let (identity, absorbing) = match kind {
             GateKind::And => (true, false),
-            GateKind::Or => (false, true),
+            _ => (false, true),
         };
         let mut lits: Vec<i32> = Vec::with_capacity(items.len());
         for it in items {
@@ -251,25 +335,10 @@ impl<S: SatSolver> BoolFactory<S> {
             }
         }
         match lits.len() {
-            0 => return BoolVal::Const(identity),
-            1 => return BoolVal::Lit(lits[0]),
-            _ => {}
+            0 => BoolVal::Const(identity),
+            1 => BoolVal::Lit(lits[0]),
+            _ => self.gate(kind, lits),
         }
-        if let Some(&g) = self.by_key.get(&(kind, lits.clone())) {
-            return BoolVal::Lit(self.gates[g].var);
-        }
-        let BoolVal::Lit(var) = self.new_var() else { unreachable!() };
-        let idx = self.gates.len();
-        self.gates.push(Gate {
-            kind,
-            inputs: lits.clone(),
-            var,
-            pos_done: false,
-            neg_done: false,
-        });
-        self.by_key.insert((kind, lits), idx);
-        self.by_var.insert(var, idx);
-        BoolVal::Lit(var)
     }
 }
 
@@ -289,6 +358,8 @@ mod tests {
         let x = f.and2(a, b);
         let y = f.and2(b, a);
         assert_eq!(x, y, "hash-consed");
+        assert_eq!(f.iff(a, a), BoolVal::TRUE);
+        assert_eq!(f.ite(a, BoolVal::TRUE, BoolVal::FALSE), a);
     }
 
     #[test]
@@ -308,7 +379,7 @@ mod tests {
 
     #[test]
     fn ite_semantics() {
-        // c & !t & r  with r = ite(c, t, e) is UNSAT.
+        // c & !t & (c ? t : e) is UNSAT.
         let mut f = BoolFactory::new(BatSat::new());
         let c = f.new_var();
         let t = f.new_var();
@@ -323,8 +394,24 @@ mod tests {
     }
 
     #[test]
+    fn ite_negative_polarity_is_encoded() {
+        // not(c ? t : e) with c and t true is UNSAT.
+        let mut f = BoolFactory::new(BatSat::new());
+        let c = f.new_var();
+        let t = f.new_var();
+        let e = f.new_var();
+        let r = f.ite(c, t, e);
+        let nr = f.not(r);
+        f.assert_true(nr);
+        f.assert_true(c);
+        f.assert_true(t);
+        f.finish();
+        assert!(f.trivially_unsat || f.sat.solve() == Some(false));
+    }
+
+    #[test]
     fn negative_polarity_gates_are_encoded() {
-        // not(a & b) asserted, with a and b forced true: must be UNSAT.
+        // not(a & b) with a and b forced true is UNSAT.
         let mut f = BoolFactory::new(BatSat::new());
         let a = f.new_var();
         let b = f.new_var();

@@ -58,4 +58,10 @@
   (`Declb EQUALS`, used for fields); multiplicity on `in`/`=` right operands is not rewritten to `*Of` forms (M3 must
   apply `CompModule.mult`).
 
+- Module loading (`loader.rs`): `open` target not next to the file -> embedded library (`stdlib.rs`). `examples/algorithms/messaging`
+  is embedded too (Java gets it from the distribution `models/`). Default alias = last segment if plain identifier and no args, else `open$N` renamed to that segment when free.
+- OPEN QUESTION (natural.als): Java rejects `open util/integer as integer` ("same alias") even alone in a neutral module, but accepts `as foo`
+  and no alias; `open util/ordering as integer` after `open util/integer as bar` is also rejected. The clash source is not in addOpen's
+  visible state; investigate the `opens` map seeding in CompModule (~l.1370 `opens.clear()` pass) before porting.
+
 ## HARNESS ISSUES (write evidence here instead of editing harness/)

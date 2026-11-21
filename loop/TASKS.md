@@ -41,7 +41,7 @@ Reference: `org.alloytools.alloy.core/parser/Alloy.lex`, `.../parser/Alloy.cup` 
 Reference: `CORE/parser/CompModule.java` (`addCommand`, `addOpen`, `resolveCommands`, ~line 1900-2100),
 `CORE/parser/CompUtil.java` (`parseRecursively`, file lookup), `CORE/ast/Command.java` (`toString` ~l.137),
 `CORE/ast/CommandScope.java`.
-- [ ] M2.1 Module loading: `open a/b[X] as c` relative to the root file's directory, else the embedded
+- [x] M2.1 (loader.rs: file lookup, cycles, default aliases; natural.als alias error not reproduced yet) Module loading: `open a/b[X] as c` relative to the root file's directory, else the embedded
       `alloy_core::stdlib`; module parameters; aliases; detect duplicate aliases (natural.als → syntax_error).
 - [x] M2.2 Commands: anonymous labels exactly as Java (`run$N`/`check$N` where N = 1 + number of commands
       before it), only the root module's commands, `expect`, `CommandInfo` fields equal to Java

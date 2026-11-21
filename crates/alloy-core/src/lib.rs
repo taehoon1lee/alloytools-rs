@@ -9,6 +9,7 @@
 
 pub mod error;
 pub mod lexer;
+pub mod loader;
 pub mod parser;
 pub mod stdlib;
 pub mod syntax;
@@ -38,7 +39,9 @@ pub struct CommandInfo {
 #[derive(Debug, Default)]
 pub struct World {
     pub commands: Vec<CommandInfo>,
-    // TODO(M1/M2): modules, sigs, fields, funcs, facts, resolved command formulas ...
+    /// Root module first, then every opened module instance (`loader::load_root`).
+    pub modules: Vec<loader::LoadedModule>,
+    // TODO(M3): sigs, fields, funcs, facts, resolved command formulas ...
 }
 
 impl World {
@@ -50,14 +53,12 @@ impl World {
 /// Parse `path` (and every module it opens, including the embedded `util/*` library),
 /// resolve names and type-check. Mirrors `CompUtil.parseEverything_fromFile`.
 ///
-/// Currently only the root file is parsed (modules/`open` are M2.1) and `CommandInfo` is filled from the
-/// parsed commands with Java's defaults; `scope_string` is still empty (M2.3: `Command.toString()`).
+/// Loads the root file and its opens (M2.1); `CommandInfo` comes from the root module's commands.
 pub fn parse_everything_from_file(path: &Path) -> Result<World, AlloyError> {
-    let src = std::fs::read_to_string(path)
-        .map_err(|e| AlloyError::new(ErrorKind::Other, None, format!("cannot read {}: {e}", path.display())))?;
-    let module = parser::parse_module(&path.display().to_string(), &src)?;
+    let modules = loader::load_root(path)?;
     Ok(World {
-        commands: command_infos(&module),
+        commands: command_infos(&modules[0].module),
+        modules,
     })
 }
 

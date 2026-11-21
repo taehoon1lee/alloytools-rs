@@ -31,3 +31,8 @@ next: M2.1 module loading (`open`, params, aliases) then M2.2/M2.3 commands (lab
 ## 2026-11-21 M2.2/M2.3/M2.4 — command headers: Command.toString, default `Run Default`, labels; commands 194/199 (acceptance met)
 parse 194/199, commands 194/199, verdict 0/465, perf 0/465 (`command_to_string`/`scope_entry_to_string` in lib.rs mirror Command.java toString + CommandScope.toString; no-command module gets Java's `Default`)
 next: M2.1 module loading (natural.als dup alias; `open` resolution), then M3 semantics
+
+## 2026-11-21 M2.1 — module loader (`loader.rs`): opens resolved relative to the file, else embedded library; parse 194/199
+parse 194/199, commands 194/199, verdict 0/465, perf 0/465 (opened modules are loaded into `World::modules`; no semantics yet)
+Embedded `examples/algorithms/messaging` (ringlead needs it). natural.als alias error still open (see NOTES).
+next: M3.1 resolved sig hierarchy / fields (semantic model)

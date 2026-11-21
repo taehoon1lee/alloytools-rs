@@ -241,3 +241,56 @@ fn to_instance(_model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod:
 
 /// Re-exported for the scope tests and the CLI's diagnostics.
 pub use scope::compute_scopes;
+
+#[cfg(test)]
+mod temporal_tests {
+    use super::*;
+
+    fn run(src: &str, idx: usize) -> Result<Solution, AlloyError> {
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let dir = std::env::temp_dir().join(format!("alloy_rs_temporal_{}_{}", std::process::id(), n));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("t.als");
+        std::fs::write(&f, src).unwrap();
+        let world = alloy_core::parse_everything_from_file(&f)?;
+        execute_command(&world, idx, &Options::default())
+    }
+
+    #[test]
+    fn eventually_needs_a_trace_and_always_can_stutter() {
+        let src = [
+            "var sig P {}",
+            "run a { eventually some P } for 2",
+            "check b { always (some P implies once some P) } for 2",
+            "run c { always no P and eventually some P } for 2",
+        ]
+        .join("
+");
+        assert!(run(&src, 0).unwrap().sat);
+        assert!(!run(&src, 1).unwrap().sat);
+        assert!(!run(&src, 2).unwrap().sat);
+    }
+
+    #[test]
+    fn past_operators_see_the_prefix_and_prime_wraps_to_the_loop() {
+        let src = [
+            "var sig P {}",
+            "fact { some P and always (some P implies after no P) }",
+            "run a { eventually (no P and once some P) } for 2",
+            "run b { always some P } for 2",
+        ]
+        .join("
+");
+        assert!(run(&src, 0).unwrap().sat);
+        assert!(!run(&src, 1).unwrap().sat);
+    }
+
+    #[test]
+    fn unbounded_steps_are_an_error() {
+        let src = "var sig P {}
+run a { some P } for 2 but 1.. steps
+";
+        assert!(run(src, 0).is_err());
+    }
+}

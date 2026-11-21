@@ -100,3 +100,10 @@ Key finding (from reading Java `SymmetryBreaker.generateSBP`): skolem relations 
 so witnesses of negated assertions are canonicalized. Adding them: p306-hotel#2 >60s -> 2.5s, firewire#4 2.3s -> 0.6s, iolus 3s -> 1.6s.
 Then translation cost: tuple keys packed into u64 (8 bits/atom), fx hasher, ranged join (190ms -> 79ms on p306#1); race configs start immediately.
 Remaining failures are only temporal (extra/examples/temporal, 21 cmds) and the `--count` milestone.
+
+## 2026-11-22 M8 temporal — verdict 465/465, perf 465/465 (sequential), gate green
+Design (alloy-translate/translate.rs): trace of k states (k = min..max steps, default 1..10; `N..` unbounded = Java's "Bounded engines do not support complete model checking" ERROR);
+time atoms `$time$i` each in its own exact relation, free `$loop` relation (one); var sigs/fields get a trailing time column; every formula is translated at a concrete
+time point `Tp{level,state}` (level 1 = first pass, level 2 = loop part; past operators see level 1 then level 2); LTL operators expand into And/Or over the
+reachable points (`future_path/past_path/next_tps/prev_tps`), `e'` is an ITE chain over loop targets at the last state; facts hold at (1,0); var sig/field declaration
+constraints are emitted per state. Random differential testing against Java (240 formulas incl. laws over until/since/releases/triggered) found no mismatch.

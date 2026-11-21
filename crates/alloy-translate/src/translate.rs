@@ -202,14 +202,12 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
         conjuncts.push(tr.formula(&f.body)?);
     }
     for (sid, body) in &model.sig_facts {
-        let f = tr.formula(body)?;
         // appended facts of a temporal model hold in every state
         if temporal.is_some() && model.temporal {
             let rexpr = RExpr::Un(UnOp::Always, Box::new(body.clone()));
-            let _ = f;
             conjuncts.push(tr.formula(&rexpr)?);
         } else {
-            conjuncts.push(f);
+            conjuncts.push(tr.formula(body)?);
         }
         let _ = sid;
     }

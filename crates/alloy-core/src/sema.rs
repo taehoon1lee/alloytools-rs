@@ -220,6 +220,9 @@ struct Builder<'a> {
     /// Bodies of sig-local functions get `this` in scope.
     /// Macro expansion depth (guards against recursive macros).
     depth: usize,
+    /// Sigs whose body is being resolved (field declarations, appended facts, sig-local functions).
+    /// Inside them a field name of the sig (or an ancestor) means `this.field` (Java implicit `this`).
+    this_sigs: Vec<SigId>,
 }
 
 /// Builds the resolved model for the loaded modules (index 0 = root).
@@ -231,6 +234,7 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
         macros: Vec::new(),
         locals: Vec::new(),
         depth: 0,
+        this_sigs: Vec::new(),
     };
     b.builtins();
     for _ in mods {
@@ -554,7 +558,14 @@ impl<'a> Builder<'a> {
                         ExprKind::Unary(UnOp::ExactlyOf, e) => (**e).clone(),
                         _ => inner.clone(),
                     };
-                    let decl = self.expr(i, &inner)?;
+                    let mark = self.locals.len();
+                    let lid = self.new_local("this");
+                    self.locals.push(("this".into(), lid));
+                    self.this_sigs.push(sid);
+                    let decl = self.expr(i, &inner);
+                    self.this_sigs.pop();
+                    self.locals.truncate(mark);
+                    let decl = decl?;
                     let f = &mut self.model.fields[fid as usize];
                     f.decl = decl;
                     f.mult = mult;
@@ -573,12 +584,15 @@ impl<'a> Builder<'a> {
         let (owner_name, _) = split_owner(&f.name);
         let mark = self.locals.len();
         let mut params = Vec::new();
+        let mut pushed_this = false;
         if let Some(on) = owner_name {
             if let Some(Sym::Sig(sid)) = self.lookup(i, on).and_then(|v| v.into_iter().next()) {
                 let lid = self.new_local("this");
                 self.locals.push(("this".into(), lid));
                 params.push((lid, RExpr::Sig(sid)));
                 self.model.funcs[fid as usize].owner = Some(sid);
+                self.this_sigs.push(sid);
+                pushed_this = true;
             }
         }
         for d in &f.params {
@@ -588,8 +602,12 @@ impl<'a> Builder<'a> {
             Some(r) => Some(self.expr(i, r)?),
             None => None,
         };
-        let body = self.expr(i, &f.body)?;
+        let body = self.expr(i, &f.body);
+        if pushed_this {
+            self.this_sigs.pop();
+        }
         self.locals.truncate(mark);
+        let body = body?;
         let func = &mut self.model.funcs[fid as usize];
         func.params = params;
         func.ret = ret;
@@ -713,9 +731,10 @@ impl<'a> Builder<'a> {
         let mark = self.locals.len();
         let lid = self.new_local("this");
         self.locals.push(("this".into(), lid));
+        self.this_sigs.push(sid);
         let body = self.conj(i, items);
+        self.this_sigs.pop();
         self.locals.truncate(mark);
-        let _ = sid;
         Ok(RExpr::Quant(
             Quant::All,
             vec![RDecl {
@@ -831,7 +850,12 @@ impl<'a> Builder<'a> {
                 if let Some(fid) = self.func_with_params(i, r) {
                     return Ok(RExpr::Call(fid, vec![self.expr(i, l)?]));
                 }
-                RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?))
+                // The right operand of an explicit `x.f` is the field itself, never `this.f` again.
+                let rr = match self.explicit_field(i, r) {
+                    Some(fid) => RExpr::Field(fid),
+                    None => self.expr(i, r)?,
+                };
+                RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(rr))
             }
             ExprKind::Binary(op, l, r) => RExpr::Bin(*op, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?)),
             ExprKind::BoxJoin(f, args) => {
@@ -960,6 +984,24 @@ impl<'a> Builder<'a> {
         items.iter().map(|x| self.expr(i, x)).collect()
     }
 
+    /// The field a plain name denotes when it resolves to exactly one field and is not a local.
+    fn explicit_field(&self, i: usize, e: &Expr) -> Option<FieldId> {
+        let ExprKind::Name(n) = &e.kind else { return None };
+        if self.locals.iter().any(|(name, _)| name == n) {
+            return None;
+        }
+        // Same lookup as `name`: an ambiguous name stays a choice (resolved by type later).
+        let found = if n.contains('/') {
+            self.lookup(i, n)
+        } else {
+            self.lookup_unqualified(i, n)
+        };
+        match found?.as_slice() {
+            [Sym::Field(fid)] => Some(*fid),
+            _ => None,
+        }
+    }
+
     /// The function a name denotes when it is a function with at least one parameter.
     fn func_with_params(&self, i: usize, e: &Expr) -> Option<FuncId> {
         let ExprKind::Name(n) = &e.kind else { return None };
@@ -998,7 +1040,22 @@ impl<'a> Builder<'a> {
         match found {
             Some(v) if v.len() == 1 => match &v[0] {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
-                Sym::Field(id) => Ok(RExpr::Field(*id)),
+                Sym::Field(id) => {
+                    // Inside a sig body a field of that sig (or of an ancestor) means `this.field`.
+                    if let (Some(&ts), Some((_, this_l))) =
+                        (self.this_sigs.last(), self.locals.iter().rev().find(|(name, _)| name == "this"))
+                    {
+                        let owner = self.model.fields[*id as usize].owner;
+                        let mut p = Some(ts);
+                        while let Some(x) = p {
+                            if x == owner {
+                                return Ok(RExpr::Bin(BinOp::Join, Box::new(RExpr::Local(*this_l)), Box::new(RExpr::Field(*id))));
+                            }
+                            p = self.model.sigs[x as usize].parent;
+                        }
+                    }
+                    Ok(RExpr::Field(*id))
+                }
                 Sym::Func(fid) => {
                     if self.model.funcs[*fid as usize].nparams == 0 {
                         Ok(RExpr::Call(*fid, Vec::new()))

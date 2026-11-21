@@ -423,7 +423,7 @@ impl<'a, S: SatSolver> Translator<'a, S> {
     /// Relational join of two evaluated matrices: `a.b`.
     fn join_m(&mut self, a: &BoolMatrix, b: &BoolMatrix) -> Result<BoolMatrix, String> {
         if a.arity + b.arity < 3 {
-            return Err("join needs an expression of arity 2 or more".into());
+            return Err(format!("join needs an expression of arity 2 or more (arities {} and {})", a.arity, b.arity));
         }
         let mut acc: BTreeMap<Vec<u32>, Vec<BoolVal>> = BTreeMap::new();
         for (ta, va) in &a.entries {

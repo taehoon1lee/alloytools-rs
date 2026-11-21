@@ -418,7 +418,7 @@ impl<'a> Tr<'a> {
             RExpr::Compr(decls, body) => {
                 let (kdecls, disj) = self.decls(decls)?;
                 let f = self.formula(body)?;
-                let f = with_disjointness(f, &disj);
+                let f = with_disjointness(f, &disj, false);
                 Expr::Comprehension(kdecls, Box::new(f))
             }
             RExpr::Ite(c, a, b) => {
@@ -581,7 +581,53 @@ impl<'a> Tr<'a> {
                 }
                 Formula::And(parts)
             }
-            RExpr::TotalOrder(_) => return Err(unsupported("pred/totalOrder (M5.4)")),
+            RExpr::TotalOrder(args) => {
+                // Java `ExprList.Op.TOTALORDER` (general form): `first` is in `elem`, has no predecessor, and
+                // every element is `first` or has one predecessor, is `last` or has one successor, and no
+                // element is reachable from itself.
+                if args.len() != 3 {
+                    return Err(other("pred/totalOrder takes exactly three arguments"));
+                }
+                let elem = self.expr(&args[0])?;
+                let first = self.expr(&args[1])?;
+                let next = self.expr(&args[2])?;
+                let f1 = Formula::Subset(
+                    elem.clone(),
+                    Expr::join(first.clone(), Expr::ReflexiveClosure(Box::new(next.clone()))),
+                );
+                let f2 = Formula::Multiplicity(Multiplicity::No, Expr::join(next.clone(), first.clone()));
+                let e = self.fresh();
+                let ev = Expr::Var(e);
+                let f3 = Formula::Or(vec![
+                    Formula::Equal(ev.clone(), first.clone()),
+                    Formula::Multiplicity(Multiplicity::One, Expr::join(next.clone(), ev.clone())),
+                ]);
+                let last = Expr::Difference(
+                    Box::new(elem.clone()),
+                    Box::new(Expr::join(next.clone(), elem.clone())),
+                );
+                let f4 = Formula::Or(vec![
+                    Formula::Equal(ev.clone(), last),
+                    Formula::Multiplicity(Multiplicity::One, Expr::join(ev.clone(), next.clone())),
+                ]);
+                let f5 = Formula::Not(Box::new(Formula::Subset(
+                    ev.clone(),
+                    Expr::join(ev.clone(), Expr::Closure(Box::new(next.clone()))),
+                )));
+                let all = Formula::Quantified(
+                    Quantifier::All,
+                    vec![Decl { var: e, domain: elem.clone(), disjoint: false, set: false }],
+                    Box::new(Formula::And(vec![f3, f4, f5])),
+                );
+                // The native predicate (used by Java for relation arguments) also requires `first` to be one atom of `elem`.
+                let f0 = Formula::And(vec![
+                    Formula::Multiplicity(Multiplicity::One, first.clone()),
+                    Formula::Subset(first.clone(), elem.clone()),
+                ]);
+                // The domain and range of `next` lie inside `elem` (util/ordering's documented requirement).
+                let f6 = Formula::Subset(next.clone(), Expr::product(elem.clone(), elem.clone()));
+                Formula::And(vec![all, f1, f2, f0, f6])
+            }
             RExpr::Choice(cands) if cands.len() == 1 => self.formula(&cands[0])?,
             RExpr::Choice(_) => return Err(unsupported("overloaded name (ExprChoice, M3.4)")),
             other_e => {
@@ -612,7 +658,7 @@ impl<'a> Tr<'a> {
     fn quantified_body(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
         let (kdecls, disj) = self.decls(decls)?;
         let b = self.formula(body)?;
-        let b = with_disjointness(b, &disj);
+        let b = with_disjointness(b, &disj, q == Quant::All);
         Ok(match q {
             Quant::All => Formula::Quantified(Quantifier::All, kdecls, Box::new(b)),
             Quant::Some => Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)),
@@ -627,7 +673,7 @@ impl<'a> Tr<'a> {
                 let y = kdecls2[0].var;
                 let bx = b.clone();
                 let by = self.formula(body)?;
-                let by = with_disjointness(by, &disj);
+                let by = with_disjointness(by, &disj, false);
                 let eq = Formula::Equal(Expr::Var(x), Expr::Var(y));
                 let uniq = Formula::Quantified(
                     Quantifier::All,
@@ -882,7 +928,7 @@ fn mult_of(m: Option<Mult>) -> Option<Multiplicity> {
 
 /// `disj` groups: every pair of variables in a group is distinct. For a body `b`, the constraint
 /// is added as a guard, so both `all` (implication) and `some` (conjunction) read it correctly.
-fn with_disjointness(b: Formula, groups: &[Vec<u32>]) -> Formula {
+fn with_disjointness(b: Formula, groups: &[Vec<u32>], universal: bool) -> Formula {
     let mut parts = Vec::new();
     for g in groups {
         for i in 0..g.len() {
@@ -893,7 +939,11 @@ fn with_disjointness(b: Formula, groups: &[Vec<u32>]) -> Formula {
     }
     if parts.is_empty() {
         b
+    } else if universal {
+        // all disj x, y | f  ==  all x, y | (x != y) => f
+        Formula::Implies(Box::new(Formula::And(parts)), Box::new(b))
     } else {
+        // some disj x, y | f  ==  some x, y | (x != y) and f
         parts.push(b);
         Formula::And(parts)
     }

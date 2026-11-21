@@ -41,3 +41,10 @@ next: M3.1 resolved sig hierarchy / fields (semantic model)
 parse 195/199, commands 195/199, verdict 0/465, perf 0/465 (no typing/translation yet). Survey: 113/116 models resolve.
 Also: loader adds Java's implicit `open util/integer as integer` (explains natural.als syntax error; now matches Java).
 next: M3.4 typing (arity, Choice resolution by type), then M4 kodkod core
+
+## 2026-11-21 M4/M5 first translation — kodkod engine + Alloy→Kodkod translator end-to-end; verdict 117/465
+parse 195/199, commands 195/199, verdict 117/465 (no wrong answers except 3 under investigation), perf 103/465
+kodkod: instance/ast/bool (hash-consed Tseitin gates)/translate (FOL2Bool, quantifiers unrolled, closure, solve+decode); 8 tests.
+alloy-translate: scope.rs (ScopeComputer + atom creation with Java unique names), translate.rs (sig/field constraints, formulas, calls).
+Java facts learned: universe always has Int atoms (bitwidth 4, `-8..7`), Int relation exact; enum sigs scope 0; unique names append `'`.
+next: decl-type errors (61 cmds, INSLabel), arity of calls (iolus), `=` arity (file_system), closure errors, pred/totalOrder, arrow mults, then integers

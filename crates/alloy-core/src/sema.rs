@@ -59,6 +59,8 @@ pub struct Sig {
     pub fields: Vec<FieldId>,
     /// Loaded module instance that declares the sig.
     pub module: usize,
+    /// Declared by an `enum` (Java `Sig.isEnum`): its scope is 0 and its values are the atoms.
+    pub is_enum: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -140,14 +142,30 @@ pub enum RExpr {
     Choice(Vec<RExpr>),
 }
 
+/// One resolved `for` entry of a command: `[exactly] start[..end][:increment] sig` (Java `CommandScope`).
+#[derive(Debug, Clone, PartialEq)]
+pub struct RScope {
+    pub sig: SigId,
+    pub start: i32,
+    pub end: i32,
+    pub increment: i32,
+    pub exact: bool,
+}
+
 /// One resolved command (its `CommandInfo` is the same index in `World::commands`).
 #[derive(Debug, Clone)]
 pub struct RCommand {
     pub check: bool,
     /// For `run f` / `check A`: the formula to solve/refute. `run` with parameters is an existential.
     pub formula: RExpr,
-    /// Facts of the root module (plus sig facts) are added by the translator, not here.
+    /// Command label (Java `Command.label`).
     pub name: String,
+    /// `for N` (overall), `N int` (bitwidth), `N seq` (maximum sequence length), as written (`None` = unset).
+    pub overall: Option<i32>,
+    pub bitwidth: Option<i32>,
+    pub maxseq: Option<i32>,
+    /// Per-sig scopes from the `for ... but` list (`int`/`seq`/`steps` are not among them).
+    pub scopes: Vec<RScope>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -223,6 +241,21 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     for i in 0..mods.len() {
         b.resolve(i)?;
     }
+    // Java `CompModule.addDefaultCommand`: a root module without commands runs `Run Default` (formula TRUE).
+    if b.model.commands.is_empty() && !mods.is_empty() {
+        let has_command = mods[0].module.paragraphs.iter().any(|p| matches!(p, Paragraph::Command(_)));
+        if !has_command {
+            b.model.commands.push(RCommand {
+                check: false,
+                formula: RExpr::Block(Vec::new()),
+                name: "Default".to_string(),
+                overall: None,
+                bitwidth: None,
+                maxseq: None,
+                scopes: Vec::new(),
+            });
+        }
+    }
     Ok(b.model)
 }
 
@@ -252,6 +285,7 @@ impl<'a> Builder<'a> {
             is_private: false,
             fields: Vec::new(),
             module: 0,
+            is_enum: false,
         };
         self.model.sigs = vec![mk("univ"), mk("none"), mk("Int"), mk("String"), mk("seq/Int")];
     }
@@ -271,6 +305,7 @@ impl<'a> Builder<'a> {
             match p {
                 Paragraph::Enum(e) => {
                     let id = self.push_sig(i, &e.name, None, true, None, e.is_private);
+                    self.model.sigs[id as usize].is_enum = true;
                     self.add_name(i, &e.name, Sym::Sig(id), e.is_private);
                     for v in &e.values {
                         let vid = self.push_sig(i, v, Some(id), false, Some(Mult::One), false);
@@ -364,6 +399,7 @@ impl<'a> Builder<'a> {
             is_private,
             fields: Vec::new(),
             module: i,
+            is_enum: false,
         });
         id
     }
@@ -461,8 +497,11 @@ impl<'a> Builder<'a> {
                     assert_next += 1;
                 }
                 Paragraph::Command(c) => {
-                    let cmd = self.resolve_command(i, c)?;
-                    self.model.commands.push(cmd);
+                    // Only the root module's commands are run (Java `World::commands`).
+                    if i == 0 {
+                        let cmd = self.resolve_command(i, c)?;
+                        self.model.commands.push(cmd);
+                    }
                 }
                 Paragraph::Open(_) | Paragraph::Macro(_) => {}
             }
@@ -589,10 +628,31 @@ impl<'a> Builder<'a> {
             },
         };
         let label = c.label.clone().unwrap_or_else(|| name.clone());
+        let mut scopes = Vec::new();
+        for t in &c.scopes.typescopes {
+            let sig = match t.sig.as_str() {
+                "String" => SIG_STRING,
+                n => match self.lookup(i, n).and_then(|v| v.into_iter().next()) {
+                    Some(Sym::Sig(id)) => id,
+                    _ => return err(i, self.mods, t.loc.line, t.loc.col, format!("The name \"{n}\" cannot be found.")),
+                },
+            };
+            scopes.push(RScope {
+                sig,
+                start: t.start,
+                end: t.end,
+                increment: t.increment,
+                exact: t.exactly,
+            });
+        }
         Ok(RCommand {
             check: c.check,
             formula,
             name: label,
+            overall: c.scopes.overall,
+            bitwidth: c.scopes.bitwidth,
+            maxseq: c.scopes.maxseq,
+            scopes,
         })
     }
 

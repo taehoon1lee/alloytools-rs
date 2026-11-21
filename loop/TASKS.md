@@ -6,6 +6,15 @@ Scores come from `python harness/check.py` (see CLAUDE.md). Java paths are relat
 `reference/alloy-java/` (abbrev: `CORE` = `org.alloytools.alloy.core/src/main/java/edu/mit/csail/sdg`,
 `KK` = `org.alloytools.pardinus.core/src/main/java/kodkod`).
 
+## STATUS (2026-11-22) — verdict 442/465, perf 420/465 (sequential), parse 195/199, commands 195/199; gate green
+Done: M1-M5 (parser, modules incl. instance merge, sema/overloads/types, kodkod engine with skolemization, FOL cache, Java SBP,
+ordering pinning, size constraints, strings, seq, integers incl. div/rem/sum), M6 mostly (portfolio + geometric restarts).
+Open (all outside `reference/models` except the first two):
+- [ ] perf: hard UNSAT commands 2-5x slower than Java (firewire#4, hotel2#2, ceilingsAndFloors#4, iolus, ringlead#4, p306-hotel#2 which exceeds 60 s)
+- [ ] parse: the 4 `models/utilities/types/*` type_error files (Java reports ambiguity / failed typecheck inside library bodies)
+- [ ] M8 temporal (extra/examples/temporal: buffer, leader, leader_events, trash = 21 commands)
+- [ ] M7 `--count` (solution enumeration)
+
 ## M0 — Environment (done by the environment builder)
 - [x] Java oracle, golden outputs, corpus (199 models, 465 Java-decided commands), harness, loop driver
 - [x] Rust workspace skeleton; CLI implements the harness protocol; SAT backend `satsolver::BatSat`

@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/memory/fixedSizeMemory_H",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 157.819,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 137.151,
+   "solve_ms": 7.106,
+   "total_ms": 144.257,
+   "stats": {
+    "primary_vars": 48,
+    "vars": 436,
+    "clauses": 711
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 151.831
+  }
+ ]
+}

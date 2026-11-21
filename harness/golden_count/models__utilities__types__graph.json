@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/types/graph",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 167.652,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 102.073,
+   "solve_ms": 5.601,
+   "total_ms": 107.674,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "count": 8,
+   "count_capped": false,
+   "count_ms": 9.661
+  }
+ ]
+}

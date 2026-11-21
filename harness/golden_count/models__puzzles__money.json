@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/money",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 121.384,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 5 int",
+   "overall": -1,
+   "bitwidth": 5,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 303.549,
+   "solve_ms": 286.081,
+   "total_ms": 589.63,
+   "stats": {
+    "primary_vars": 256,
+    "vars": 9779,
+    "clauses": 29620
+   },
+   "count": 1,
+   "count_capped": false,
+   "count_ms": 15.896
+  }
+ ]
+}

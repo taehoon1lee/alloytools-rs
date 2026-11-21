@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/tower-hanoi/hanoi",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 234.403,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Game1",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Game1 for 1 but 3 Stake, 5 Disc, 32 State expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 431.433,
+   "solve_ms": 1330.651,
+   "total_ms": 1762.084,
+   "stats": {
+    "primary_vars": 512,
+    "vars": 12707,
+    "clauses": 23516
+   },
+   "count": 1,
+   "count_capped": false,
+   "count_ms": 36.706
+  },
+  {
+   "index": 1,
+   "label": "Game2",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Game2 for 1 but 3 Stake, 3 Disc, 8 State expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 46.057,
+   "solve_ms": 13.937,
+   "total_ms": 59.994,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1885,
+    "clauses": 3191
+   },
+   "count": 1,
+   "count_capped": false,
+   "count_ms": 2.277
+  }
+ ]
+}

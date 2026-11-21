@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/einstein/einstein-wikipedia",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 296.708,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 5",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 227.638,
+   "solve_ms": 19.593,
+   "total_ms": 247.232,
+   "stats": {
+    "primary_vars": 125,
+    "vars": 1211,
+    "clauses": 2046
+   },
+   "count": 1,
+   "count_capped": false,
+   "count_ms": 5.636
+  }
+ ]
+}

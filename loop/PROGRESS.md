@@ -7,3 +7,7 @@ next: M1.1 lexer
 ## 2026-11-21 M1.1 — lexer (`crates/alloy-core/src/lexer.rs`, longest-match like JFlex)
 parse 0/199, commands 0/199, verdict 0/465, perf 0/465 (no parser yet; lexer unit tests + all 199+ corpus .als lex OK)
 next: M1.2 surface AST (`syntax.rs`)
+
+## 2026-11-21 M1.2 — surface AST (`crates/alloy-core/src/syntax.rs`, types only, no parsing yet)
+parse 0/199, commands 0/199, verdict 0/465, perf 0/465 (unchanged; Rust still `unsupported`; 9 unit tests pass; gate exit 0)
+next: M1.3 expression parser (precedence from Alloy.cup) producing `syntax::Expr`

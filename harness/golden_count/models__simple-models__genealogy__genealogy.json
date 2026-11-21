@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/genealogy/genealogy",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 167.779,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Show",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run Show for 6 expect 1",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 239.344,
+   "solve_ms": 32.217,
+   "total_ms": 271.56,
+   "stats": {
+    "primary_vars": 86,
+    "vars": 2121,
+    "clauses": 3965
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 409.548
+  }
+ ]
+}

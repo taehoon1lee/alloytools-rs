@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/puzzles/handshake",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 215.463,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "P10",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run P10 for 5 int, exactly 10 Person expect 1",
+   "overall": -1,
+   "bitwidth": 5,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 245.895,
+   "solve_ms": 122.843,
+   "total_ms": 368.737,
+   "stats": {
+    "primary_vars": 200,
+    "vars": 3988,
+    "clauses": 9584
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 580.749
+  },
+  {
+   "index": 1,
+   "label": "P12",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run P12 for 5 int, exactly 12 Person expect 1",
+   "overall": -1,
+   "bitwidth": 5,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  },
+  {
+   "index": 2,
+   "label": "P14",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run P14 for 5 int, exactly 14 Person expect 1",
+   "overall": -1,
+   "bitwidth": 5,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  },
+  {
+   "index": 3,
+   "label": "P16",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run P16 for 6 int, exactly 16 Person expect 1",
+   "overall": -1,
+   "bitwidth": 6,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  }
+ ]
+}

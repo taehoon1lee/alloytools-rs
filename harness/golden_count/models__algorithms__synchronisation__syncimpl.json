@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/synchronisation/syncimpl",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 240.73,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Correctness",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Correctness for 4 but 2 FileContents expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 213.81,
+   "solve_ms": 0.151,
+   "total_ms": 213.961,
+   "stats": {
+    "primary_vars": 0,
+    "vars": 0,
+    "clauses": 0
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.017
+  }
+ ]
+}

@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/transport/railway",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 210.621,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "PolicyWorks",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check PolicyWorks for 2 Train, 1 GateState, 2 TrainState, 4 Seg expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 213.274,
+   "solve_ms": 44.877,
+   "total_ms": 258.152,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1053,
+    "clauses": 1761
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 346.674
+  },
+  {
+   "index": 1,
+   "label": "TrainsMoveLegal",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TrainsMoveLegal for 3 expect 1",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 41.102,
+   "solve_ms": 2.266,
+   "total_ms": 43.368,
+   "stats": {
+    "primary_vars": 87,
+    "vars": 1011,
+    "clauses": 1805
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 127.531
+  }
+ ]
+}

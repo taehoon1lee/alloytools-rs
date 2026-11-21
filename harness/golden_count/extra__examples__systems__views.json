@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/systems/views",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 193.083,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "zippishOK",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check zippishOK for 6 but 8 State, 3 ViewType expect 1",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 796.847,
+   "solve_ms": 194.554,
+   "total_ms": 991.401,
+   "stats": {
+    "primary_vars": 1734,
+    "vars": 95613,
+    "clauses": 294467
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 5440.87
+  }
+ ]
+}

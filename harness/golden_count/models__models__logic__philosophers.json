@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/logic/philosophers",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 202.879,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1 for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 338.656,
+   "solve_ms": 22.402,
+   "total_ms": 361.058,
+   "stats": {
+    "primary_vars": 120,
+    "vars": 2296,
+    "clauses": 5713
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 316.921
+  },
+  {
+   "index": 1,
+   "label": "Liveliness",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Liveliness for 15 but 4 int, exactly 4 P, 4 Fork",
+   "overall": 15,
+   "bitwidth": 4,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 157.284,
+   "solve_ms": 167.907,
+   "total_ms": 325.192,
+   "stats": {
+    "primary_vars": 307,
+    "vars": 7559,
+    "clauses": 19282
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 1071.147
+  }
+ ]
+}

@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/state-machine/reset-flipflop-with-enable",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 383.349,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 10",
+   "overall": 10,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 168.374,
+   "solve_ms": 10.299,
+   "total_ms": 178.673,
+   "stats": {
+    "primary_vars": 50,
+    "vars": 307,
+    "clauses": 513
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 139.863
+  }
+ ]
+}

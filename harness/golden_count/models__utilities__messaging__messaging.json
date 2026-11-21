@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/utilities/messaging/messaging",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 404.441,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "SomeState",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SomeState for 2 expect 1",
+   "overall": 2,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 223.01,
+   "solve_ms": 9.209,
+   "total_ms": 232.219,
+   "stats": {
+    "primary_vars": 76,
+    "vars": 649,
+    "clauses": 816
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 151.567
+  },
+  {
+   "index": 1,
+   "label": "OutOfOrder",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run OutOfOrder for 4 expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 130.085,
+   "solve_ms": 7.238,
+   "total_ms": 137.323,
+   "stats": {
+    "primary_vars": 496,
+    "vars": 4686,
+    "clauses": 7676
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 275.416
+  }
+ ]
+}

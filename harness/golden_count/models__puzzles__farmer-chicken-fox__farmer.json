@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/puzzles/farmer-chicken-fox/farmer",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 156.251,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "solvePuzzle",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run solvePuzzle for 8 State expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 184.766,
+   "solve_ms": 17.276,
+   "total_ms": 202.043,
+   "stats": {
+    "primary_vars": 80,
+    "vars": 1137,
+    "clauses": 3011
+   },
+   "count": 2,
+   "count_capped": false,
+   "count_ms": 15.563
+  },
+  {
+   "index": 1,
+   "label": "NoQuantumObjects",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check NoQuantumObjects for 8 State expect 0",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 35.772,
+   "solve_ms": 25.928,
+   "total_ms": 61.7,
+   "stats": {
+    "primary_vars": 92,
+    "vars": 1255,
+    "clauses": 3213
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.006
+  }
+ ]
+}

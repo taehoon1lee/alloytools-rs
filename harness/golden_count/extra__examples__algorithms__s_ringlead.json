@@ -1,0 +1,95 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/algorithms/s_ringlead",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 330.557,
+ "command_count": 4,
+ "commands": [
+  {
+   "index": 0,
+   "label": "BadLivenessTrace",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run BadLivenessTrace for 3 but 8 State expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "ERROR",
+   "error": {
+    "kind": "type_error",
+    "line": 79,
+    "col": 17,
+    "in_file": "s_ringlead.als",
+    "msg": "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized."
+   },
+   "total_ms": 427.141
+  },
+  {
+   "index": 1,
+   "label": "SomeLeader",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SomeLeader for 4 but 6 State expect 1",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "ERROR",
+   "error": {
+    "kind": "type_error",
+    "line": 79,
+    "col": 17,
+    "in_file": "s_ringlead.als",
+    "msg": "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized."
+   },
+   "total_ms": 63.755
+  },
+  {
+   "index": 2,
+   "label": "Safety",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Safety for 7 expect 0",
+   "overall": 7,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "ERROR",
+   "error": {
+    "kind": "type_error",
+    "line": 79,
+    "col": 17,
+    "in_file": "s_ringlead.als",
+    "msg": "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized."
+   },
+   "total_ms": 100.981
+  },
+  {
+   "index": 3,
+   "label": "AltTrans",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run AltTrans for 5 but 8 State expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "ERROR",
+   "error": {
+    "kind": "type_error",
+    "line": 79,
+    "col": 17,
+    "in_file": "s_ringlead.als",
+    "msg": "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized."
+   },
+   "total_ms": 85.979
+  }
+ ]
+}

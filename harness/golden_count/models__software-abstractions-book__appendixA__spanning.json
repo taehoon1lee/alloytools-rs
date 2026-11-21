@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/appendixA/spanning",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 106.131,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 94.374,
+   "solve_ms": 11.059,
+   "total_ms": 105.433,
+   "stats": {
+    "primary_vars": 768,
+    "vars": 1283,
+    "clauses": 1028
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 198.502
+  }
+ ]
+}

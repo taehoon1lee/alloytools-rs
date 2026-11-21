@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/java/java-map",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 182.544,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "verify",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check verify for 4 but 2 Map",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 446.442,
+   "solve_ms": 724.124,
+   "total_ms": 1170.566,
+   "stats": {
+    "primary_vars": 55,
+    "vars": 1327,
+    "clauses": 3525
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.01
+  }
+ ]
+}

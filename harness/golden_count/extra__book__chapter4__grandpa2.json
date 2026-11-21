@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter4/grandpa2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 208.959,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoSelfFather",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoSelfFather",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 167.356,
+   "solve_ms": 5.976,
+   "total_ms": 173.331,
+   "stats": {
+    "primary_vars": 45,
+    "vars": 397,
+    "clauses": 587
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.019
+  },
+  {
+   "index": 1,
+   "label": "ownGrandpa",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run ownGrandpa for 4 Person",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 22.503,
+   "solve_ms": 12.474,
+   "total_ms": 34.977,
+   "stats": {
+    "primary_vars": 76,
+    "vars": 907,
+    "clauses": 1374
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 164.959
+  }
+ ]
+}

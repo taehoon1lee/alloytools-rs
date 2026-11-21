@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/file-system/file_system",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 119.449,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "check$1",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check check$1 for 5 expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 172.846,
+   "solve_ms": 15.934,
+   "total_ms": 188.779,
+   "stats": {
+    "primary_vars": 127,
+    "vars": 1695,
+    "clauses": 3439
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 214.319
+  },
+  {
+   "index": 1,
+   "label": "check$2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check check$2 for 5 expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 23.515,
+   "solve_ms": 6.392,
+   "total_ms": 29.907,
+   "stats": {
+    "primary_vars": 127,
+    "vars": 1735,
+    "clauses": 3523
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.005
+  }
+ ]
+}

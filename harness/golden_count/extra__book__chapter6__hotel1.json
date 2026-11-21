@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/hotel1",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 249.099,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoBadEntry",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoBadEntry for 3 but 2 Room, 2 Guest, 5 Time",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 337.699,
+   "solve_ms": 70.544,
+   "total_ms": 408.243,
+   "stats": {
+    "primary_vars": 132,
+    "vars": 2335,
+    "clauses": 4541
+   },
+   "count": 4,
+   "count_capped": false,
+   "count_ms": 62.326
+  }
+ ]
+}

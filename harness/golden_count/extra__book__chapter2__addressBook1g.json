@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook1g",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 134.184,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "delUndoesAdd",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check delUndoesAdd for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 145.652,
+   "solve_ms": 10.485,
+   "total_ms": 156.137,
+   "stats": {
+    "primary_vars": 51,
+    "vars": 579,
+    "clauses": 1135
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 172.349
+  }
+ ]
+}

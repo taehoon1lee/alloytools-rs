@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter2/addressBook2d",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 116.342,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3 but 1 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 152.835,
+   "solve_ms": 6.202,
+   "total_ms": 159.037,
+   "stats": {
+    "primary_vars": 20,
+    "vars": 199,
+    "clauses": 268
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 129.079
+  }
+ ]
+}

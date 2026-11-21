@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/addressBook1",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 180.005,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "show",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run show for 3",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 141.654,
+   "solve_ms": 4.962,
+   "total_ms": 146.617,
+   "stats": {
+    "primary_vars": 27,
+    "vars": 96,
+    "clauses": 143
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 124.984
+  }
+ ]
+}

@@ -25,7 +25,9 @@ param(
     [int]$IterationTimeoutMin = 45,
     [int]$MaxNoProgress = 4,
     [double]$MaxBudgetUsdPerIter = 0,
-    [switch]$NoGate
+    [switch]$NoGate,
+    # Testing only: path to a .ps1 that stands in for the claude agent (driver self-test).
+    [string]$Agent = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -100,7 +102,9 @@ for ($i = 1; $i -le $MaxIterations; $i++) {
 
     $argList = @("-p", "--model", $Model, "--dangerously-skip-permissions", "--output-format", "stream-json", "--verbose")
     if ($MaxBudgetUsdPerIter -gt 0) { $argList += @("--max-budget-usd", "$MaxBudgetUsdPerIter") }
-    $p = Start-Process -FilePath "claude" -ArgumentList $argList -RedirectStandardInput $PromptFile `
+    $exe = "claude"
+    if ($Agent) { $exe = "pwsh"; $argList = @("-NoProfile", "-File", $Agent) }
+    $p = Start-Process -FilePath $exe -ArgumentList $argList -RedirectStandardInput $PromptFile `
         -RedirectStandardOutput $out -RedirectStandardError $err -NoNewWindow -PassThru
     if (-not $p.WaitForExit($IterationTimeoutMin * 60 * 1000)) {
         Log "iter ${i}: TIMEOUT after $IterationTimeoutMin min -> killing"

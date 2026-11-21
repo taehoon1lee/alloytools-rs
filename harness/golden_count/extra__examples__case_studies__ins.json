@@ -1,0 +1,32 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/case_studies/ins",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 232.373,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "ERROR",
+   "error": {
+    "kind": "type_error",
+    "line": 46,
+    "col": 13,
+    "in_file": "ins.als",
+    "msg": "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized."
+   },
+   "total_ms": 236.109
+  }
+ ]
+}

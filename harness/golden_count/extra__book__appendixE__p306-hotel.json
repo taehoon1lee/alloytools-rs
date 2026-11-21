@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixE/p306-hotel",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 234.749,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "NoIntruder",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoIntruder for 3 but 6 Time, 1 Room, 2 Guest",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 368.81,
+   "solve_ms": 103.169,
+   "total_ms": 471.978,
+   "stats": {
+    "primary_vars": 137,
+    "vars": 3257,
+    "clauses": 6578
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.01
+  },
+  {
+   "index": 1,
+   "label": "NoIntruder",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoIntruder for 4 but 7 Time, 1 Room, 2 Guest",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 103.284,
+   "solve_ms": 920.997,
+   "total_ms": 1024.281,
+   "stats": {
+    "primary_vars": 207,
+    "vars": 5381,
+    "clauses": 11391
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.004
+  },
+  {
+   "index": 2,
+   "label": "NoIntruder",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check NoIntruder for 6 but 12 Time, 3 Room, 3 Guest",
+   "overall": 6,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  }
+ ]
+}

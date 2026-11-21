@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter5/addressBook",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 131.847,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "add",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run add for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 134.909,
+   "solve_ms": 7.875,
+   "total_ms": 142.784,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 402,
+    "clauses": 638
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 128.3
+  },
+  {
+   "index": 1,
+   "label": "addLocal",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check addLocal for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 12.952,
+   "solve_ms": 2.26,
+   "total_ms": 15.212,
+   "stats": {
+    "primary_vars": 39,
+    "vars": 608,
+    "clauses": 1253
+   },
+   "count": 12,
+   "count_capped": false,
+   "count_ms": 17.232
+  }
+ ]
+}

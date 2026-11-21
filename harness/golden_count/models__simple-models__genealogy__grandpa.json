@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/simple-models/genealogy/grandpa",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 165.313,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "ownGrandpa",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run ownGrandpa for 4 Person expect 1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 157.971,
+   "solve_ms": 28.2,
+   "total_ms": 186.171,
+   "stats": {
+    "primary_vars": 76,
+    "vars": 1105,
+    "clauses": 1824
+   },
+   "count": 48,
+   "count_capped": false,
+   "count_ms": 141.231
+  }
+ ]
+}

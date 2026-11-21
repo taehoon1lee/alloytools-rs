@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter6/memory/abstractMemory",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 203.693,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "WriteRead",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check WriteRead",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 125.283,
+   "solve_ms": 13.545,
+   "total_ms": 138.828,
+   "stats": {
+    "primary_vars": 51,
+    "vars": 597,
+    "clauses": 1125
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.006
+  },
+  {
+   "index": 1,
+   "label": "WriteIdempotent",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check WriteIdempotent",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 13.847,
+   "solve_ms": 19.682,
+   "total_ms": 33.529,
+   "stats": {
+    "primary_vars": 51,
+    "vars": 649,
+    "clauses": 1277
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.006
+  }
+ ]
+}

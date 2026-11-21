@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/chapter2/addressBook1e",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 129.277,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "add",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run add for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 120.257,
+   "solve_ms": 5.753,
+   "total_ms": 126.01,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 347,
+    "clauses": 631
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 117.328
+  }
+ ]
+}

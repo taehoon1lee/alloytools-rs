@@ -1,0 +1,81 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/algorithms/stable_mutex_ring",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 399.104,
+ "command_count": 3,
+ "commands": [
+  {
+   "index": 0,
+   "label": "TraceShorterThanMaxSimpleLoop",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TraceShorterThanMaxSimpleLoop for 7 but 2 Process, 3 Val expect 1",
+   "overall": 7,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 302.467,
+   "solve_ms": 18.049,
+   "total_ms": 320.517,
+   "stats": {
+    "primary_vars": 87,
+    "vars": 1543,
+    "clauses": 2729
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 286.014
+  },
+  {
+   "index": 1,
+   "label": "TwoPrivileged",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run TwoPrivileged for 5 but 3 Process, 4 Val expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 57.466,
+   "solve_ms": 11.744,
+   "total_ms": 69.209,
+   "stats": {
+    "primary_vars": 143,
+    "vars": 2682,
+    "clauses": 5437
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 325.302
+  },
+  {
+   "index": 2,
+   "label": "Closure",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check Closure for 5 but 5 Process, 6 Val expect 0",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  }
+ ]
+}

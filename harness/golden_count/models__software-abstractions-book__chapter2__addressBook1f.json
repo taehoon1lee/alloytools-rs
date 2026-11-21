@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter2/addressBook1f",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 134.224,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "showAdd",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run showAdd for 3 but 2 Book",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 130.101,
+   "solve_ms": 9.427,
+   "total_ms": 139.528,
+   "stats": {
+    "primary_vars": 36,
+    "vars": 371,
+    "clauses": 700
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 139.251
+  }
+ ]
+}

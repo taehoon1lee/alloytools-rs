@@ -1,0 +1,25 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/chapter5/sets2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 127.171,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Closed",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check Closed for 4 Element, 16 Set",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "TIMEOUT",
+   "timeout_ms": 20000
+  }
+ ]
+}

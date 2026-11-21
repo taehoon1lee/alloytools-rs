@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/book/appendixA/barbers",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 142.027,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "Default",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run Default",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 147.197,
+   "solve_ms": 6.135,
+   "total_ms": 153.333,
+   "stats": {
+    "primary_vars": 11,
+    "vars": 46,
+    "clauses": 64
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.012
+  }
+ ]
+}

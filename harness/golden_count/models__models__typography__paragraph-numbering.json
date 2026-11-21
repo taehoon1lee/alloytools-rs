@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/models/typography/paragraph-numbering",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 200.099,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "PreserveForest",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check PreserveForest for 4 expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 263.47,
+   "solve_ms": 588.709,
+   "total_ms": 852.179,
+   "stats": {
+    "primary_vars": 240,
+    "vars": 2867,
+    "clauses": 5875
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.007
+  },
+  {
+   "index": 1,
+   "label": "AddNeverReduces",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check AddNeverReduces for 5 expect 1",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 75.94,
+   "solve_ms": 20.128,
+   "total_ms": 96.068,
+   "stats": {
+    "primary_vars": 420,
+    "vars": 5862,
+    "clauses": 13037
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 317.965
+  }
+ ]
+}

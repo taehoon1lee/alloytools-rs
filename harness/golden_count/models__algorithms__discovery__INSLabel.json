@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/discovery/INSLabel",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 195.729,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "LookupConforms2",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check LookupConforms2 for 4 but 1 State, 3 LabelTree, 2 Record expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 841.912,
+   "solve_ms": 14.491,
+   "total_ms": 856.403,
+   "stats": {
+    "primary_vars": 187,
+    "vars": 4933,
+    "clauses": 12621
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.009
+  },
+  {
+   "index": 1,
+   "label": "Lookup",
+   "kind": "run",
+   "expects": 0,
+   "scope": "Run Lookup for 3 expect 0",
+   "overall": 3,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 248.636,
+   "solve_ms": 9.163,
+   "total_ms": 257.798,
+   "stats": {
+    "primary_vars": 131,
+    "vars": 2792,
+    "clauses": 6427
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.006
+  }
+ ]
+}

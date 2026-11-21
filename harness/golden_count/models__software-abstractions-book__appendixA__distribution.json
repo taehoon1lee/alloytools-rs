@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/software-abstractions-book/appendixA/distribution",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 112.135,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "union",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check union for 4",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 105.038,
+   "solve_ms": 92.346,
+   "total_ms": 197.384,
+   "stats": {
+    "primary_vars": 528,
+    "vars": 1651,
+    "clauses": 4004
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.009
+  }
+ ]
+}

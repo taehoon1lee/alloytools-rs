@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/algorithms/ring-orientation/stable-orient-ring",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 221.454,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "SomeState",
+   "kind": "run",
+   "expects": 1,
+   "scope": "Run SomeState for 1 but 2 Tick, 2 Bool, 3 Process expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 185.588,
+   "solve_ms": 32.336,
+   "total_ms": 217.925,
+   "stats": {
+    "primary_vars": 95,
+    "vars": 1506,
+    "clauses": 2896
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 158.456
+  },
+  {
+   "index": 1,
+   "label": "Closure",
+   "kind": "check",
+   "expects": 1,
+   "scope": "Check Closure for 1 but 2 Tick, 2 Bool, 3 Process expect 1",
+   "overall": 1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 33.408,
+   "solve_ms": 3.849,
+   "total_ms": 37.257,
+   "stats": {
+    "primary_vars": 98,
+    "vars": 1598,
+    "clauses": 3074
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 106.489
+  }
+ ]
+}

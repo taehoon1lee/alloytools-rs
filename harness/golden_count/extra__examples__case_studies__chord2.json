@@ -1,0 +1,39 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "extra/examples/case_studies/chord2",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 186.729,
+ "command_count": 1,
+ "commands": [
+  {
+   "index": 0,
+   "label": "FindSuccessorWorks",
+   "kind": "check",
+   "expects": 0,
+   "scope": "Check FindSuccessorWorks for 4 but 1 State, 3 Node, 3 NodeData expect 0",
+   "overall": 4,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "UNSAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 273.094,
+   "solve_ms": 6451.182,
+   "total_ms": 6724.276,
+   "stats": {
+    "primary_vars": 218,
+    "vars": 10386,
+    "clauses": 18035
+   },
+   "count": 0,
+   "count_capped": false,
+   "count_ms": 0.01
+  }
+ ]
+}

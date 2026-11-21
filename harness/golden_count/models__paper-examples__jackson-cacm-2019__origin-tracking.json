@@ -1,0 +1,67 @@
+{
+ "schema": 1,
+ "tool": "java-alloy-6.2.0",
+ "file": "models/paper-examples/jackson-cacm-2019/origin-tracking",
+ "status": "ok",
+ "error": null,
+ "parse_ms": 171.949,
+ "command_count": 2,
+ "commands": [
+  {
+   "index": 0,
+   "label": "run$1",
+   "kind": "run",
+   "expects": -1,
+   "scope": "Run run$1",
+   "overall": -1,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 176.166,
+   "solve_ms": 9.415,
+   "total_ms": 185.58,
+   "stats": {
+    "primary_vars": 69,
+    "vars": 957,
+    "clauses": 1707
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 334.5
+  },
+  {
+   "index": 1,
+   "label": "check$2",
+   "kind": "check",
+   "expects": -1,
+   "scope": "Check check$2 for 5",
+   "overall": 5,
+   "bitwidth": -1,
+   "maxseq": -1,
+   "minprefix": -1,
+   "maxprefix": -1,
+   "status": "SAT",
+   "error": null,
+   "temporal": false,
+   "min_trace": -1,
+   "max_trace": -1,
+   "translate_ms": 53.493,
+   "solve_ms": 23.774,
+   "total_ms": 77.266,
+   "stats": {
+    "primary_vars": 190,
+    "vars": 3475,
+    "clauses": 6752
+   },
+   "count": 100,
+   "count_capped": true,
+   "count_ms": 247.074
+  }
+ ]
+}

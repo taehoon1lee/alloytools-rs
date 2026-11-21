@@ -81,7 +81,7 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
     // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
     let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> = std::collections::HashSet::new();
-    for (_, body) in &model.sig_facts {
+    for (_, body) in model.sig_facts.iter().filter(|_| std::env::var("KNOPIN").is_err()) {
         pin_total_orders(body, &mut bounds, &sig_rel, &field_rel, &mut pinned);
     }
 
@@ -298,7 +298,7 @@ fn type_of(
                 tuples: a.tuples.intersection(&b.tuples).cloned().collect(),
             }
         }
-        RExpr::Bin(BinOp::Minus, a, b) => t!(a).difference(&t!(b)),
+        RExpr::Bin(BinOp::Minus, a, _) => t!(a),
         RExpr::Bin(BinOp::Arrow(_, _), a, b) => t!(a).product(&t!(b)),
         RExpr::Bin(BinOp::Join, a, b) => join_ts(&t!(a), &t!(b))?,
         RExpr::Local(l) => match env.get(l).or_else(|| env.get(&LocalId::MAX)) {
@@ -761,7 +761,19 @@ impl<'a> Tr<'a> {
             RExpr::Choice(_) => {
                 let r = self.resolve(e, &Exp::Any)?;
                 if Self::is_choice(&r) {
-                    return Err(unsupported("overloaded name still ambiguous after type resolution (M3.4)"));
+                    let names: Vec<String> = match &r {
+                        RExpr::Choice(cs) => cs
+                            .iter()
+                            .map(|c| match c {
+                                RExpr::Call(f, _) => self.model.funcs[*f as usize].label.clone(),
+                                RExpr::Field(f) => self.model.fields[*f as usize].label.clone(),
+                                RExpr::Sig(s) => self.model.sigs[*s as usize].label.clone(),
+                                other_c => format!("{:.30}", format!("{other_c:?}")),
+                            })
+                            .collect(),
+                        _ => Vec::new(),
+                    };
+                    return Err(unsupported(format!("overloaded name still ambiguous after type resolution (M3.4): {}", names.join(" | "))));
                 }
                 self.expr(&r)?
             }
@@ -1253,7 +1265,18 @@ impl<'a> Tr<'a> {
                     },
                     Box::new(f.decl.clone()),
                 ),
-                None => f.decl.clone(),
+                None => {
+                    // Java `Sig.addField`: no multiplicity symbol on a unary bound means `one`.
+                    let unary = match self.expr(&f.decl) {
+                        Ok(e) => self.arity(&e).map_or(false, |a| a == 1),
+                        Err(_) => false,
+                    };
+                    if unary {
+                        RExpr::Un(UnOp::One, Box::new(f.decl.clone()))
+                    } else {
+                        f.decl.clone()
+                    }
+                }
             };
             let body = self.in_formula(lhs, &decl);
             self.locals.remove(&f.this_local);

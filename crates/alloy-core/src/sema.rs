@@ -73,7 +73,7 @@ pub struct Field {
     pub decl: RExpr,
     /// The local standing for `this` inside `decl`.
     pub this_local: LocalId,
-    /// `set` (None), `one`, `lone`, `some` multiplicity of the declared bound.
+    /// Multiplicity keyword of the declared bound (None = none written: `one` when the bound is unary).
     pub mult: Option<Mult>,
     /// Defined field `f = e` (Java `EXACTLYOF`).
     pub defined: bool,
@@ -819,7 +819,7 @@ impl<'a> Builder<'a> {
                 found.push(s.clone());
             }
             for f in found {
-                if !out.iter().any(|o| same_sym(o, &f)) {
+                if !out.iter().any(|o| same_sym(o, &f) || self.same_instance_func(o, &f)) {
                     out.push(f);
                 }
             }
@@ -827,6 +827,22 @@ impl<'a> Builder<'a> {
         for (_, t2) in &sc.opens {
             self.collect_public(*t2, name, visited, out);
         }
+    }
+
+    /// The same function of the same module file instantiated with the same arguments (Java loads such a
+    /// module once, so e.g. an explicit `open util/integer` does not duplicate the implicit one).
+    fn same_instance_func(&self, a: &Sym, b: &Sym) -> bool {
+        let (Sym::Func(x), Sym::Func(y)) = (a, b) else { return false };
+        let (fx, fy) = (&self.model.funcs[*x as usize], &self.model.funcs[*y as usize]);
+        if fx.name != fy.name || fx.nparams != fy.nparams || fx.is_pred != fy.is_pred || fx.module == fy.module {
+            return fx.module == fy.module && x == y;
+        }
+        let (mx, my) = (&self.mods[fx.module], &self.mods[fy.module]);
+        if mx.path != my.path {
+            return false;
+        }
+        let (px, py) = (&self.scopes[fx.module].params, &self.scopes[fy.module].params);
+        px.len() == py.len() && px.iter().all(|(k, v)| py.get(k).map_or(false, |w| same_sym(v, w)))
     }
 
     fn lookup_public(&self, target: usize, name: &str) -> Option<Vec<Sym>> {
@@ -864,8 +880,10 @@ impl<'a> Builder<'a> {
             ExprKind::Str(_) => return Err(unsupported("string constants (M3.2 follow-up: atoms named \"...\")")),
             ExprKind::Unary(op, x) => RExpr::Un(*op, Box::new(self.expr(i, x)?)),
             ExprKind::Binary(BinOp::Join, l, r) => {
-                if let Some(fid) = self.func_with_params(i, r) {
-                    return Ok(RExpr::Call(fid, vec![self.expr(i, l)?]));
+                let cands = self.func_cands(i, r, 1);
+                if !cands.is_empty() {
+                    let recv = self.expr(i, l)?;
+                    return Ok(Self::calls(cands, vec![recv]));
                 }
                 // The right operand of an explicit `x.f` is the field itself, never `this.f` again.
                 let rr = match self.explicit_field(i, r) {
@@ -896,14 +914,20 @@ impl<'a> Builder<'a> {
                             }
                         }
                     }
-                    if let Some(fid) = self.func_with_params(i, r) {
+                    let cands = self.func_cands(i, r, args.len() + 1);
+                    if !cands.is_empty() {
                         let mut a = vec![self.expr(i, l)?];
                         a.extend(self.exprs(i, args)?);
-                        return Ok(RExpr::Call(fid, a));
+                        return Ok(Self::calls(cands, a));
                     }
                 }
                 // `f[a, b]`: a call when `f` names a function, else a join `b.a` (Java BoxJoin).
                 if let ExprKind::Name(n) = &f.kind {
+                    let cands = self.func_cands(i, f, args.len());
+                    if !cands.is_empty() {
+                        let a = self.exprs(i, args)?;
+                        return Ok(Self::calls(cands, a));
+                    }
                     if let Some(v) = self.lookup(i, n) {
                         // `f[a, b]` is a call only when `f` takes exactly that many parameters; otherwise it is a join.
                         if let Some(Sym::Func(fid)) = v.first() {
@@ -1016,6 +1040,34 @@ impl<'a> Builder<'a> {
         match found?.as_slice() {
             [Sym::Field(fid)] => Some(*fid),
             _ => None,
+        }
+    }
+
+    /// Functions a plain name may denote that take exactly `nargs` parameters (every symbol of that name
+    /// must be such a function; locals shadow). Several candidates form a type-resolved overload.
+    fn func_cands(&self, i: usize, e: &Expr, nargs: usize) -> Vec<FuncId> {
+        let ExprKind::Name(n) = &e.kind else { return Vec::new() };
+        if n.starts_with('@') || self.locals.iter().any(|(name, _)| name == n) {
+            return Vec::new();
+        }
+        let found = if n.contains('/') { self.lookup(i, n) } else { self.lookup_unqualified(i, n) };
+        let Some(v) = found else { return Vec::new() };
+        let mut out = Vec::new();
+        for sym in &v {
+            match sym {
+                Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == nargs && nargs > 0 => out.push(*fid),
+                Sym::Func(_) => {}
+                _ => return Vec::new(),
+            }
+        }
+        out
+    }
+
+    fn calls(cands: Vec<FuncId>, args: Vec<RExpr>) -> RExpr {
+        if cands.len() == 1 {
+            RExpr::Call(cands[0], args)
+        } else {
+            RExpr::Choice(cands.into_iter().map(|f| RExpr::Call(f, args.clone())).collect())
         }
     }
 
@@ -1166,7 +1218,7 @@ fn strip_mult(e: &Expr) -> (Option<Mult>, &Expr) {
         ExprKind::Unary(UnOp::One, x) => (Some(Mult::One), x),
         ExprKind::Unary(UnOp::Lone, x) => (Some(Mult::Lone), x),
         ExprKind::Unary(UnOp::Some, x) => (Some(Mult::Some), x),
-        ExprKind::Unary(UnOp::Set, x) => (None, x),
+        ExprKind::Unary(UnOp::Set, x) => (Some(Mult::Set), x),
         _ => (None, e),
     }
 }

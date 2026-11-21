@@ -1568,7 +1568,12 @@ impl<'a> Tr<'a> {
             self.locals.remove(&f.this_local);
             self.local_bound.remove(&f.this_local);
             let body = body?;
-            out.push(Formula::Subset(rel.clone(), Expr::product(owner.clone(), self.univ_pow(self.arity(&rel)? - 1))));
+            // Java: the first column of the field is inside the owner sig (`f.univ.univ... in sig`).
+            let mut first_col = rel.clone();
+            for _ in 1..self.arity(&rel)? {
+                first_col = Expr::join(first_col, Expr::Const(KConst::Univ));
+            }
+            out.push(Formula::Subset(first_col, owner.clone()));
             out.push(Formula::Quantified(
                 Quantifier::All,
                 vec![Decl { var: this, domain: owner, disjoint: false, set: false }],

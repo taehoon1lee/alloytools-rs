@@ -1040,7 +1040,7 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     // time-limited attempts with Java's predicate (two relation orders) and finally an unlimited one.
     // (symmetry-breaking order, conflict limit, time limit)
     const ATTEMPTS: [(u8, Option<u64>, Option<u64>); 4] =
-        [(NO_SBP, Some(15_000), Some(800)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
+        [(NO_SBP, Some(60_000), Some(1_200)), (0, None, Some(8_000)), (1, None, Some(8_000)), (0, None, None)];
     for (order, conflicts, limit_ms) in ATTEMPTS {
         let mut sat = BatSat::new();
         sat.set_conflict_limit(conflicts);
@@ -1059,7 +1059,25 @@ pub fn solve_with<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S) -> R
 
 fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order: u8) -> Result<Solution, String> {
     let mut tr = Translator::new(bounds, sat);
-    let top = tr.formula(formula)?;
+    let top = if std::env::var("KPROF").is_ok() {
+        if let Formula::And(items) = formula {
+            let mut vals = Vec::new();
+            for (k, it) in items.iter().enumerate() {
+                let t0 = std::time::Instant::now();
+                let v = tr.formula(it)?;
+                let dt = t0.elapsed();
+                if dt.as_millis() > 20 {
+                    eprintln!("conjunct {k}: {:?} {:.120}", dt, format!("{it:?}"));
+                }
+                vals.push(v);
+            }
+            tr.f.and(&vals)
+        } else {
+            tr.formula(formula)?
+        }
+    } else {
+        tr.formula(formula)?
+    };
     tr.f.assert_true(top);
     add_symmetry_breaking(&mut tr, order);
     tr.f.finish();

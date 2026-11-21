@@ -49,6 +49,7 @@ impl batsat::Callbacks for Budget {
 }
 
 pub struct BatSat {
+    time_limit: Option<std::time::Duration>,
     s: Solver<Budget>,
     vars: Vec<Var>,
     clauses: u64,
@@ -95,7 +96,7 @@ impl Default for BatSat {
         if let Some(v) = f("KSAT_CD") {
             o.clause_decay = v;
         }
-        BatSat { s: Solver::new(o, Budget::default()), vars: Vec::new(), clauses: 0, buf: Vec::new() }
+        BatSat { time_limit: None, s: Solver::new(o, Budget::default()), vars: Vec::new(), clauses: 0, buf: Vec::new() }
     }
 }
 
@@ -116,7 +117,8 @@ impl SatSolver for BatSat {
         self.s.cb_mut().learnt = 0;
     }
     fn set_time_limit(&mut self, limit: Option<std::time::Duration>) {
-        self.s.cb_mut().deadline = limit.map(|d| std::time::Instant::now() + d);
+        // the clock starts when `solve()` is called, not while the formula is still being translated
+        self.time_limit = limit;
     }
     fn num_vars(&self) -> u32 {
         self.vars.len() as u32
@@ -145,6 +147,7 @@ impl SatSolver for BatSat {
     }
     fn solve(&mut self) -> Option<bool> {
         let t0 = std::time::Instant::now();
+        self.s.cb_mut().deadline = self.time_limit.map(|d| t0 + d);
         let r = self.s.solve_limited(&[]);
         if std::env::var("KSAT_STATS").is_ok() {
             eprintln!("sat: conflicts {} time {:?} vars {} clauses {}", self.s.num_conflicts(), t0.elapsed(), self.vars.len(), self.clauses);

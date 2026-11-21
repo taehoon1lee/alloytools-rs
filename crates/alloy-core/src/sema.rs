@@ -713,7 +713,11 @@ impl<'a> Builder<'a> {
                 Some(Sym::Func(fid)) if !c.check => {
                     let params = self.model.funcs[fid as usize].params.clone();
                     let args: Vec<RExpr> = params.iter().map(|(l, _)| RExpr::Local(*l)).collect();
-                    let call = RExpr::Call(fid, args);
+                    let mut call = RExpr::Call(fid, args);
+                    // `run f` on a function means `some f[..]` (the function value is non-empty)
+                    if !self.model.funcs[fid as usize].is_pred {
+                        call = RExpr::Un(UnOp::Some, Box::new(call));
+                    }
                     if params.is_empty() {
                         call
                     } else {

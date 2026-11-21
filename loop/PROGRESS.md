@@ -84,3 +84,8 @@ next: perf (--perf), remaining non-temporal failures, then M8 temporal.
 Done: Java `resolveModules` port (`loader::merge_instances`: same file + same canonical sig args = one module instance, so two `open util/ordering[Tick]` share one ordering),
 `sum x: e | i` (IntExpr::SumOver), signed div/rem circuits, `x: lone/some e` decl vars, multi-var `lone/one`, bare-name overloads skip arg-taking funcs.
 Remaining 40: temporal (~21), hotel3/4 (4 overload), javatypes_soundness (4), INSLabel (2 higher-order), view-backing/stable-orient-ring (arity), basic-auth (strings), perf-heavy (p306-hotel, ceilings).
+
+## 2026-11-21 strings/seq/size/INSLabel — verdict 442/465 (gate green)
+Done: Java size constraints (`#sig <= n` / `= n`), string literals (String atoms + per-literal relations), `seq` keyword (+implicit sequniv open), sig links pre-pass,
+penalty-aware ExprChoice (one-element Choice marks penalty 1), `run f` on functions, first-column field constraint as join (not a univ^k product: 15 s -> ms), portfolio clock starts at solve().
+Remaining 23: temporal (21 cmds in extra/examples/temporal: buffer, leader, leader_events, trash), p306-hotel NoIntruder (perf, Java 24 s).

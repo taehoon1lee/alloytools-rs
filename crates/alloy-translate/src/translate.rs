@@ -94,7 +94,7 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
         field_rel,
         locals: HashMap::new(),
         local_bound: HashMap::new(),
-        pol: !cmd.check,
+        pol: true,
         under_universal: false,
         n_atoms,
         local_arity: HashMap::new(),
@@ -114,6 +114,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     conjuncts.extend(tr.sig_constraints()?);
     conjuncts.extend(tr.field_constraints()?);
 
+    // A `check` is solved negated: the command formula occurs in negative position, the facts in positive.
+    tr.pol = !cmd.check;
     let command = tr.formula(&cmd.formula)?;
     conjuncts.push(if cmd.check { Formula::Not(Box::new(command)) } else { command });
     Ok(Problem {
@@ -732,9 +734,9 @@ impl<'a> Tr<'a> {
             }
             RExpr::Bin(op, _, _) => return Err(unsupported(format!("binary operator {op:?} in expression position"))),
             RExpr::Compr(decls, body) => {
-                let (kdecls, disj) = self.decls(decls)?;
+                let (kdecls, disj, guards) = self.decls(decls)?;
                 let f = self.formula(body)?;
-                let f = with_disjointness(f, &disj, false);
+                let f = with_disjointness(f, &disj, &guards, false);
                 Expr::Comprehension(kdecls, Box::new(f))
             }
             RExpr::Ite(c, a, b) => {
@@ -955,12 +957,12 @@ impl<'a> Tr<'a> {
     fn quantified(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
         // Effective quantifier after polarity: `all` in positive position (or `some` in negative) is universal.
         let eff_universal = (q == Quant::All) == self.pol;
-        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set, _)));
+        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set, _)) || self.ty(&d.bound).map_or(false, |t| t.arity > 1));
         if has_set && (eff_universal || self.under_universal) {
             return Err(AlloyError::new(
                 ErrorKind::Type,
                 None,
-                "Analysis cannot be performed since it requires higher-order quantification that could not be skolemized.",
+                format!("Analysis cannot be performed since it requires higher-order quantification that could not be skolemized. {:.200}", format!("{decls:?}")),
             ));
         }
         let saved_under = self.under_universal;
@@ -971,9 +973,9 @@ impl<'a> Tr<'a> {
     }
 
     fn quantified_body(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
-        let (kdecls, disj) = self.decls(decls)?;
+        let (kdecls, disj, guards) = self.decls(decls)?;
         let b = self.formula(body)?;
-        let b = with_disjointness(b, &disj, q == Quant::All);
+        let b = with_disjointness(b, &disj, &guards, q == Quant::All);
         Ok(match q {
             Quant::All => Formula::Quantified(Quantifier::All, kdecls, Box::new(b)),
             Quant::Some => Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)),
@@ -983,12 +985,12 @@ impl<'a> Tr<'a> {
                 if decls.iter().map(|d| d.vars.len()).sum::<usize>() != 1 {
                     return Err(unsupported("lone/one quantifier over several variables (M5.4)"));
                 }
-                let (kdecls2, _) = self.decls(decls)?;
+                let (kdecls2, _, _) = self.decls(decls)?;
                 let x = kdecls[0].var;
                 let y = kdecls2[0].var;
                 let bx = b.clone();
                 let by = self.formula(body)?;
-                let by = with_disjointness(by, &disj, false);
+                let by = with_disjointness(by, &disj, &guards, false);
                 let eq = Formula::Equal(Expr::Var(x), Expr::Var(y));
                 let uniq = Formula::Quantified(
                     Quantifier::All,
@@ -1081,12 +1083,14 @@ impl<'a> Tr<'a> {
 
     /// Declares the variables of `decls` (one kodkod variable per Alloy variable) and returns the
     /// kodkod declarations plus the `disj` groups as lists of variable ids.
-    fn decls(&mut self, decls: &[RDecl]) -> Result<(Vec<Decl>, Vec<Vec<u32>>), AlloyError> {
+    fn decls(&mut self, decls: &[RDecl]) -> Result<(Vec<Decl>, Vec<Vec<u32>>, Vec<Formula>), AlloyError> {
         let mut out = Vec::new();
         let mut disj = Vec::new();
+        let mut guards = Vec::new();
         for d in decls {
-            // `x: set e` ranges over subsets, `x: one e` (the default) over the tuples of `e`.
-            let (bound, is_set) = match &d.bound {
+            // `x: set e` ranges over subsets, `x: one e` (the default) over the tuples of `e`; a bound of
+            // arity > 1 (`x: A -> one B`) is a relation-valued variable constrained by its multiplicities.
+            let (bound, mut is_set) = match &d.bound {
                 RExpr::Un(UnOp::Set, x) => (&**x, true),
                 RExpr::Un(UnOp::One, x) => (&**x, false),
                 RExpr::Un(UnOp::Lone | UnOp::Some, _) => {
@@ -1095,15 +1099,22 @@ impl<'a> Tr<'a> {
                 other => (other, false),
             };
             let domain = self.expr(bound)?;
+            let a = self.arity(&domain)?;
+            let higher_arity = a > 1;
+            if higher_arity {
+                is_set = true;
+            }
             for &l in &d.vars {
                 self.local_bound.insert(l, bound.clone());
             }
             let mut group = Vec::new();
             for &l in &d.vars {
                 let v = self.fresh();
-                let a = self.arity(&domain)?;
                 self.local_arity.insert(v, a);
                 self.locals.insert(l, Expr::Var(v));
+                if higher_arity && has_arrow_mult(bound) {
+                    guards.push(self.in_formula(Expr::Var(v), bound)?);
+                }
                 out.push(Decl {
                     var: v,
                     domain: domain.clone(),
@@ -1116,7 +1127,7 @@ impl<'a> Tr<'a> {
                 disj.push(group);
             }
         }
-        Ok((out, disj))
+        Ok((out, disj, guards))
     }
 
     fn bind_lets(&mut self, binds: &[(LocalId, RExpr)]) -> Result<Vec<(LocalId, Option<Expr>)>, AlloyError> {
@@ -1317,8 +1328,8 @@ fn mult_of(m: Option<Mult>) -> Option<Multiplicity> {
 
 /// `disj` groups: every pair of variables in a group is distinct. For a body `b`, the constraint
 /// is added as a guard, so both `all` (implication) and `some` (conjunction) read it correctly.
-fn with_disjointness(b: Formula, groups: &[Vec<u32>], universal: bool) -> Formula {
-    let mut parts = Vec::new();
+fn with_disjointness(b: Formula, groups: &[Vec<u32>], guards: &[Formula], universal: bool) -> Formula {
+    let mut parts: Vec<Formula> = guards.to_vec();
     for g in groups {
         for i in 0..g.len() {
             for j in i + 1..g.len() {

@@ -55,18 +55,23 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     bounds.int_start = n_sig_atoms;
     bounds.int_min = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
 
-    // Relations of the sigs: lower = exact atoms, upper = atoms the sig may take.
-    let mut sig_rel: Vec<Option<u32>> = vec![None; model.sigs.len()];
-    for (i, s) in model.sigs.iter().enumerate() {
-        if s.kind != SigKind::User {
-            continue;
+    // Relations of the sigs (Java `BoundsComputer.allocatePrimSig`): a sig without children is one relation; a sig
+    // with children is the union of its children's expressions, plus a `_remainder` relation unless abstract.
+    let mut sig_expr: Vec<Option<Expr>> = vec![None; model.sigs.len()];
+    let mut disjoint: Vec<Formula> = Vec::new();
+    for i in 0..model.sigs.len() {
+        let s = &model.sigs[i];
+        if s.kind == SigKind::User && s.parent.is_none() && s.subset_of.is_empty() {
+            allocate_prim_sig(model, &lay, n_atoms, i as SigId, &mut bounds, &mut sig_expr, &mut disjoint)?;
         }
-        let up = sig_upper(model, &lay, i as SigId, n_atoms)?;
-        let lo = lay.lower(i as SigId);
-        let upper = unary(up);
-        let lower = unary(lo);
-        let id = bounds.bound(&s.label, lower, upper).map_err(other)?;
-        sig_rel[i] = Some(id);
+    }
+    for (i, s) in model.sigs.iter().enumerate() {
+        if s.kind == SigKind::User && !s.subset_of.is_empty() {
+            let up = sig_upper(model, &lay, i as SigId, n_atoms)?;
+            let lo = lay.lower(i as SigId);
+            let id = bounds.bound(&s.label, unary(lo), unary(up)).map_err(other)?;
+            sig_expr[i] = Some(Expr::Rel(id));
+        }
     }
     // Relations of the fields: upper = owner × (type of the declaration).
     let mut field_rel: Vec<Option<u32>> = vec![None; model.fields.len()];
@@ -82,14 +87,15 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
     let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> = std::collections::HashSet::new();
     for (_, body) in model.sig_facts.iter().filter(|_| std::env::var("KNOPIN").is_err()) {
-        pin_total_orders(body, &mut bounds, &sig_rel, &field_rel, &mut pinned);
+        pin_total_orders(body, &mut bounds, &sig_expr, &field_rel, &mut pinned);
     }
 
     let mut tr = Tr {
         pinned,
         model,
         lay: &lay,
-        sig_rel,
+        sig_expr,
+        sig_disjoint: disjoint,
         int_rel,
         field_rel,
         locals: HashMap::new(),
@@ -124,6 +130,58 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options) -> Result<Problem
     })
 }
 
+/// Java `BoundsComputer.allocatePrimSig`.
+fn allocate_prim_sig(
+    model: &Model,
+    lay: &Layout,
+    n_atoms: u32,
+    sid: SigId,
+    bounds: &mut Bounds,
+    sig_expr: &mut Vec<Option<Expr>>,
+    disjoint: &mut Vec<Formula>,
+) -> Result<Expr, AlloyError> {
+    let sig = &model.sigs[sid as usize];
+    let kids: Vec<SigId> = lay.children(sid).to_vec();
+    let mut sum: Option<Expr> = None;
+    for &k in &kids {
+        let ce = allocate_prim_sig(model, lay, n_atoms, k, bounds, sig_expr, disjoint)?;
+        sum = Some(match sum {
+            None => ce,
+            Some(prev) => {
+                // subsigs are disjoint
+                disjoint.push(Formula::Multiplicity(
+                    Multiplicity::No,
+                    Expr::Intersection(Box::new(prev.clone()), Box::new(ce.clone())),
+                ));
+                Expr::union(prev, ce)
+            }
+        });
+    }
+    let mut lower: Vec<u32> = lay.lower(sid);
+    let mut upper: Vec<u32> = sig_upper(model, lay, sid, n_atoms)?;
+    let e = match sum {
+        None => {
+            let id = bounds.bound(&sig.label, unary(lower), unary(upper)).map_err(other)?;
+            Expr::Rel(id)
+        }
+        Some(sum) if sig.is_abstract => sum,
+        Some(sum) => {
+            // remainder: atoms known to be in a subsig are removed
+            for &k in &kids {
+                let known = lay.lower(k);
+                lower.retain(|a| !known.contains(a));
+                upper.retain(|a| !known.contains(a));
+            }
+            let id = bounds
+                .bound(&format!("{}_remainder", sig.label), unary(lower), unary(upper))
+                .map_err(other)?;
+            Expr::union(sum, Expr::Rel(id))
+        }
+    };
+    sig_expr[sid as usize] = Some(e.clone());
+    Ok(e)
+}
+
 /// `(elem, first field, next field)` of `pred/totalOrder[elem, this.first, this.next]`.
 fn total_order_key(args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
     let field_of = |e: &RExpr| match e {
@@ -142,7 +200,7 @@ fn total_order_key(args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
 fn pin_total_orders(
     e: &RExpr,
     bounds: &mut Bounds,
-    sig_rel: &[Option<u32>],
+    sig_rel: &[Option<Expr>],
     field_rel: &[Option<u32>],
     pinned: &mut std::collections::HashSet<(SigId, FieldId, FieldId)>,
 ) {
@@ -160,6 +218,7 @@ fn pin_total_orders(
             else {
                 return;
             };
+            let Expr::Rel(er) = er else { return };
             let (er, r1, r2) = (*er as usize, *r1 as usize, *r2 as usize);
             if bounds.relations[r1].arity != 2 || bounds.relations[r2].arity != 3 {
                 return;
@@ -207,13 +266,18 @@ fn int_atom_names(bitwidth: i32) -> Vec<String> {
 
 /// Numeric expressions (`Int` values rather than sets of atoms).
 fn is_numeric(e: &RExpr) -> bool {
-    matches!(
-        e,
-        RExpr::Num(_)
-            | RExpr::Const(Const::IntMin | Const::IntMax)
-            | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
-            | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _)
-    )
+    match e {
+        // `+`/`-` are always set union/difference (Java `ExprBinary` PLUS/MINUS type = union with common arity);
+        // integer arithmetic is `IntPlus`/`IntMinus` (the `plus`/`minus` functions).
+        RExpr::Block(items) if items.len() == 1 => is_numeric(&items[0]),
+        _ => matches!(
+            e,
+            RExpr::Num(_)
+                | RExpr::Const(Const::IntMin | Const::IntMax)
+                | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
+                | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _)
+        ),
+    }
 }
 
 fn unary(atoms: Vec<u32>) -> TupleSet {
@@ -417,7 +481,9 @@ struct Tr<'a> {
     pinned: std::collections::HashSet<(SigId, FieldId, FieldId)>,
     model: &'a Model,
     lay: &'a Layout,
-    sig_rel: Vec<Option<u32>>,
+    sig_expr: Vec<Option<Expr>>,
+    /// `no (sum of earlier children & child)` formulas of the sig hierarchy.
+    sig_disjoint: Vec<Formula>,
     /// The `Int` relation (exactly the integer atoms).
     int_rel: u32,
     field_rel: Vec<Option<u32>>,
@@ -448,8 +514,8 @@ impl<'a> Tr<'a> {
             SIG_UNIV => Ok(Expr::Const(KConst::Univ)),
             SIG_NONE => Ok(Expr::Const(KConst::None)),
             SIG_INT => Ok(Expr::Rel(self.int_rel)),
-            _ => match self.sig_rel.get(s as usize).copied().flatten() {
-                Some(r) => Ok(Expr::Rel(r)),
+            _ => match self.sig_expr.get(s as usize).cloned().flatten() {
+                Some(e) => Ok(e),
                 None => Err(unsupported(format!("sig {} (integers/strings/seq)", self.model.sigs[s as usize].label))),
             },
         }
@@ -796,6 +862,7 @@ impl<'a> Tr<'a> {
             RExpr::Un(UnOp::IntCast, x) if is_numeric(x) => self.int_of(x)?,
             RExpr::Un(UnOp::IntCast, x) => IntExpr::Sum(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Neg, x) => IntExpr::Neg(Box::new(self.int_of(x)?)),
+            RExpr::Block(items) if items.len() == 1 => self.int_of(&items[0])?,
             RExpr::Bin(BinOp::IntPlus, a, b) => IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::IntMinus, a, b) => IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
             RExpr::Bin(BinOp::Mul, a, b) => IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
@@ -832,7 +899,8 @@ impl<'a> Tr<'a> {
                 Formula::Implies(Box::new(a?), Box::new(self.formula(b)?))
             }
             RExpr::Bin(BinOp::Iff, a, b) => Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
-            RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) || is_numeric(b) => {
+            // Java `visit(ExprBinary) EQUALS`: integer equality only when both sides are integer-typed, else set equality.
+            RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) && is_numeric(b) => {
                 Formula::IntCompare(IntCmp::Eq, self.int_of(a)?, self.int_of(b)?)
             }
             RExpr::Bin(BinOp::Equals, a, b) => {
@@ -1192,7 +1260,7 @@ impl<'a> Tr<'a> {
 
     /// `all s: sig | ...` constraints of the sig hierarchy (Java `TranslateAlloyToKodkod.visit(Sig)`).
     fn sig_constraints(&mut self) -> Result<Vec<Formula>, AlloyError> {
-        let mut out = Vec::new();
+        let mut out = std::mem::take(&mut self.sig_disjoint);
         let n = self.model.sigs.len();
         for i in 0..n {
             let sig = &self.model.sigs[i];
@@ -1211,31 +1279,6 @@ impl<'a> Tr<'a> {
                 } else {
                     Formula::Subset(me.clone(), rhs)
                 });
-            } else if let Some(p) = sig.parent {
-                out.push(Formula::Subset(me.clone(), self.sig_expr(p)?));
-            }
-            // Subsigs of one parent are disjoint.
-            let kids: Vec<SigId> = self.lay.children(i as SigId).to_vec();
-            for a in 0..kids.len() {
-                for b in a + 1..kids.len() {
-                    let inter = Expr::Intersection(
-                        Box::new(self.sig_expr(kids[a])?),
-                        Box::new(self.sig_expr(kids[b])?),
-                    );
-                    out.push(Formula::Multiplicity(Multiplicity::No, inter));
-                }
-            }
-            // An abstract sig is exactly the union of its children.
-            if sig.is_abstract {
-                let mut parts = Vec::new();
-                for &k in &kids {
-                    parts.push(self.sig_expr(k)?);
-                }
-                let rhs = parts
-                    .into_iter()
-                    .reduce(Expr::union)
-                    .unwrap_or(Expr::Const(KConst::None));
-                out.push(Formula::Equal(me.clone(), rhs));
             }
             match sig.mult {
                 Some(Mult::One) => out.push(Formula::Multiplicity(Multiplicity::One, me)),
@@ -1250,6 +1293,14 @@ impl<'a> Tr<'a> {
     /// Field constraints: `f in owner -> decl`, declared multiplicities, and defined fields `f = e`.
     fn field_constraints(&mut self) -> Result<Vec<Formula>, AlloyError> {
         let mut out = Vec::new();
+        for g in self.model.field_disjoint.clone() {
+            for i in 0..g.len() {
+                for j in i + 1..g.len() {
+                    let inter = Expr::Intersection(Box::new(self.field_expr(g[i])?), Box::new(self.field_expr(g[j])?));
+                    out.push(Formula::Multiplicity(Multiplicity::No, inter));
+                }
+            }
+        }
         let nf = self.model.fields.len();
         for fi in 0..nf {
             let f = self.model.fields[fi].clone();

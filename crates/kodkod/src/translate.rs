@@ -63,6 +63,9 @@ impl<'a, S: SatSolver> Translator<'a, S> {
         let mut rels = Vec::with_capacity(bounds.relations.len());
         let mut primary_vars = 0;
         for rb in &bounds.relations {
+            if std::env::var("KDBG_BOUNDS").is_ok() {
+                eprintln!("rel {} arity {} lower {} upper {}", rb.name, rb.arity, rb.lower.tuples.len(), rb.upper.tuples.len());
+            }
             let mut m = BoolMatrix::empty(rb.arity);
             for t in &rb.upper.tuples {
                 let v = if rb.lower.contains(t) {

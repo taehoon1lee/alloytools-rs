@@ -186,6 +186,8 @@ pub struct Model {
     pub sig_facts: Vec<(SigId, RExpr)>,
     /// Sigs forced to have an exact scope by `module m[exactly A]` parameters (Java `exactSigs`).
     pub exact_sigs: Vec<SigId>,
+    /// `disj f, g: e` field declarations: the fields of each group are pairwise disjoint.
+    pub field_disjoint: Vec<Vec<FieldId>>,
 }
 
 #[derive(Debug, Clone)]
@@ -565,6 +567,9 @@ impl<'a> Builder<'a> {
             let fields = self.model.sigs[sid as usize].fields.clone();
             let mut k = 0;
             for d in &s.fields {
+                if d.disjoint && d.names.len() > 1 {
+                    self.model.field_disjoint.push(fields[k..k + d.names.len()].to_vec());
+                }
                 for _ in &d.names {
                     let fid = fields[k];
                     k += 1;

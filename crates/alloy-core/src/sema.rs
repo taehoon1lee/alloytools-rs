@@ -618,7 +618,8 @@ impl<'a> Builder<'a> {
                 self.locals.push(("this".into(), lid));
                 params.push((lid, RExpr::Sig(sid)));
                 self.model.funcs[fid as usize].owner = Some(sid);
-                self.this_sigs.push(sid);
+                // Java `populate`: only sig facts and field declarations have a root sig (implicit `this.f`);
+                // a sig-local function sees the raw fields.
                 pushed_this = true;
             }
         }
@@ -630,9 +631,7 @@ impl<'a> Builder<'a> {
             None => None,
         };
         let body = self.expr(i, &f.body);
-        if pushed_this {
-            self.this_sigs.pop();
-        }
+        let _ = pushed_this;
         self.locals.truncate(mark);
         let body = body?;
         let func = &mut self.model.funcs[fid as usize];
@@ -895,11 +894,8 @@ impl<'a> Builder<'a> {
                     let recv = self.expr(i, l)?;
                     return Ok(Self::calls(cands, vec![recv]));
                 }
-                // The right operand of an explicit `x.f` is the field itself, never `this.f` again.
-                let rr = match self.explicit_field(i, r) {
-                    Some(fid) => RExpr::Field(fid),
-                    None => self.expr(i, r)?,
-                };
+                // Java `populate`: a field of the enclosing sig is `this.f` in every position (`x.@f` avoids it).
+                let rr = self.expr(i, r)?;
                 RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(rr))
             }
             ExprKind::Binary(op, l, r) => RExpr::Bin(*op, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?)),
@@ -1037,20 +1033,6 @@ impl<'a> Builder<'a> {
 
     fn exprs(&mut self, i: usize, items: &[Expr]) -> Result<Vec<RExpr>, AlloyError> {
         items.iter().map(|x| self.expr(i, x)).collect()
-    }
-
-    /// The field a plain name denotes when it resolves to exactly one field and is not a local.
-    fn explicit_field(&self, i: usize, e: &Expr) -> Option<FieldId> {
-        let ExprKind::Name(n) = &e.kind else { return None };
-        if self.locals.iter().any(|(name, _)| name == n) {
-            return None;
-        }
-        // Same lookup as `name`: an ambiguous name stays a choice (resolved by type later).
-        let found = self.lookup_any(i, n);
-        match found?.as_slice() {
-            [Sym::Field(fid)] => Some(*fid),
-            _ => None,
-        }
     }
 
     /// Functions a plain name may denote that take exactly `nargs` parameters (every symbol of that name

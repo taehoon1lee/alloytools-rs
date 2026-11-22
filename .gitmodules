@@ -1,0 +1,10 @@
+[submodule "reference/alloy-java"]
+	path = reference/alloy-java
+	url = https://github.com/AlloyTools/org.alloytools.alloy.git
+	shallow = true
+	ignore = dirty
+[submodule "reference/models"]
+	path = reference/models
+	url = https://github.com/AlloyTools/models.git
+	shallow = true
+	ignore = dirty

@@ -5,10 +5,10 @@ There is a single judge: the score of `python harness/check.py` — the **same a
 
 ## Layout
 ```
-reference/                    (not in git, read-only)
-  alloy-java/                 github.com/AlloyTools/org.alloytools.alloy  (Java source being ported)
-  models/                     github.com/AlloyTools/models                (sample models)
-  bin/org.alloytools.alloy.dist.jar   official Alloy 6.2.0 release (reference executor)
+reference/                    (read-only; the two repos are pinned git submodules)
+  alloy-java/                 submodule github.com/AlloyTools/org.alloytools.alloy @ ed89fdb (Java source being ported)
+  models/                     submodule github.com/AlloyTools/models @ 886447d (sample models)
+  bin/org.alloytools.alloy.dist.jar   official Alloy 6.2.0 release (reference executor; not in git, setup.py downloads it)
 harness/                      the judge — must not be edited inside the loop
   java-oracle/src/AlloyOracle.java   runs every command through the Alloy API and prints normalized JSON
   corpus.json                 the 199 .als files compared (models repo + Alloy's bundled examples)
@@ -118,7 +118,11 @@ git log --oneline | Select-Object -First 20
 ```
 
 ## Rebuilding / checks
+Fetch the pinned reference sources first (`harness/setup.py` would otherwise clone the current upstream master, which
+may not match `harness/corpus.json` and the goldens):
 ```powershell
+git clone --recursive git@github.com:taehoon1lee/alloytools-rs.git   # or, in an existing clone:
+git submodule update --init --depth 1
 python harness/setup.py                    # check reference, jar, oracle, cargo (installs/builds what is missing)
 python harness/gen_golden.py --force       # regenerate golden (about 8 min, sequential = accurate timings)
 python harness/gen_golden.py --count-mode --force -j 4

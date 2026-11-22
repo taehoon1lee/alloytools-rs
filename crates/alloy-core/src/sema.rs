@@ -96,6 +96,8 @@ pub struct Func {
     pub is_pred: bool,
     /// Parameters as locals with their declared bounds (receiver first).
     pub params: Vec<(LocalId, RExpr)>,
+    /// The declarations the parameters come from (Java `Func.decls`): (number of names, `disj`), in order.
+    pub param_decls: Vec<(usize, bool)>,
     pub ret: Option<RExpr>,
     pub body: RExpr,
     pub is_private: bool,
@@ -429,6 +431,7 @@ impl<'a> Builder<'a> {
                         owner: None,
                         is_pred: matches!(p, Paragraph::Pred(_)),
                         params: Vec::new(),
+                        param_decls: Vec::new(),
                         ret: None,
                         body: RExpr::Block(Vec::new()),
                         is_private: f.is_private,
@@ -889,6 +892,7 @@ impl<'a> Builder<'a> {
         let (owner_name, _) = split_owner(&f.name);
         let mark = self.locals.len();
         let mut params = Vec::new();
+        let mut param_decls: Vec<(usize, bool)> = Vec::new();
         let mut pushed_this = false;
         if let Some(on) = owner_name {
             let builtin = match on {
@@ -908,6 +912,7 @@ impl<'a> Builder<'a> {
                 let lid = self.new_local("this");
                 self.locals.push(("this".into(), lid));
                 params.push((lid, RExpr::Sig(sid)));
+                param_decls.push((1, false));
                 self.model.funcs[fid as usize].owner = Some(sid);
                 // Java `populate`: only sig facts and field declarations have a root sig (implicit `this.f`);
                 // a sig-local function sees the raw fields.
@@ -916,6 +921,7 @@ impl<'a> Builder<'a> {
         }
         for d in &f.params {
             params.extend(self.decl_locals(i, d)?);
+            param_decls.push((d.names.len(), d.disjoint));
         }
         let ret = match &f.ret {
             Some(r) => Some(self.expr(i, r)?),
@@ -927,6 +933,7 @@ impl<'a> Builder<'a> {
         let body = body?;
         let func = &mut self.model.funcs[fid as usize];
         func.params = params;
+        func.param_decls = param_decls;
         func.ret = ret;
         func.body = body;
         Ok(())
@@ -956,14 +963,21 @@ impl<'a> Builder<'a> {
                     if params.is_empty() {
                         call
                     } else {
-                        let decls = params
-                            .iter()
-                            .map(|(l, b)| RDecl {
-                                vars: vec![*l],
-                                disjoint: false,
-                                bound: b.clone(),
-                            })
-                            .collect();
+                        // Java: `some f.decls | body` (one declaration per group of names, `disj` kept)
+                        let mut groups = self.model.funcs[fid as usize].param_decls.clone();
+                        if groups.iter().map(|g| g.0).sum::<usize>() != params.len() {
+                            groups = vec![(1, false); params.len()];
+                        }
+                        let mut decls = Vec::new();
+                        let mut k = 0;
+                        for (cnt, disjoint) in groups {
+                            decls.push(RDecl {
+                                vars: params[k..k + cnt].iter().map(|(l, _)| *l).collect(),
+                                disjoint,
+                                bound: params[k].1.clone(),
+                            });
+                            k += cnt;
+                        }
                         RExpr::Quant(Quant::Some, decls, Box::new(call))
                     }
                 }

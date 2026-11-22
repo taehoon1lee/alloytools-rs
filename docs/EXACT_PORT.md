@@ -12,15 +12,19 @@ fast pipeline: an UNSAT from the fast side stops it (SAT4J, the FOL→boolean tr
 honour the stop flag); a SAT result waits for the exact instance and falls back to the fast instance if the exact
 side fails. `ALLOY_RS_NO_EXACT=1` disables it.
 
-**Status (2026-11-22): done.** All 215 SAT commands of the corpus with a golden instance (static and temporal) give
+**Status (2026-11-23): done.** All 215 SAT commands of the corpus with a golden instance (static and temporal) give
 the identical first instance through the CLI (`python harness/check.py --verbose`: 215 identical, 0 differ).
+`python tools/exact/cmp_inst.py --all -j 6`: the exact pipeline alone agrees with Java on all 465 scored commands
+(215 instances, 250 UNSAT/ERROR verdicts), so the CLI's fallback instance is never used on the corpus. The one
+command Java times out on in the harness (`extra/examples/temporal/buffer#2`, check orderIsPreserved) is UNSAT in
+Java when given time (109 s) and in Rust, so it has no counterexample.
 
 ## Stages and their ground truth (all verified against Java dumps, never read by Rust code)
 | stage | Rust | verified by | status |
 |---|---|---|---|
 | SAT4J 2.3.1 `newDefault()` | `crates/satsolver/src/sat4j.rs` | replay `out/*.cnf` (`cargo run --release -p satsolver --example sat4j_replay -- tools/exact/out/*.cnf`) | **216/216 models identical** |
 | Kodkod `Translator` (Kodkod problem → CNF) | `crates/pardinus` | `cargo run --release -p pardinus --example kk_cnf -- tools/exact/out/*.kk` | **207/207 static problems: identical CNF call sequence** |
-| Alloy → Kodkod (`TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, A4Solution setup) | `crates/alloy-translate/src/exact/` | `python tools/exact/cmp_alloy.py` (`.kk` text + CNF of every SAT call) | **215/215 CNF identical**, 213/215 `.kk` text (spanning: Java shares one bound node across `r, t1, t2: univ->univ`; no CNF effect) |
+| Alloy → Kodkod (`TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, A4Solution setup) | `crates/alloy-translate/src/exact/` | `python tools/exact/cmp_alloy.py` (`.kk` text + CNF of every SAT call) | **215/215 `.kk` text and CNF identical** |
 | `A4Solution.rename` + eval → instance JSON | `exact/instance.rs` | `python tools/exact/cmp_inst.py` (vs harness goldens) | **215/215 identical** |
 | Pardinus temporal (`TemporalPardinusSolver`, LTL2FOL, bounds expansion, `TemporalInstance`) | `crates/pardinus/src/temporal.rs` | `cmp_alloy.py` (one CNF block per trace length) | **8/8 identical** |
 

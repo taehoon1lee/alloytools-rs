@@ -113,6 +113,14 @@ impl<K: AsIndex, V> IntMap<K, V> {
     }
 }
 
+impl<K: AsIndex, V> IntMap<K, V> {
+    /// Base pointer of the dense map (alloy-rs: raw access in `propagate`).
+    #[inline(always)]
+    pub fn as_ptr(&self) -> *const V {
+        self.map.as_ptr()
+    }
+}
+
 impl<K: AsIndex, V> ops::Index<K> for IntMap<K, V> {
     type Output = V;
     #[inline]

@@ -523,6 +523,14 @@ pub(crate) union ClauseData {
     lit: Lit,
 }
 
+impl ClauseData {
+    /// Size field of a header word (alloy-rs: raw access in `propagate`).
+    #[inline(always)]
+    pub(crate) unsafe fn header_size(&self) -> u32 {
+        self.header.size()
+    }
+}
+
 impl Into<Lit> for ClauseData {
     fn into(self: ClauseData) -> Lit {
         unsafe { self.lit }
@@ -631,6 +639,11 @@ impl ClauseAllocator {
     }
     pub fn wasted(&self) -> u32 {
         self.ra.wasted()
+    }
+    /// Base pointer of the clause arena (alloy-rs: raw access in `propagate`; invalidated by allocation).
+    #[inline(always)]
+    pub(crate) fn data_ptr(&mut self) -> *mut ClauseData {
+        self.ra.as_mut_ptr()
     }
     pub(crate) fn alloc_with_learnt(&mut self, clause: &[Lit], learnt: bool) -> CRef {
         let use_extra = learnt | self.extra_clause_field;

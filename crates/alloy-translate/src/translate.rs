@@ -203,6 +203,9 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
         next_var: 0,
         depth: 0,
         bounds: &bounds,
+        field_memo: std::cell::RefCell::new(memo),
+        lb_version: 0,
+        ty_env: std::cell::RefCell::new(None),
     };
 
     let mut conjuncts = Vec::new();
@@ -658,6 +661,13 @@ struct Tr<'a> {
     next_var: u32,
     depth: usize,
     bounds: &'a Bounds,
+    /// Upper bounds of all fields (`field_upper`, context-free), shared by every `ty` call.
+    field_memo: std::cell::RefCell<Vec<Option<TupleSet>>>,
+    /// Bumped whenever `local_bound` changes (a LocalId is always bound to the same declared expression, so after
+    /// the first visit of a scope re-binding is a no-op).
+    lb_version: u64,
+    /// Types of all bound locals, computed by `ty` for `lb_version`.
+    ty_env: std::cell::RefCell<Option<(u64, HashMap<LocalId, TupleSet>)>>,
 }
 
 impl<'a> Tr<'a> {
@@ -741,8 +751,48 @@ impl<'a> Tr<'a> {
         })
     }
 
+    /// Records the declared bound of a local (for `ty`).
+    fn set_local_bound(&mut self, l: LocalId, b: &RExpr) {
+        if self.local_bound.get(&l) != Some(b) {
+            self.local_bound.insert(l, b.clone());
+            self.lb_version += 1;
+        }
+    }
+
     /// Static (upper-bound atom) type of an expression; `None` when it cannot be computed.
     fn ty(&self, e: &RExpr) -> Option<TupleSet> {
+        // field upper bounds do not depend on the locals: computed once (Java types every node once)
+        let mut memo = self.field_memo.borrow_mut();
+        let mut cache = self.ty_env.borrow_mut();
+        if cache.as_ref().map_or(true, |(v, _)| *v != self.lb_version) {
+            *cache = Some((self.lb_version, self.local_types(&mut memo)));
+        }
+        let env = &mut cache.as_mut().expect("just set").1;
+        // `type_of` only writes to the environment for comprehension variables and call parameters
+        fn writes_env(e: &RExpr) -> bool {
+            match e {
+                RExpr::Compr(..) | RExpr::Call(..) => true,
+                RExpr::Sig(_) | RExpr::Field(_) | RExpr::Local(_) | RExpr::Const(_) | RExpr::Num(_) | RExpr::Str(_) => {
+                    false
+                }
+                RExpr::Un(_, x) => writes_env(x),
+                RExpr::Bin(_, a, b) => writes_env(a) || writes_env(b),
+                RExpr::Ite(c, a, b) => writes_env(c) || writes_env(a) || writes_env(b),
+                RExpr::Quant(_, ds, b) => ds.iter().any(|d| writes_env(&d.bound)) || writes_env(b),
+                RExpr::Let(bs, b) => bs.iter().any(|(_, x)| writes_env(x)) || writes_env(b),
+                RExpr::Block(xs) | RExpr::Disj(xs) | RExpr::TotalOrder(xs) | RExpr::Choice(xs) => xs.iter().any(writes_env),
+            }
+        }
+        if writes_env(e) {
+            let mut env2 = env.clone();
+            type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), &mut env2).ok()
+        } else {
+            type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), env).ok()
+        }
+    }
+
+    /// Types of the bound locals (the environment of `ty`).
+    fn local_types(&self, memo: &mut Vec<Option<TupleSet>>) -> HashMap<LocalId, TupleSet> {
         let mut env: HashMap<LocalId, TupleSet> = HashMap::new();
         // Locals are numbered in creation order, so a bound only refers to smaller ids: ascending order is
         // deterministic and needs one pass (a few more passes cover odd orders).
@@ -751,8 +801,7 @@ impl<'a> Tr<'a> {
         for _ in 0..3 {
             let mut rest = Vec::new();
             for (l, b) in pending {
-                let mut memo = vec![None; self.model.fields.len()];
-                match type_of(self.model, self.lay, self.n_atoms, b, &mut memo, &mut Vec::new(), &mut env) {
+                match type_of(self.model, self.lay, self.n_atoms, b, memo, &mut Vec::new(), &mut env) {
                     Ok(t) => {
                         env.insert(*l, t);
                     }
@@ -764,8 +813,7 @@ impl<'a> Tr<'a> {
                 break;
             }
         }
-        let mut memo = vec![None; self.model.fields.len()];
-        type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), &mut env).ok()
+        env
     }
 
     /// Does candidate `c` fit the expected type?
@@ -1470,7 +1518,7 @@ impl<'a> Tr<'a> {
                 is_set = true;
             }
             for &l in &d.vars {
-                self.local_bound.insert(l, bound.clone());
+                self.set_local_bound(l, bound);
             }
             let mut group = Vec::new();
             for &l in &d.vars {
@@ -1502,7 +1550,7 @@ impl<'a> Tr<'a> {
         let mut saved = Vec::new();
         for (l, e) in binds {
             let v = self.expr(e)?;
-            self.local_bound.insert(*l, e.clone());
+            self.set_local_bound(*l, e);
             saved.push((*l, self.locals.insert(*l, v)));
         }
         Ok(saved)
@@ -1548,7 +1596,7 @@ impl<'a> Tr<'a> {
         let mut saved = Vec::new();
         for ((l, b), v) in params.iter().zip(vals) {
             // Parameters keep their declared bound, so overloaded names used on them can be typed.
-            self.local_bound.insert(*l, b.clone());
+            self.set_local_bound(*l, b);
             saved.push((*l, self.locals.insert(*l, v)));
         }
         self.depth += 1;
@@ -1953,7 +2001,7 @@ impl<'a> Tr<'a> {
             let this = self.fresh();
             self.local_arity.insert(this, 1);
             self.locals.insert(f.this_local, Expr::Var(this));
-            self.local_bound.insert(f.this_local, RExpr::Sig(f.owner));
+            self.set_local_bound(f.this_local, &RExpr::Sig(f.owner));
             let lhs = Expr::join(Expr::Var(this), rel.clone());
             let decl = match f.mult {
                 Some(m) => RExpr::Un(
@@ -1980,7 +2028,9 @@ impl<'a> Tr<'a> {
             };
             let body = self.in_formula(lhs, &decl);
             self.locals.remove(&f.this_local);
-            self.local_bound.remove(&f.this_local);
+            if self.local_bound.remove(&f.this_local).is_some() {
+                self.lb_version += 1;
+            }
             let body = body?;
             // Java: the first column of the field is inside the owner sig (`f.univ.univ... in sig`).
             let mut first_col = rel.clone();

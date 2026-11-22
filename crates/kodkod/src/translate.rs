@@ -1312,11 +1312,17 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     //    proofs but can make satisfiable puzzles much harder), so race a few equally sound configurations; the
     //    first answer wins. With one core the configurations run one after another instead.
     // (symmetry-breaking order, luby restarts, random-decision frequency, seed, initial polarity)
-    const CONFIGS: [(u8, bool, f64, u32, Option<bool>); 8] = [
+    // The first four race. Which relations' bits the (truncated, 20-pair) lex-leader predicate covers decides how
+    // hard an UNSAT proof is, and no single order is best (hotel4: order 1/2 ~2.5x faster than Java's order 0;
+    // p306-hotel/iolus/addressBook3d: order 0 2-10x faster), so three SBP orders race next to one no-SBP config
+    // for the satisfiable puzzles.
+    const CONFIGS: [(u8, bool, f64, u32, Option<bool>); 10] = [
         (0, false, 0.0, 0, Some(true)),
         (NO_SBP, true, 0.0, 0, Some(true)),
-        (0, true, 0.0, 0, None),
+        (1, true, 0.0, 0, None),
+        (2, true, 0.0, 0, Some(true)),
         (NO_SBP, false, 0.0, 0, None),
+        (0, true, 0.0, 0, None),
         (1, true, 0.0, 0, Some(true)),
         (0, false, 0.0, 0, None),
         (1, false, 0.0, 0, None),
@@ -1348,6 +1354,11 @@ pub fn solve(bounds: &Bounds, formula: &Formula) -> Result<Solution, String> {
     std::thread::scope(|scope| {
         for &ci in &selected {
             let (order, luby, rnd, seed, pol) = CONFIGS[ci];
+            // experiment knob: KSAT_ORDER overrides the symmetry-breaking relation order of SBP configs
+            let order = match std::env::var("KSAT_ORDER").ok().and_then(|v| v.parse::<u8>().ok()) {
+                Some(o) if order != NO_SBP => o,
+                _ => order,
+            };
             let tx = tx.clone();
             let stop = stop.clone();
             scope.spawn(move || {

@@ -130,3 +130,18 @@
   * tools: `KSAT_DUMP=<file>` writes the CNF; `cargo run --release --example cnfbench -- <cnf>` solves it
     (`KSAT_SIMP=<n>`); knobs `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL`, `KSAT_WHO` (portfolio winner). splr was 4x
     slower than batsat on hotel4; plain learnt-limit sweeps gave nothing.
+- PERF 2026-11-22 (2) (alternating sequential `--perf`, machine under outside load: 31.45 s -> 22.73 s = -27.7%,
+  models/ -24.6%; config-0 CNF bytes and result JSON identical on all 465 commands vs the previous binary):
+  * portfolio = 3 SBP relation orders + 1 no-SBP. The order of relations in the truncated (20-pair) lex-leader SBP
+    changes UNSAT proof time by 2-10x per model, in both directions (hotel4: order 1/2 1.1 s vs order 0 2.9 s;
+    p306/iolus/addressBook3d: order 0 best). Chosen from a per-config timing matrix over all commands
+    (`KSAT_CONFIGS=i`, min over a 4-set = virtual portfolio): old set 26.8 s -> new 21.4 s. `KSAT_ORDER=n` overrides
+    the order of the SBP configs for such experiments. A 5th thread would add only ~3%.
+  * `alloy-translate` `Tr::ty` recomputed the types of all bound locals (and all field bounds) on every call: >95%
+    of the Alloy->Kodkod translation time (hotel2#2 133 -> 9 ms). Now the env is cached per `local_bound` version.
+  * batsat `propagate`: long-clause loop with unchecked accesses + prefetch of the clause 2 watchers ahead: same
+    search, ~8% faster BCP (BCP is ~80% of hard-UNSAT time, mostly cache misses on clause memory).
+  * tried, no gain: Glucose LBD clause DB (+ dynamic restarts: helps p306, hurts hotel4; <1% in the portfolio),
+    Glucose binary-implication learnt minimization (+5%), ternary 3-literal watch lists (BCP not faster), longer
+    SBP (`symmetry` > 20). 4 threads in one process slow each other ~15% = same as 4 processes (hardware, not the
+    allocator).

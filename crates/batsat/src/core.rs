@@ -33,6 +33,7 @@ use {
 
 #[cfg(feature = "logging")]
 use crate::clause::display::Print;
+use crate::clause::ClauseData;
 
 /// The main solver structure.
 ///
@@ -1739,78 +1740,94 @@ impl SolverV {
                 break;
             }
             let watches_data_ptr: *mut OccListsData<_, _> = &mut self.watches_data;
-            // let ws = self.watches().lookup_mut(p);
             let ws = self
                 .watches_data
                 .lookup_mut_pred(p, &WatcherDeleted { ca: &self.ca });
-            // eprintln!("watcher of {:?} = {:?}", p, ws);
+            // alloy-rs: the loop below is MiniSat's long-clause propagation with unchecked accesses and a prefetch of
+            // the clause two watchers ahead (BCP is ~80% of the time on the hard Kodkod CNFs, mostly cache misses).
+            // Safety: watcher crefs point to live clauses of `self.ca` (no allocation happens in this loop, so `mem`
+            // stays valid); literals' variables index `ass`; `i, j < end = ws.len()` and `ws` is not resized until the
+            // loop ends (pushes go to other watch lists: `!c[1] != p`).
+            let end: usize = ws.len();
+            let wp: *mut Watcher = ws.as_mut_ptr();
+            let mem: *mut ClauseData = self.ca.data_ptr();
+            let ass: *const lbool = self.vars.ass.as_ptr();
+            #[inline(always)]
+            unsafe fn val(ass: *const lbool, l: Lit) -> u8 {
+                (*ass.add(l.var().idx() as usize)).to_u8() ^ (!l.sign()) as u8
+            }
+            let false_lit = !p;
             let mut i: usize = 0;
             let mut j: usize = 0;
-            let end: usize = ws.len();
-            'clauses: while i < end {
-                // Try to avoid inspecting the clause:
-                let blocker = ws[i].blocker;
-                if self.vars.value_lit(blocker) == lbool::TRUE {
-                    ws[j] = ws[i];
-                    j += 1;
-                    i += 1;
-                    continue;
-                }
-
-                // Make sure the false literal is data[1]:
-                let cr = ws[i].cref;
-                let mut c = self.ca.get_mut(cr);
-                let false_lit = !p;
-                if c[0] == false_lit {
-                    c[0] = c[1];
-                    c[1] = false_lit;
-                }
-                debug_assert_eq!(c[1], false_lit);
-                i += 1;
-
-                // If 0th watch is true, then clause is already satisfied.
-                let first = c[0];
-                let w = Watcher::new(cr, first);
-                if first != blocker && self.vars.value_lit(first) == lbool::TRUE {
-                    ws[j] = w;
-                    j += 1;
-                    continue;
-                }
-
-                // Look for new watch:
-                for k in 2..c.size() {
-                    if self.vars.value_lit(c[k]) != lbool::FALSE {
-                        c[1] = c[k];
-                        c[k] = false_lit;
-
-                        // self.watches()[!c[1]].push(w);
-                        // safe because `!c[1]!=p`, so watches are not aliased
-                        debug_assert_ne!(!c[1], p);
-                        unsafe { (&mut *watches_data_ptr)[!c[1]].push(w) };
-                        continue 'clauses;
-                    }
-                }
-
-                // Did not find watch -- clause is unit under assignment:
-                ws[j] = w;
-                j += 1;
-                if self.vars.value_lit(first) == lbool::FALSE {
-                    // eprintln!("propagation: conflict at {:?}", first);
-                    confl = Some(cr);
-                    self.qhead = self.vars.trail.len() as i32;
-                    // Copy the remaining watches:
-                    while i < end {
-                        ws[j] = ws[i];
+            unsafe {
+                'clauses: while i < end {
+                    let wi = *wp.add(i);
+                    // Try to avoid inspecting the clause:
+                    if val(ass, wi.blocker) == 0 {
+                        *wp.add(j) = wi;
                         j += 1;
                         i += 1;
+                        continue;
                     }
-                } else {
-                    // eprintln!("propagation: got {:?}", first);
-                    self.vars.unchecked_enqueue(first, cr);
+                    #[cfg(target_arch = "x86_64")]
+                    if i + 2 < end {
+                        let ahead = (*wp.add(i + 2)).cref.idx() as usize;
+                        std::arch::x86_64::_mm_prefetch(
+                            mem.add(ahead) as *const i8,
+                            std::arch::x86_64::_MM_HINT_T0,
+                        );
+                    }
+                    let cr = wi.cref;
+                    let base = mem.add(cr.idx() as usize);
+                    let size = (*base).header_size() as usize;
+                    let lits = base.add(1) as *mut Lit;
+                    // Make sure the false literal is data[1]:
+                    if *lits == false_lit {
+                        *lits = *lits.add(1);
+                        *lits.add(1) = false_lit;
+                    }
+                    debug_assert_eq!(*lits.add(1), false_lit);
+                    i += 1;
+
+                    // If 0th watch is true, then clause is already satisfied.
+                    let first = *lits;
+                    let w = Watcher::new(cr, first);
+                    if first != wi.blocker && val(ass, first) == 0 {
+                        *wp.add(j) = w;
+                        j += 1;
+                        continue;
+                    }
+
+                    // Look for new watch:
+                    for k in 2..size {
+                        let lk = *lits.add(k);
+                        if val(ass, lk) != 1 {
+                            *lits.add(1) = lk;
+                            *lits.add(k) = false_lit;
+                            debug_assert_ne!(!lk, p);
+                            (&mut *watches_data_ptr)[!lk].push(w);
+                            continue 'clauses;
+                        }
+                    }
+
+                    // Did not find watch -- clause is unit under assignment:
+                    *wp.add(j) = w;
+                    j += 1;
+                    if val(ass, first) == 1 {
+                        confl = Some(cr);
+                        self.qhead = self.vars.trail.len() as i32;
+                        // Copy the remaining watches:
+                        while i < end {
+                            *wp.add(j) = *wp.add(i);
+                            j += 1;
+                            i += 1;
+                        }
+                    } else {
+                        self.vars.unchecked_enqueue(first, cr);
+                    }
                 }
             }
-            let dummy = Watcher::DUMMY;
-            ws.resize(j, dummy);
+            ws.truncate(j);
         }
         self.propagations += num_props as u64;
         self.simp_db_props -= num_props as i64;

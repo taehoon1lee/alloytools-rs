@@ -57,6 +57,11 @@ impl<T: Copy + Default> RegionAllocator<T> {
     pub fn subslice(&self, r: Ref<T>, len: u32) -> &[T] {
         &self.vec[r.0 as usize..r.0 as usize + len as usize]
     }
+    /// Base pointer of the region (alloy-rs: raw access in `propagate`; invalidated by `alloc`).
+    #[inline(always)]
+    pub fn as_mut_ptr(&mut self) -> *mut T {
+        self.vec.as_mut_ptr()
+    }
     pub fn subslice_mut(&mut self, r: Ref<T>, len: u32) -> &mut [T] {
         &mut self.vec[r.0 as usize..r.0 as usize + len as usize]
     }
@@ -116,6 +121,11 @@ impl<T: Copy> Default for Ref<T> {
 }
 
 impl<T: Copy> Ref<T> {
+    /// Offset in the region (alloy-rs: raw access in `propagate`).
+    #[inline(always)]
+    pub fn idx(&self) -> u32 {
+        self.0
+    }
     pub const UNDEF: Self = Ref(!0, PhantomData);
     pub const SPECIAL: Self = Ref((!0) - 1, PhantomData);
 }

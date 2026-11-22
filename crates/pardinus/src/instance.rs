@@ -46,6 +46,8 @@ pub struct Bounds {
     pub symb: Vec<(N, N, N)>,
     /// int bounds (`SparseSequence`, ascending int)
     pub ints: BTreeMap<i32, TupleSet>,
+    /// `TemporalTranslator.STATE` when these are expanded temporal bounds (symmetry breaking per time step)
+    pub state: Option<N>,
 }
 
 impl Bounds {

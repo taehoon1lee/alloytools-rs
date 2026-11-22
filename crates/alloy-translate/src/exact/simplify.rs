@@ -26,6 +26,7 @@ impl<'a> Cx<'a> {
 
     fn simplify_in_f(&mut self, form: N) -> bool {
         match self.ast.get(form).clone() {
+            Node::UTempF(TOp::Always, f) => self.simplify_in_f(f),
             Node::NaryF(FOp::And, v) => {
                 for x in v {
                     if !self.simplify_in_f(x) {
@@ -43,6 +44,8 @@ impl<'a> Cx<'a> {
 
     fn simplify_eq(&mut self, form: N) -> bool {
         match self.ast.get(form).clone() {
+            // Java: an `always` conjunct is handed to simplify_in
+            Node::UTempF(TOp::Always, f) => self.simplify_in_f(f),
             Node::NaryF(FOp::And, v) => {
                 for x in v {
                     if !self.simplify_eq(x) {

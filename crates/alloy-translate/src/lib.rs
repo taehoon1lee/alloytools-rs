@@ -107,7 +107,7 @@ type ExactJob = (std::thread::JoinHandle<Result<exact::ExactOutcome, AlloyError>
 /// yields the very instance Java reports. The fast pipeline decides the verdict; the exact one is only waited for
 /// when the command is SAT (and stopped otherwise).
 fn spawn_exact(world: &World, model: &Model, index: usize, opt: &Options) -> Option<ExactJob> {
-    if model.temporal || !opt.want_instance || std::env::var("ALLOY_RS_NO_EXACT").is_ok() {
+    if !opt.want_instance || std::env::var("ALLOY_RS_NO_EXACT").is_ok() {
         return None;
     }
     let (w, m, sym) = (world.clone(), model.clone(), opt.symmetry);
@@ -130,8 +130,8 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
         Ok(mut sol) if sol.sat => {
             if let Ok(Ok(out)) = h.join() {
                 if out.sat {
-                    if let Some(inst) = out.instance {
-                        sol.instance = Some(Instance { trace_length: 1, loop_state: -1, states: vec![inst] });
+                    if let Some(states) = out.instance {
+                        sol.instance = Some(Instance { trace_length: states.len() as i32, loop_state: out.loop_state, states });
                     }
                 }
             }

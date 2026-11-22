@@ -45,6 +45,26 @@ fn java_calls(path: &str) -> Vec<String> {
     out
 }
 
+fn java_blocks(path: &str) -> Vec<Vec<String>> {
+    let mut out = Vec::new();
+    let mut cur: Option<Vec<String>> = None;
+    if let Ok(f) = std::fs::File::open(path) {
+        for line in BufReader::new(f).lines() {
+            let line = line.unwrap();
+            if line == "begin" {
+                cur = Some(Vec::new());
+            } else if line.starts_with("s ") || line == "end" {
+                if let Some(c) = cur.take() {
+                    out.push(c);
+                }
+            } else if let Some(c) = &mut cur {
+                c.push(line);
+            }
+        }
+    }
+    out
+}
+
 fn run(model: &str, idx: usize, prefix: &str) -> Result<(bool, bool, String), String> {
     let world = alloy_core::parse_everything_from_file(std::path::Path::new(model))
         .map_err(|e| e.to_string())?;
@@ -70,8 +90,41 @@ fn run(model: &str, idx: usize, prefix: &str) -> Result<(bool, bool, String), St
         );
         let _ = std::fs::write(format!("{prefix}.rust.kk"), &text);
     }
+    if p.options.temporal {
+        // one CNF block per trace length tried
+        let logs = alloy_translate::exact::temporal_cnf_log(&world, &m, idx).map_err(|e| e.to_string())?;
+        if std::env::var("DUMP_TCNF").is_ok() {
+            let mut t = String::new();
+            for b in &logs {
+                t.push_str("begin\n");
+                for l in b {
+                    t.push_str(l);
+                    t.push('\n');
+                }
+                t.push_str("end\n");
+            }
+            let _ = std::fs::write(format!("{prefix}.rust.cnf"), t);
+        }
+        let want = java_blocks(&format!("{prefix}.cnf"));
+        let same = logs == want;
+        let mut d = detail;
+        if !same {
+            let k = logs.iter().zip(want.iter()).position(|(a, b)| a != b).unwrap_or(logs.len().min(want.len()));
+            let line = match (logs.get(k), want.get(k)) {
+                (Some(a), Some(b)) => {
+                    let i = a.iter().zip(b.iter()).position(|(x, y)| x != y).unwrap_or(a.len().min(b.len()));
+                    format!("block {k} line {i}: rust={:?} java={:?} (lens {} {})", a.get(i), b.get(i), a.len(), b.len())
+                }
+                _ => format!("blocks rust={} java={}", logs.len(), want.len()),
+            };
+            d = format!("{d} [{line}]");
+        }
+        return Ok((kk_same, same, d));
+    }
     let mut rec = Rec::default();
-    pardinus::translator::translate(&mut p, &mut rec)?;
+    if let Err(e) = pardinus::translator::translate(&mut p, &mut rec) {
+        return Ok((kk_same, false, format!("{detail} [translate: {e}]")));
+    }
     let cnf_same = rec.calls == java_calls(&format!("{prefix}.cnf"));
     Ok((kk_same, cnf_same, detail))
 }

@@ -80,10 +80,14 @@ impl<'a> Cx<'a> {
                             Box::new(inr),
                         )
                     };
-                    let ff = self.cform(&form)?;
+                    let mut ff = self.cform(&form)?;
                     self.ltypes.truncate(oldt);
+                    if self.is_temporal(ff) {
+                        ff = self.always(ff);
+                    }
                     self.add_formula(ff);
-                    if !one {
+                    // [electrum] a variable singleton sig is not simplified
+                    if !one || self.is_var_sig(s) {
                         let mut fr = self.a2k_field[f as usize].unwrap();
                         let ar = self
                             .field_type(f)?
@@ -96,13 +100,19 @@ impl<'a> Cx<'a> {
                             fr = self.ast.join(fr, u);
                         }
                         let se = self.a2k(s);
-                        let ff = self.ast.in_(fr, se);
+                        let mut ff = self.ast.in_(fr, se);
+                        if self.is_temporal(ff) {
+                            ff = self.always(ff);
+                        }
                         self.add_formula(ff);
                     }
                 }
                 if group.len() > 1 {
                     let dj = RExpr::Disj(group.iter().map(|f| RExpr::Field(*f)).collect());
-                    let ff = self.cform(&dj)?;
+                    let mut ff = self.cform(&dj)?;
+                    if self.model.fields[group[0] as usize].is_var {
+                        ff = self.always(ff);
+                    }
                     self.add_formula(ff);
                 }
             }
@@ -131,12 +141,16 @@ impl<'a> Cx<'a> {
                 } else {
                     body
                 };
-                let ff = self.cform(&form).map_err(|e| {
+                let mut ff = self.cform(&form).map_err(|e| {
                     fatal(format!(
                         "sig fact of {}: {}",
                         self.labels[s as usize], e.msg
                     ))
                 })?;
+                // [electrum] a sig fact over variable relations holds in every state
+                if self.is_temporal(ff) {
+                    ff = self.always(ff);
+                }
                 self.add_formula(ff);
             }
         }

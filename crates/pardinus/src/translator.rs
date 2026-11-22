@@ -111,18 +111,37 @@ fn resolve_rel(ast: &mut Ast, b: &mut Bounds, rel: N, out: &mut Vec<N>, bitwidth
     }
     let pos = b.symb.iter().position(|x| x.0 == rel).unwrap();
     b.symb.remove(pos);
-    if let Some(c) = constr {
+    if let Some(mut c) = constr {
+        // a constraint over variable relations holds in every state
+        if is_temporal_node(ast, c) {
+            c = ast.add(Node::UTempF(crate::ast::TOp::Always, c));
+        }
         out.push(c);
     }
     Ok(())
 }
 
+/// `TemporalTranslator.isTemporal`
+fn is_temporal_node(ast: &Ast, n: N) -> bool {
+    match ast.get(n) {
+        Node::UTempF(..) | Node::BTempF(..) | Node::TempE(..) => true,
+        Node::Rel(ri) => ri.var,
+        _ => crate::annotate::children(ast, n).into_iter().any(|c| is_temporal_node(ast, c)),
+    }
+}
+
 /// `Translator.translate(formula, bounds, options)` + `Bool2CNFTranslator` into `sink`.
 pub fn translate(p: &mut Problem, sink: &mut dyn CnfSink) -> Result<Translation, String> {
-    let opt = p.options.clone();
-    if opt.temporal {
-        return Err("temporal problems are not supported by the exact pipeline yet".into());
+    if p.options.temporal {
+        return Err("temporal problems are solved with temporal::solve".into());
     }
+    translate_expanded(p, sink)
+}
+
+/// `Translator.translate` of a static problem (also the expansion of a temporal one: `options.temporal` then only
+/// keeps skolems out of symmetry breaking).
+pub fn translate_expanded(p: &mut Problem, sink: &mut dyn CnfSink) -> Result<Translation, String> {
+    let opt = p.options.clone();
     let ast = &mut p.ast;
     let mut bounds = p.bounds.clone();
     // constructor: symbForm = TRUE.and(bounds.resolve()); originalFormula = formula.and(symbForm)

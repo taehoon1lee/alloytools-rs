@@ -441,29 +441,54 @@ impl Breaker {
         let mut original: Vec<BV> = Vec::new();
         let mut permuted: Vec<BV> = Vec::new();
         let syms = self.symmetries.clone();
+        // [HASLab] temporal expansions: the static entries first, then the entries of each time step in turn
+        let times: Option<Vec<u32>> = b.state.filter(|s| b.lower.contains_key(s)).map(|s| b.lower[&s].idx.clone());
+        let mut passes: Vec<Option<u32>> = vec![None];
+        if let Some(ts) = &times {
+            passes.extend(ts.iter().map(|&t| Some(t)));
+        }
+        let has_atom = |idx: u32, arity: u32, a: u32| -> bool {
+            let mut x = idx;
+            for _ in 0..arity {
+                if x % n == a {
+                    return true;
+                }
+                x /= n;
+            }
+            false
+        };
         for sym in &syms {
             let mut prev = sym[0];
             for &cur in &sym[1..] {
-                for (r, reps) in &rel_parts {
-                    if original.len() >= pred_len {
-                        break;
-                    }
-                    if reps.binary_search(&sym[0]).is_err() {
-                        continue;
-                    }
-                    let info = ast.rel_info(*r);
-                    if info.skolem && opt.temporal {
-                        continue;
-                    }
-                    let m = leaf.interpret_rel(*r, info.arity)?;
-                    for (&idx, &val) in &m.cells {
-                        let pidx = self.permutation(info.arity, idx, prev, cur);
-                        let pval = m.get(pidx);
-                        if pidx == idx || original.iter().zip(permuted.iter()).any(|(o, p)| *o == pval && *p == val) {
+                for &time in &passes {
+                    for (r, reps) in &rel_parts {
+                        if original.len() >= pred_len {
+                            break;
+                        }
+                        if reps.binary_search(&sym[0]).is_err() {
                             continue;
                         }
-                        original.push(val);
-                        permuted.push(pval);
+                        let info = ast.rel_info(*r);
+                        if info.skolem && opt.temporal {
+                            continue;
+                        }
+                        let m = leaf.interpret_rel(*r, info.arity)?;
+                        for (&idx, &val) in &m.cells {
+                            let pidx = self.permutation(info.arity, idx, prev, cur);
+                            let pval = m.get(pidx);
+                            if pidx == idx || original.iter().zip(permuted.iter()).any(|(o, p)| *o == pval && *p == val) {
+                                continue;
+                            }
+                            let in_state = times.as_ref().map_or(false, |ts| ts.binary_search(&(idx % n)).is_ok());
+                            let take = match time {
+                                None => !in_state,
+                                Some(t) => has_atom(idx, info.arity, t),
+                            };
+                            if take {
+                                original.push(val);
+                                permuted.push(pval);
+                            }
+                        }
                     }
                 }
                 let l = leq(f, &original, &permuted);

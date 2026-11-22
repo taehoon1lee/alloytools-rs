@@ -354,13 +354,22 @@ impl<'a> Cx<'a> {
                 let i = self.cint(x)?;
                 V::I(self.ast.add(Node::UnI(IOp::Neg, i)))
             }
-            UnOp::Prime
-            | UnOp::Always
-            | UnOp::Eventually
-            | UnOp::Historically
-            | UnOp::Once
-            | UnOp::Before
-            | UnOp::After => return Err(unsupported("temporal operators in the exact pipeline")),
+            UnOp::Prime => {
+                let s = self.cset(x)?;
+                V::E(self.ast.add(Node::TempE(TOp::Prime, s)))
+            }
+            UnOp::Always | UnOp::Eventually | UnOp::Historically | UnOp::Once | UnOp::Before | UnOp::After => {
+                let op = match op {
+                    UnOp::Always => TOp::Always,
+                    UnOp::Eventually => TOp::Eventually,
+                    UnOp::Historically => TOp::Historically,
+                    UnOp::Once => TOp::Once,
+                    UnOp::Before => TOp::Before,
+                    _ => TOp::After,
+                };
+                let f = self.cform(x)?;
+                V::F(self.ast.add(Node::UTempF(op, f)))
+            }
         })
     }
 
@@ -526,7 +535,15 @@ impl<'a> Cx<'a> {
                 V::E(self.ast.intersection(s, s2))
             }
             BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered => {
-                return Err(unsupported("temporal operators in the exact pipeline"))
+                let top = match op {
+                    BinOp::Until => TOp::Until,
+                    BinOp::Releases => TOp::Releases,
+                    BinOp::Since => TOp::Since,
+                    _ => TOp::Triggered,
+                };
+                let fa = self.cform(a)?;
+                let fb = self.cform(b)?;
+                V::F(self.ast.add(Node::BTempF(top, fa, fb)))
             }
         })
     }

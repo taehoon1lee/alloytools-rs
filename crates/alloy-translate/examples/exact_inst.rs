@@ -25,21 +25,28 @@ fn run(model: &str, idx: usize) -> Result<String, String> {
     let r = alloy_translate::exact::solve_first(&world, &m, idx, 20, None).map_err(|e| e.to_string())?;
     let ms = t.elapsed().as_secs_f64() * 1000.0;
     let mut s = format!("\"sat\":{},\"ms\":{ms:.1}", r.sat);
-    if let Some(inst) = r.instance {
-        s.push_str(",\"instance\":{\"trace_length\":1,\"loop\":-1,\"states\":[{");
-        let mut first = true;
-        for (k, v) in inst {
-            if !first {
+    if let Some(states) = r.instance {
+        s.push_str(&format!(",\"instance\":{{\"trace_length\":{},\"loop\":{},\"states\":[", states.len(), r.loop_state));
+        for (si, inst) in states.iter().enumerate() {
+            if si > 0 {
                 s.push(',');
             }
-            first = false;
-            s.push_str(&q(&k));
-            s.push_str(":[");
-            let ts: Vec<String> = v.iter().map(|t| format!("[{}]", t.iter().map(|a| q(a)).collect::<Vec<_>>().join(","))).collect();
-            s.push_str(&ts.join(","));
-            s.push(']');
+            s.push('{');
+            let mut first = true;
+            for (k, v) in inst {
+                if !first {
+                    s.push(',');
+                }
+                first = false;
+                s.push_str(&q(k));
+                s.push_str(":[");
+                let ts: Vec<String> = v.iter().map(|t| format!("[{}]", t.iter().map(|a| q(a)).collect::<Vec<_>>().join(","))).collect();
+                s.push_str(&ts.join(","));
+                s.push(']');
+            }
+            s.push('}');
         }
-        s.push_str("}]}");
+        s.push_str("]}");
     }
     Ok(s)
 }

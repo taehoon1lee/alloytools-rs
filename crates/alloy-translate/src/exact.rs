@@ -13,7 +13,7 @@ use alloy_core::sema::{
 };
 use alloy_core::syntax::{BinOp, Const, Mult as AMult, Quant as AQuant, UnOp};
 use pardinus::ast::{
-    Ast, CastOp, CmpOp, ConstE, EOp, FOp, ICmpOp, IOp, Mult, Node, Quant, RelInfo, N,
+    Ast, CastOp, CmpOp, ConstE, EOp, FOp, ICmpOp, IOp, Mult, Node, Quant, RelInfo, TOp, N,
 };
 use pardinus::instance::{Bounds, Options as KOptions, Problem, TupleSet};
 use std::collections::HashMap;
@@ -429,11 +429,6 @@ fn prepare<'a>(
     idx: usize,
     symmetry: i32,
 ) -> Result<(Cx<'a>, Problem), AlloyError> {
-    if model.temporal {
-        return Err(unsupported(
-            "temporal models are not supported by the exact pipeline yet",
-        ));
-    }
     let cmd = model
         .commands
         .get(idx)
@@ -456,9 +451,22 @@ fn prepare<'a>(
     let fs = cx.formulas.clone();
     let goal = cx.ast.and_all(&fs);
     // A4Solution: symmetry 0 when the command expects 1 (an instance must exist)
+    // A4Solution: temporal problems solve trace lengths min..max (default 1..10) with Pardinus
+    let (temporal, min_trace, max_trace) = if model.temporal {
+        let (smin, smax) = cmd.steps.map_or((None, -1), |(a, b)| (a, b));
+        if smax == i32::MAX {
+            return Err(AlloyError::new(ErrorKind::Other, None, "Bounded engines do not support complete model checking.".to_string()));
+        }
+        (true, smin.unwrap_or(1).max(1), if smax > 0 { smax } else { 10 })
+    } else {
+        (false, -1, -1)
+    };
     let options = KOptions {
         bitwidth: cx.bitwidth,
         symmetry: if expects == 1 { 0 } else { symmetry },
+        temporal,
+        min_trace,
+        max_trace,
         ..Default::default()
     };
     let ast = std::mem::take(&mut cx.ast);
@@ -592,6 +600,28 @@ impl<'a> Cx<'a> {
         self.bounds.bound(r, lo, ts(arity, upper));
         r
     }
+    fn is_var_sig(&self, s: SigId) -> bool {
+        self.is_user(s) && self.model.sigs[s as usize].is_var
+    }
+    fn always(&mut self, f: N) -> N {
+        self.ast.add(Node::UTempF(TOp::Always, f))
+    }
+    /// `TemporalTranslator.isTemporal`: temporal operators or variable relations
+    fn is_temporal(&self, n: N) -> bool {
+        let mut stack = vec![n];
+        let mut seen = std::collections::HashSet::new();
+        while let Some(x) = stack.pop() {
+            if !seen.insert(x) {
+                continue;
+            }
+            match self.ast.get(x) {
+                Node::UTempF(..) | Node::BTempF(..) | Node::TempE(..) => return true,
+                Node::Rel(ri) if ri.var => return true,
+                _ => stack.extend(pardinus::annotate::children(&self.ast, x)),
+            }
+        }
+        false
+    }
     fn add_formula(&mut self, f: N) {
         if let Some(&first) = self.formulas.first() {
             if matches!(self.ast.get(first), Node::ConstF(false)) {
@@ -673,4 +703,11 @@ impl<'a> Cx<'a> {
             }
         })
     }
+}
+
+/// Dev check: the CNF calls of every SAT attempt of a temporal command (compare with Java's `.cnf` dumps).
+pub fn temporal_cnf_log(world: &alloy_core::World, model: &Model, idx: usize) -> Result<Vec<Vec<String>>, AlloyError> {
+    let (_cx, mut p) = prepare(world, model, idx, 20)?;
+    let s = pardinus::temporal::solve(&mut p, None, true).map_err(fatal)?;
+    Ok(s.cnf_log)
 }

@@ -229,21 +229,31 @@ impl<'a> Cx<'a> {
         }
     }
 
+    // Java: BoundsComputer.allocatePrimSig (with the [electrum] disjointness of variable subsigs)
     fn allocate_prim(&mut self, s: SigId) -> Result<N, AlloyError> {
-        if self.model.sigs[s as usize].is_var {
-            return Err(unsupported(
-                "var sigs are not supported by the exact pipeline yet",
-            ));
-        }
+        let is_var = self.is_var_sig(s);
         let mut sum: Option<N> = None;
+        let mut all_static = true;
+        let mut extra: Vec<N> = Vec::new();
+        let mut v: Option<N> = None;
         for c in self.prim_children(s) {
+            if self.is_var_sig(c) {
+                all_static = false;
+            }
             let ce = self.allocate_prim(c)?;
             match sum {
                 None => sum = Some(ce),
                 Some(sm) => {
-                    let i = self.ast.intersection(sm, ce);
-                    let no = self.ast.mult(Mult::No, i);
-                    self.add_formula(no);
+                    if !all_static {
+                        let vv = *v.get_or_insert_with(|| self.ast.var("v", 1));
+                        let c2 = self.a2k(c);
+                        let ff = self.var_disjoint(vv, c2, sm);
+                        extra.push(ff);
+                    } else {
+                        let i = self.ast.intersection(sm, ce);
+                        let no = self.ast.mult(Mult::No, i);
+                        self.add_formula(no);
+                    }
                     sum = Some(self.ast.union(sm, ce));
                 }
             }
@@ -252,7 +262,7 @@ impl<'a> Cx<'a> {
         let mut upper = self.ub[&s].clone();
         let label = self.label(s).to_string();
         let e = match sum {
-            None => self.add_rel(&label, Some(lower), upper, 1, false),
+            None => self.add_rel(&label, Some(lower), upper, 1, is_var),
             Some(sm) if self.model.sigs[s as usize].is_abstract => sm,
             Some(sm) => {
                 for c in self.prim_children(s) {
@@ -261,12 +271,42 @@ impl<'a> Cx<'a> {
                     lower.retain(|a| !cts.contains(a));
                     upper.retain(|a| !cts.contains(a));
                 }
-                let rem = self.add_rel(&format!("{label}_remainder"), Some(lower), upper, 1, false);
+                let rem = self.add_rel(&format!("{label}_remainder"), Some(lower), upper, 1, is_var);
+                if !all_static {
+                    let vv = *v.get_or_insert_with(|| self.ast.var("v", 1));
+                    let ff = self.var_disjoint(vv, sm, rem);
+                    extra.push(ff);
+                }
                 self.ast.union(sm, rem)
             }
         };
+        if !extra.is_empty() {
+            let vv = v.expect("set with extra");
+            let body = self.ast.and_all(&extra);
+            let u = self.ast.univ();
+            let d = self.ast.one_of(vv, u);
+            let f = self.ast.quantify(Quant::All, d, body);
+            self.add_formula(f);
+            if !is_var {
+                // the static top relation is the union of variable parts: it must not change
+                let p = self.ast.add(Node::TempE(TOp::Prime, e));
+                let eq = self.ast.eq(p, e);
+                let f = self.always(eq);
+                self.add_formula(f);
+            }
+        }
         self.add_sig(s, e);
         Ok(e)
+    }
+
+    /// `(v in a).eventually() implies (v in b).not().always()`
+    fn var_disjoint(&mut self, v: N, a: N, b: N) -> N {
+        let ina = self.ast.in_(v, a);
+        let ev = self.ast.add(Node::UTempF(TOp::Eventually, ina));
+        let inb = self.ast.in_(v, b);
+        let nb = self.ast.not(inb);
+        let al = self.always(nb);
+        self.ast.binf(ev, FOp::Implies, al)
     }
 
     fn allocate_subset(&mut self, s: SigId) -> Result<N, AlloyError> {
@@ -278,6 +318,7 @@ impl<'a> Cx<'a> {
         let parents = self.model.sigs[s as usize].subset_of.clone();
         let mut sum: Option<N> = None;
         let mut tsv: Vec<u32> = Vec::new();
+        let has_var_parent = parents.iter().any(|&p| self.is_var_sig(p));
         for p in parents {
             let pe = if self.is_prim(p) {
                 self.a2k(p)
@@ -298,9 +339,13 @@ impl<'a> Cx<'a> {
         tsv.sort_unstable();
         tsv.dedup();
         let label = self.label(s).to_string();
-        let r = self.add_rel(&label, None, tsv, 1, self.model.sigs[s as usize].is_var);
+        let is_var = self.is_var_sig(s);
+        let r = self.add_rel(&label, None, tsv, 1, is_var);
         self.add_sig(s, r);
-        let f = self.ast.in_(r, sum);
+        let mut f = self.ast.in_(r, sum);
+        if is_var || has_var_parent {
+            f = self.always(f);
+        }
         self.add_formula(f);
         Ok(r)
     }
@@ -457,13 +502,10 @@ impl<'a> Cx<'a> {
             if one && fields.len() == 2 && self.enum_order(s)? {
                 continue;
             }
+            // a field of a variable `one` sig is not simplified ([electrum])
+            let one_static = one && !self.is_var_sig(s);
             for f in fields {
                 let fd = self.model.fields[f as usize].clone();
-                if fd.is_var {
-                    return Err(unsupported(
-                        "var fields are not supported by the exact pipeline yet",
-                    ));
-                }
                 if one && fd.defined {
                     if let Some(sim) = self.sim(&fd.decl) {
                         let se = self.a2k(s);
@@ -474,7 +516,7 @@ impl<'a> Cx<'a> {
                 }
                 let ft = self.field_type(f)?;
                 let h = self.hier();
-                let t = if one {
+                let t = if one_static {
                     h.join(&h.make(SIG_UNIV), &ft)
                 } else {
                     ft
@@ -505,8 +547,8 @@ impl<'a> Cx<'a> {
                 ub.sort_unstable();
                 ub.dedup();
                 let label = format!("{}.{}", self.label(s), fd.name);
-                let r = self.add_rel(&label, None, ub, arity, false);
-                let fe = if one {
+                let r = self.add_rel(&label, None, ub, arity, fd.is_var);
+                let fe = if one_static {
                     let se = self.a2k(s);
                     self.ast.product(se, r)
                 } else {
@@ -533,19 +575,29 @@ impl<'a> Cx<'a> {
                 -1
             };
             let sm = self.model.sigs[s as usize].mult;
+            let sv = self.is_var_sig(s);
             if sm == Some(AMult::One) {
                 if lower != 1 || upper != 1 {
-                    let f = self.ast.mult(Mult::One, exp);
+                    let mut f = self.ast.mult(Mult::One, exp);
+                    if sv {
+                        f = self.always(f);
+                    }
                     self.add_formula(f);
                 }
                 continue;
             }
             if sm == Some(AMult::Some) && lower < 1 {
-                let f = self.ast.mult(Mult::Some, exp);
+                let mut f = self.ast.mult(Mult::Some, exp);
+                if sv {
+                    f = self.always(f);
+                }
                 self.add_formula(f);
             }
             if sm == Some(AMult::Lone) && upper > 1 {
-                let f = self.ast.mult(Mult::Lone, exp);
+                let mut f = self.ast.mult(Mult::Lone, exp);
+                if sv {
+                    f = self.always(f);
+                }
                 self.add_formula(f);
             }
             if n < 0 {
@@ -750,10 +802,12 @@ impl<'a> Cx<'a> {
     /// `BoundsComputer.size(sig, n, exact)`
     fn size(&mut self, s: SigId, mut n: i32, exact: bool) -> N {
         let a = self.a2k(s);
+        let sv = self.is_var_sig(s);
         if n <= 0 {
             return self.ast.mult(Mult::No, a);
         }
-        if n == 1 {
+        // [electrum] a variable sig is never exact: quantify over the static univ
+        if n == 1 && !sv {
             return self.ast.mult(if exact { Mult::One } else { Mult::Lone }, a);
         }
         let mut f: Option<N> = if exact { Some(self.ast.tru()) } else { None };
@@ -763,7 +817,8 @@ impl<'a> Cx<'a> {
             n -= 1;
             let v = self.ast.var(&format!("v{}", self.cnt), 1);
             self.cnt += 1;
-            let dd = self.ast.one_of(v, a);
+            let dom = if sv { self.ast.univ() } else { a };
+            let dd = self.ast.one_of(v, dom);
             d = Some(match d {
                 None => dd,
                 Some(x) => self.ast.decls_and(dd, x),
@@ -787,9 +842,17 @@ impl<'a> Cx<'a> {
                 let body = self.ast.binf(eq, FOp::And, ff);
                 self.ast.quantify(Quant::Some, d, body)
             }
-            None => {
+            None if !sv => {
                 let no = self.ast.mult(Mult::No, a);
                 let ex = self.ast.quantify(Quant::Some, d, eq);
+                self.ast.binf(no, FOp::Or, ex)
+            }
+            None => {
+                let u = self.ast.univ();
+                let no = self.ast.mult(Mult::No, u);
+                let inn = self.ast.in_(a, sum);
+                let al = self.always(inn);
+                let ex = self.ast.quantify(Quant::Some, d, al);
                 self.ast.binf(no, FOp::Or, ex)
             }
         }

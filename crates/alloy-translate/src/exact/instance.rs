@@ -11,8 +11,11 @@ use std::sync::Arc;
 /// Result of the exact pipeline for one command.
 pub struct ExactOutcome {
     pub sat: bool,
-    /// First instance: `this/Sig`, `this/Sig.field`, `skolem:$x` -> tuples of atom names (sorted like Java).
-    pub instance: Option<BTreeMap<String, Vec<Vec<String>>>>,
+    /// First instance, one map per state (static problems: one): `this/Sig`, `this/Sig.field`, `skolem:$x` ->
+    /// tuples of atom names (sorted like Java).
+    pub instance: Option<Vec<BTreeMap<String, Vec<Vec<String>>>>>,
+    /// temporal: the loop state of the lasso (-1 for static problems)
+    pub loop_state: i32,
     pub primary_vars: i32,
     pub vars: i32,
     pub clauses: i64,
@@ -61,6 +64,31 @@ pub fn solve_first(
     stop: Option<Arc<AtomicBool>>,
 ) -> Result<ExactOutcome, AlloyError> {
     let (mut cx, mut p) = prepare(world, model, idx, symmetry)?;
+    if p.options.temporal {
+        let ts = pardinus::temporal::solve(&mut p, stop, false).map_err(fatal)?;
+        let mut out = ExactOutcome {
+            sat: ts.sat,
+            instance: None,
+            loop_state: ts.loop_state as i32,
+            primary_vars: ts.primary_vars,
+            vars: ts.vars,
+            clauses: ts.clauses,
+        };
+        if !ts.sat {
+            return Ok(out);
+        }
+        let skolems: Vec<N> = ts.skolems.iter().filter(|(s, _)| cx.typed_vars.contains(&s.var)).map(|(s, _)| s.relation).collect();
+        let mut insts = ts.states.clone();
+        for m in &mut insts {
+            for (s, v) in &ts.skolems {
+                m.insert(s.relation, v.clone());
+            }
+        }
+        let n = p.bounds.universe_size();
+        let mut ev = Eval { ast: &mut p.ast, insts: &insts, n, ints: &p.bounds.ints, bitwidth: p.options.bitwidth };
+        out.instance = Some(cx.render(&mut ev, &skolems, &p.bounds.atoms)?);
+        return Ok(out);
+    }
     let mut solver = satsolver::sat4j::Sat4j::new();
     if let Some(f) = stop {
         solver.set_stop_flag(f);
@@ -72,7 +100,7 @@ pub fn solve_first(
         Some(v) => v,
         None => solver.solve().ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "solver interrupted".to_string()))?,
     };
-    let mut out = ExactOutcome { sat, instance: None, primary_vars: tr.num_primary, vars: solver.num_vars() as i32, clauses };
+    let mut out = ExactOutcome { sat, instance: None, loop_state: -1, primary_vars: tr.num_primary, vars: solver.num_vars() as i32, clauses };
     if !sat {
         return Ok(out);
     }
@@ -81,26 +109,31 @@ pub fn solve_first(
     let inst: HashMap<N, PTs> = tr.interpret(&value).into_iter().collect();
     // A4Solution's skolemizing reporter: a skolem gets a type (and is shown) only if its variable has one
     let skolems: Vec<N> = tr.skolems.iter().filter(|s| cx.typed_vars.contains(&s.var)).map(|s| s.relation).collect();
-    let mut ev = Eval { ast: &mut p.ast, inst: &inst, n: p.bounds.universe_size(), ints: &p.bounds.ints, bitwidth: p.options.bitwidth };
+    let insts = vec![inst];
+    let mut ev = Eval { ast: &mut p.ast, insts: &insts, n: p.bounds.universe_size(), ints: &p.bounds.ints, bitwidth: p.options.bitwidth };
     out.instance = Some(cx.render(&mut ev, &skolems, &p.bounds.atoms)?);
     Ok(out)
 }
 
-/// `Evaluator` over the solution instance.
+/// `Evaluator` over the solution instance (one relation valuation per state).
 struct Eval<'e> {
     ast: &'e mut Ast,
-    inst: &'e HashMap<N, PTs>,
+    insts: &'e [HashMap<N, PTs>],
     n: u32,
     ints: &'e BTreeMap<i32, PTs>,
     bitwidth: i32,
 }
 impl Eval<'_> {
     fn eval(&self, e: N) -> Result<Vec<Vec<u32>>, AlloyError> {
+        self.eval_at(e, 0)
+    }
+    /// `Evaluator.evaluate(expr, state)`
+    fn eval_at(&self, e: N, st: usize) -> Result<Vec<Vec<u32>>, AlloyError> {
         let mut rels: Vec<N> = Vec::new();
         collect_rels(self.ast, e, &mut rels);
         let mut m = HashMap::new();
         for r in rels {
-            let t = self.inst.get(&r).cloned().unwrap_or_else(|| PTs::new(self.ast.arity(r), Vec::new()));
+            let t = self.insts[st].get(&r).cloned().unwrap_or_else(|| PTs::new(self.ast.arity(r), Vec::new()));
             m.insert(r, t);
         }
         let t = pardinus::translator::evaluate(self.ast, e, self.n, m, self.ints, self.bitwidth).map_err(fatal)?;
@@ -162,7 +195,7 @@ fn is_order(b: &[Vec<u32>], u: &[Vec<u32>]) -> Option<Vec<u32>> {
 
 impl<'a> Cx<'a> {
     /// `A4Solution.rename` then the oracle's `instanceJson` (one state).
-    fn render(&mut self, ev: &mut Eval, skolems: &[N], atoms: &[String]) -> Result<BTreeMap<String, Vec<Vec<String>>>, AlloyError> {
+    fn render(&mut self, ev: &mut Eval, skolems: &[N], atoms: &[String]) -> Result<Vec<BTreeMap<String, Vec<Vec<String>>>>, AlloyError> {
         let mut un = Unique(HashSet::new());
         let sigs = self.alloc_order.clone();
         // orders along `next`/`prev` fields
@@ -234,27 +267,34 @@ impl<'a> Cx<'a> {
             v.sort_by(|a, b| java_cmp(&a.0, &b.0));
             v.into_iter().map(|(_, t)| t).collect()
         };
-        let mut out = BTreeMap::new();
-        for &s in &sigs {
-            let label = self.label(s).to_string();
-            let se = self.a2k(s);
-            out.insert(label.clone(), render(ev.eval(se)?));
-            for f in self.model.sigs[s as usize].fields.clone() {
-                let Some(fe) = self.a2k_field[f as usize] else { continue };
-                let key = format!("{label}.{}", self.model.fields[f as usize].name);
-                out.insert(key, render(ev.eval(fe)?));
-            }
-        }
+        let mut sk_labels = Vec::new();
         for &r in skolems {
             let n = match ev.ast.get(r) {
                 Node::Rel(ri) => ri.name.clone(),
                 _ => continue,
             };
             let n = tail_this(&n).trim_start_matches('$').to_string();
-            let label = un.make(&format!("${n}"));
-            out.insert(format!("skolem:{label}"), render(ev.eval(r)?));
+            sk_labels.push((r, un.make(&format!("${n}"))));
         }
-        Ok(out)
+        let mut states = Vec::new();
+        for st in 0..ev.insts.len() {
+            let mut out = BTreeMap::new();
+            for &s in &sigs {
+                let label = self.label(s).to_string();
+                let se = self.a2k(s);
+                out.insert(label.clone(), render(ev.eval_at(se, st)?));
+                for f in self.model.sigs[s as usize].fields.clone() {
+                    let Some(fe) = self.a2k_field[f as usize] else { continue };
+                    let key = format!("{label}.{}", self.model.fields[f as usize].name);
+                    out.insert(key, render(ev.eval_at(fe, st)?));
+                }
+            }
+            for (r, label) in &sk_labels {
+                out.insert(format!("skolem:{label}"), render(ev.eval_at(*r, st)?));
+            }
+            states.push(out);
+        }
+        Ok(states)
     }
 
     fn rename_sig(
@@ -270,7 +310,10 @@ impl<'a> Cx<'a> {
             self.rename_sig(ev, c, nexts, un, claimed, name)?;
         }
         let signame = un.make(tail_this(self.label(s)));
-        let mut list: Vec<u32> = ev.eval(self.a2k(s))?.into_iter().map(|t| t[0]).collect();
+        let mut list: Vec<u32> = Vec::new();
+        for st in 0..ev.insts.len() {
+            list.extend(ev.eval_at(self.a2k(s), st)?.into_iter().map(|t| t[0]));
+        }
         if let Some((_, order)) = nexts.iter().find(|(x, _)| *x == s) {
             if order.len() == list.len() && list.iter().all(|a| order.contains(a)) {
                 list = order.clone();

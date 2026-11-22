@@ -103,8 +103,9 @@ fn instance_json(i: &Instance) -> Value {
         .map(|st| {
             let mut m = Map::new();
             for (k, tuples) in st {
+                // the oracle sorts the JSON text of each tuple (`String.compareTo`)
                 let mut t = tuples.clone();
-                t.sort();
+                t.sort_by_cached_key(|x| serde_json::to_string(x).unwrap_or_default().encode_utf16().collect::<Vec<u16>>());
                 m.insert(k.clone(), json!(t));
             }
             Value::Object(m)

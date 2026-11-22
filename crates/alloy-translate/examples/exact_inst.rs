@@ -22,7 +22,7 @@ fn run(model: &str, idx: usize) -> Result<String, String> {
     let world = alloy_core::parse_everything_from_file(std::path::Path::new(model)).map_err(|e| e.to_string())?;
     let m = alloy_core::sema::build(&world.modules).map_err(|e| e.to_string())?;
     let t = std::time::Instant::now();
-    let r = alloy_translate::exact::solve_first(&world, &m, idx, None).map_err(|e| e.to_string())?;
+    let r = alloy_translate::exact::solve_first(&world, &m, idx, 20, None).map_err(|e| e.to_string())?;
     let ms = t.elapsed().as_secs_f64() * 1000.0;
     let mut s = format!("\"sat\":{},\"ms\":{ms:.1}", r.sat);
     if let Some(inst) = r.instance {

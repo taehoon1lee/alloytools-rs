@@ -16,6 +16,8 @@ mod scope;
 mod translate;
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Instant;
 
 use alloy_core::error::{AlloyError, ErrorKind};
@@ -99,10 +101,54 @@ pub fn check_types(world: &World) -> Result<(), AlloyError> {
     }
 }
 
+type ExactJob = (std::thread::JoinHandle<Result<exact::ExactOutcome, AlloyError>>, Arc<AtomicBool>);
+
+/// Starts the exact pipeline (Java-identical translation + SAT4J, `exact::solve_first`) on its own thread: it
+/// yields the very instance Java reports. The fast pipeline decides the verdict; the exact one is only waited for
+/// when the command is SAT (and stopped otherwise).
+fn spawn_exact(world: &World, model: &Model, index: usize, opt: &Options) -> Option<ExactJob> {
+    if model.temporal || !opt.want_instance || std::env::var("ALLOY_RS_NO_EXACT").is_ok() {
+        return None;
+    }
+    let (w, m, sym) = (world.clone(), model.clone(), opt.symmetry);
+    let stop = Arc::new(AtomicBool::new(false));
+    let s2 = stop.clone();
+    let h = std::thread::Builder::new()
+        .stack_size(1 << 30)
+        .spawn(move || exact::solve_first(&w, &m, index, sym, Some(s2)))
+        .ok()?;
+    Some((h, stop))
+}
+
 /// Execute command number `index` of `world` (the root module's `index`-th command).
 pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Solution, AlloyError> {
-    let t0 = Instant::now();
     let model = sema::build(&world.modules)?;
+    let job = spawn_exact(world, &model, index, opt);
+    let r = execute_fast(world, &model, index, opt);
+    let Some((h, stop)) = job else { return r };
+    match r {
+        Ok(mut sol) if sol.sat => {
+            if let Ok(Ok(out)) = h.join() {
+                if out.sat {
+                    if let Some(inst) = out.instance {
+                        sol.instance = Some(Instance { trace_length: 1, loop_state: -1, states: vec![inst] });
+                    }
+                }
+            }
+            Ok(sol)
+        }
+        other => {
+            // UNSAT or error: the exact run is not needed (its thread ends at the next SAT4J stop check)
+            stop.store(true, Ordering::Relaxed);
+            other
+        }
+    }
+}
+
+/// The verdict (and a fallback instance) from the optimized pipeline.
+fn execute_fast(world: &World, model: &Model, index: usize, opt: &Options) -> Result<Solution, AlloyError> {
+    let _ = world;
+    let t0 = Instant::now();
     let cmd: &RCommand = model
         .commands
         .get(index)

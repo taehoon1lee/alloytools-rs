@@ -53,8 +53,14 @@ impl pardinus::cnf::CnfSink for Counting<'_> {
 }
 
 /// `TranslateAlloyToKodkod.execute_command` + `A4Solution.solve` + the oracle's instance printer, exactly as Java.
-pub fn solve_first(world: &alloy_core::World, model: &Model, idx: usize, stop: Option<Arc<AtomicBool>>) -> Result<ExactOutcome, AlloyError> {
-    let (mut cx, mut p) = prepare(world, model, idx)?;
+pub fn solve_first(
+    world: &alloy_core::World,
+    model: &Model,
+    idx: usize,
+    symmetry: i32,
+    stop: Option<Arc<AtomicBool>>,
+) -> Result<ExactOutcome, AlloyError> {
+    let (mut cx, mut p) = prepare(world, model, idx, symmetry)?;
     let mut solver = satsolver::sat4j::Sat4j::new();
     if let Some(f) = stop {
         solver.set_stop_flag(f);

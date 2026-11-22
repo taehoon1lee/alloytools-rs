@@ -409,7 +409,7 @@ pub fn build(
     model: &Model,
     idx: usize,
 ) -> Result<(Problem, ExactInfo), AlloyError> {
-    let (cx, p) = prepare(world, model, idx)?;
+    let (cx, p) = prepare(world, model, idx, 20)?;
     let info = ExactInfo {
         sig_expr: cx.a2k_sig.clone(),
         field_expr: cx.a2k_field.clone(),
@@ -427,6 +427,7 @@ fn prepare<'a>(
     world: &alloy_core::World,
     model: &'a Model,
     idx: usize,
+    symmetry: i32,
 ) -> Result<(Cx<'a>, Problem), AlloyError> {
     if model.temporal {
         return Err(unsupported(
@@ -457,7 +458,7 @@ fn prepare<'a>(
     // A4Solution: symmetry 0 when the command expects 1 (an instance must exist)
     let options = KOptions {
         bitwidth: cx.bitwidth,
-        symmetry: if expects == 1 { 0 } else { 20 },
+        symmetry: if expects == 1 { 0 } else { symmetry },
         ..Default::default()
     };
     let ast = std::mem::take(&mut cx.ast);

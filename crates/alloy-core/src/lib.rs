@@ -37,7 +37,7 @@ pub struct CommandInfo {
 
 /// A fully parsed, resolved and type-checked root module plus all opened modules
 /// (equivalent of the Java `CompModule` returned by `parseEverything_fromFile`).
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct World {
     pub commands: Vec<CommandInfo>,
     /// Root module first, then every opened module instance (`loader::load_root`).

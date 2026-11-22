@@ -15,7 +15,7 @@ use crate::stdlib;
 use crate::syntax::{Expr, ExprKind, Loc, Module, Open, Paragraph};
 
 /// One parsed module instance (Java `CompModule`). Index 0 of the loaded list is the root.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LoadedModule {
     /// Header name (`module a/b`), or "" when there is no header.
     pub name: String,

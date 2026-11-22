@@ -8,3 +8,5 @@
 /harness/*.log
 __pycache__/
 *.pyc
+/tools/exact/classes
+/tools/exact/out

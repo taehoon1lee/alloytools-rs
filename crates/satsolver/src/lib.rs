@@ -10,6 +10,7 @@
 
 use batsat::{lbool, Lit, Solver, SolverInterface, Var};
 
+pub mod sat4j;
 pub mod simp;
 
 pub trait SatSolver {

@@ -1,0 +1,8 @@
+[package]
+name = "pardinus"
+version.workspace = true
+edition.workspace = true
+description = "Bit-exact port of the Pardinus/Kodkod translation pipeline used by Alloy 6.2.0 (Kodkod problem -> CNF -> SAT4J -> instance)"
+
+[dependencies]
+satsolver = { path = "../satsolver" }

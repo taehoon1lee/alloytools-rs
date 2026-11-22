@@ -7,16 +7,22 @@ predicate inlining + total-order breaking, skolemization, FOL→boolean circuit 
 Plaisted-Greenbaum CNF) → SAT4J 2.3.1 default solver → `A4Solution` atom renaming + sig/field/skolem evaluation.
 
 The existing fast pipeline (crates/kodkod, portfolio SAT) stays for verdicts/perf; the exact pipeline is used to
-produce the instance.
+produce the instance. `alloy_translate::execute_command` starts `exact::solve_first` on its own thread next to the
+fast pipeline: an UNSAT from the fast side stops it (SAT4J, the FOL→boolean translation and the trace-length loop
+honour the stop flag); a SAT result waits for the exact instance and falls back to the fast instance if the exact
+side fails. `ALLOY_RS_NO_EXACT=1` disables it.
+
+**Status (2026-11-22): done.** All 215 SAT commands of the corpus with a golden instance (static and temporal) give
+the identical first instance through the CLI (`python harness/check.py --verbose`: 215 identical, 0 differ).
 
 ## Stages and their ground truth (all verified against Java dumps, never read by Rust code)
 | stage | Rust | verified by | status |
 |---|---|---|---|
 | SAT4J 2.3.1 `newDefault()` | `crates/satsolver/src/sat4j.rs` | replay `out/*.cnf` (`cargo run --release -p satsolver --example sat4j_replay -- tools/exact/out/*.cnf`) | **216/216 models identical** |
-| Kodkod `Translator` (Kodkod problem → CNF) | `crates/pardinus` | `cargo run --release -p pardinus --example kk_cnf -- tools/exact/out/*.kk` | **207/207 static problems: identical CNF call sequence** (8 temporal: todo) |
-| Alloy → Kodkod (`TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, A4Solution setup) | `crates/alloy-translate` (exact path) | serialize to `.kk` format, compare to `out/*.kk` | todo |
-| `A4Solution.rename` + eval → instance JSON | alloy-translate | compare to `out/*.json` / harness goldens | todo |
-| Pardinus temporal (`TemporalPardinusSolver`, LTL2FOL, bounds expansion) | crates/pardinus | `out/*leader*` | todo |
+| Kodkod `Translator` (Kodkod problem → CNF) | `crates/pardinus` | `cargo run --release -p pardinus --example kk_cnf -- tools/exact/out/*.kk` | **207/207 static problems: identical CNF call sequence** |
+| Alloy → Kodkod (`TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, A4Solution setup) | `crates/alloy-translate/src/exact/` | `python tools/exact/cmp_alloy.py` (`.kk` text + CNF of every SAT call) | **215/215 CNF identical**, 213/215 `.kk` text (spanning: Java shares one bound node across `r, t1, t2: univ->univ`; no CNF effect) |
+| `A4Solution.rename` + eval → instance JSON | `exact/instance.rs` | `python tools/exact/cmp_inst.py` (vs harness goldens) | **215/215 identical** |
+| Pardinus temporal (`TemporalPardinusSolver`, LTL2FOL, bounds expansion, `TemporalInstance`) | `crates/pardinus/src/temporal.rs` | `cmp_alloy.py` (one CNF block per trace length) | **8/8 identical** |
 
 ## Tools (`tools/exact/`)
 - `python tools/exact/build.py` — compiles `java/edu/mit/csail/sdg/translator/*.java` against the Alloy jar.
@@ -26,6 +32,11 @@ produce the instance.
   formula DAG + `PardinusBounds` (concrete + symbolic bounds, int bounds, relation order) + options.
 - `TraceOracle.java` — SAT4J wrapper recording every `addVariables`/`addClause` + model; `replay` mode.
 - `PinCheck.java` — validates an arbitrary (Rust) instance by pinning it into Java's bounds and re-solving.
+- `cmp_alloy.py` + `crates/alloy-translate/examples/exact_cmp.rs` — Rust `.kk` text / CNF vs `out/` (temporal: per
+  trace length; `DUMP_TCNF=1` writes `<tag>.rust.cnf`, a differing `.kk` is written to `<tag>.rust.kk`).
+- `cmp_inst.py` + `examples/exact_inst.rs` — Rust first instance (all states) vs the harness golden instances.
+- Java lex-leader chains: run the oracle with `-Ddebug=yes -Dorg.slf4j.simpleLogger.defaultLogLevel=debug`
+  (`lex: [...]` lines, truncated to 320 chars).
 - `jstrip.py` — comment stripper for reading big Java files (the naive sed range strip loses code!).
 - SAT4J 2.3.1 sources: `https://repo1.maven.org/maven2/org/sat4j/org.sat4j.core/2.3.1/` (sources jar; the jar's
   `Solver.class` is byte-identical to the one inside the Alloy dist jar).
@@ -52,7 +63,20 @@ DECL var mult expr, DECLS d…, UTEMPF/BTEMPF/TEMPE); then `R relid` (bounds.rel
 - Pardinus symbolic bounds (`Version.experimental=true` in Alloy): `this/Sig.field` often has only a symbolic bound;
   `Translator` resolves them (`PardinusBounds.resolve`) and conjoins extra constraints.
 
-## Alloy → Kodkod (next stage) — facts gathered from the Java sources
+- Alloy-side Java quirks that each cost an exact match (all ported):
+  `ExprChoice` resolves top-down (an overloaded right operand of a join is distributed, `CompModule.process`;
+  2+ legal all-empty candidates → `none`; the chosen candidate is resolved further); macro arguments are substituted
+  as expressions (re-translated at every use, fresh Kodkod nodes); a small-int `fun` body gets an implicit `Int[..]`
+  (`resolve_as_set`); `Int[e]` is `e`; `S <: S.f` is `f`; string atoms come in `java.util.HashSet` order of
+  `Command.getAllStringConstants`; `Simplifier` tightens bounds before `r = r`; `enum E` opens
+  `util/ordering[this/E]` with alias `open$N` (renamed by `doneParsing`), and BoundsComputer pre-binds its
+  First/Next; merged module instantiations keep the path minimal by (`$`, `Util.slashComparator`); skolems are shown
+  only for variables with an Alloy type (`kv2typepos`).
+- Temporal: symbolic-bound constraints over variable relations are wrapped in `always` (PardinusBounds.resolve); the
+  lex-leader SBP takes the static entries first, then the entries of each time step (`[HASLab]` loop over
+  `lowerBound(STATE)`); LTL2FOL builds fresh nodes per occurrence except for unchanged subtrees.
+
+## Alloy → Kodkod — facts gathered from the Java sources
 Target: build a `pardinus::instance::Problem` from the Rust sema `Model` + `RCommand` whose `.kk` serialization is
 textually identical to KKDump's (write a `write_kk` in pardinus that emits nodes in KKDump's DFS order: BINE left
 then right, NARY children in order, COMPR/QUANT/SUM decls then body, DECL var then expr, then `R`/`L`/`H`/`SB`/`SC`/

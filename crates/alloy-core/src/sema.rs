@@ -288,7 +288,11 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     }
     // Java `CompModule.addDefaultCommand`: a root module without commands runs `Run Default` (formula TRUE).
     if b.model.commands.is_empty() && !mods.is_empty() {
-        let has_command = mods[0].module.paragraphs.iter().any(|p| matches!(p, Paragraph::Command(_)));
+        let has_command = mods[0]
+            .module
+            .paragraphs
+            .iter()
+            .any(|p| matches!(p, Paragraph::Command(_)));
         if !has_command {
             b.model.commands.push(RCommand {
                 check: false,
@@ -305,7 +309,13 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     Ok(b.model)
 }
 
-fn err<T>(module: usize, mods: &[LoadedModule], line: i32, col: i32, msg: impl Into<String>) -> Result<T, AlloyError> {
+fn err<T>(
+    module: usize,
+    mods: &[LoadedModule],
+    line: i32,
+    col: i32,
+    msg: impl Into<String>,
+) -> Result<T, AlloyError> {
     Err(AlloyError::new(
         ErrorKind::Type,
         Some(Pos {
@@ -334,7 +344,13 @@ impl<'a> Builder<'a> {
             is_enum: false,
             is_var: false,
         };
-        self.model.sigs = vec![mk("univ"), mk("none"), mk("Int"), mk("String"), mk("seq/Int")];
+        self.model.sigs = vec![
+            mk("univ"),
+            mk("none"),
+            mk("Int"),
+            mk("String"),
+            mk("seq/Int"),
+        ];
     }
 
     /// Phase 1: create the sigs, fields, functions, assertions and macros of instance `i`.
@@ -342,7 +358,11 @@ impl<'a> Builder<'a> {
         let module = &self.mods[i].module;
         if i == 0 {
             // A root module with parameters: each parameter is a free sig (no opener binds it).
-            let params = module.header.as_ref().map(|h| h.params.clone()).unwrap_or_default();
+            let params = module
+                .header
+                .as_ref()
+                .map(|h| h.params.clone())
+                .unwrap_or_default();
             for p in params {
                 let id = self.push_sig(i, &p, None, false, None, false);
                 self.add_name(i, &p, Sym::Sig(id), false);
@@ -362,7 +382,12 @@ impl<'a> Builder<'a> {
                 Paragraph::Sig(s) => {
                     for name in &s.names {
                         let id = self.model.sigs.len() as SigId;
-                        let mult = s.quals.one.then_some(Mult::One).or(s.quals.lone.then_some(Mult::Lone)).or(s.quals.some.then_some(Mult::Some));
+                        let mult = s
+                            .quals
+                            .one
+                            .then_some(Mult::One)
+                            .or(s.quals.lone.then_some(Mult::Lone))
+                            .or(s.quals.some.then_some(Mult::Some));
                         self.push_sig(i, name, None, s.quals.is_abstract, mult, s.quals.is_private);
                         if s.quals.var {
                             self.model.sigs[id as usize].is_var = true;
@@ -393,7 +418,8 @@ impl<'a> Builder<'a> {
                 Paragraph::Fun(f) | Paragraph::Pred(f) => {
                     let (owner, name) = split_owner(&f.name);
                     let fid = self.model.funcs.len() as FuncId;
-                    let nparams = f.params.iter().map(|d| d.names.len()).sum::<usize>() + owner.is_some() as usize;
+                    let nparams = f.params.iter().map(|d| d.names.len()).sum::<usize>()
+                        + owner.is_some() as usize;
                     self.model.funcs.push(Func {
                         label: f.name.clone(),
                         name: name.to_string(),
@@ -437,7 +463,15 @@ impl<'a> Builder<'a> {
     }
 
     /// Appends a user sig (Java `CompModule.addSig`) and returns its id.
-    fn push_sig(&mut self, i: usize, name: &str, parent: Option<SigId>, is_abstract: bool, mult: Option<Mult>, is_private: bool) -> SigId {
+    fn push_sig(
+        &mut self,
+        i: usize,
+        name: &str,
+        parent: Option<SigId>,
+        is_abstract: bool,
+        mult: Option<Mult>,
+        is_private: bool,
+    ) -> SigId {
         let id = self.model.sigs.len() as SigId;
         self.model.sigs.push(Sig {
             label: format!("this/{name}"),
@@ -458,7 +492,11 @@ impl<'a> Builder<'a> {
     }
 
     fn add_name(&mut self, i: usize, name: &str, sym: Sym, private: bool) {
-        self.scopes[i].names.entry(name.to_string()).or_default().push(sym);
+        self.scopes[i]
+            .names
+            .entry(name.to_string())
+            .or_default()
+            .push(sym);
         self.scopes[i].private.insert(name.to_string(), private);
     }
 
@@ -471,7 +509,9 @@ impl<'a> Builder<'a> {
             for r in &resolved {
                 self.scopes[i].opens.push((r.alias.clone(), r.target));
                 let Some(k) = r.paragraph else { continue };
-                let Paragraph::Open(o) = &self.mods[i].module.paragraphs[k] else { continue };
+                let Paragraph::Open(o) = &self.mods[i].module.paragraphs[k] else {
+                    continue;
+                };
                 let target = r.target;
                 let params = self.mods[target]
                     .module
@@ -516,11 +556,23 @@ impl<'a> Builder<'a> {
     /// Module argument of an `open` (a sig name, as Java requires for sig parameters).
     fn resolve_sig_arg(&self, i: usize, a: &Expr) -> Result<Sym, AlloyError> {
         let ExprKind::Name(n) = &a.kind else {
-            return err(i, self.mods, a.loc.line, a.loc.col, "Module arguments must be sig names.");
+            return err(
+                i,
+                self.mods,
+                a.loc.line,
+                a.loc.col,
+                "Module arguments must be sig names.",
+            );
         };
         match self.lookup(i, n) {
             Some(syms) if syms.len() == 1 && matches!(syms[0], Sym::Sig(_)) => Ok(syms[0].clone()),
-            _ => err(i, self.mods, a.loc.line, a.loc.col, format!("The name \"{n}\" cannot be found.")),
+            _ => err(
+                i,
+                self.mods,
+                a.loc.line,
+                a.loc.col,
+                format!("The name \"{n}\" cannot be found."),
+            ),
         }
     }
 
@@ -543,7 +595,10 @@ impl<'a> Builder<'a> {
                     if calls.len() == c.len() {
                         let first = &funcs[calls[0] as usize];
                         if first.ret.is_some()
-                            && calls.iter().all(|f| funcs[*f as usize].ret == first.ret && funcs[*f as usize].is_pred == first.is_pred)
+                            && calls.iter().all(|f| {
+                                funcs[*f as usize].ret == first.ret
+                                    && funcs[*f as usize].is_pred == first.is_pred
+                            })
                         {
                             *found = Some(calls);
                             return;
@@ -575,7 +630,10 @@ impl<'a> Builder<'a> {
                     }
                     walk(b, found, funcs);
                 }
-                RExpr::Call(_, args) | RExpr::Block(args) | RExpr::Disj(args) | RExpr::TotalOrder(args) => {
+                RExpr::Call(_, args)
+                | RExpr::Block(args)
+                | RExpr::Disj(args)
+                | RExpr::TotalOrder(args) => {
                     for x in args {
                         walk(x, found, funcs);
                     }
@@ -586,7 +644,9 @@ impl<'a> Builder<'a> {
         let mut found: Option<Vec<FuncId>> = None;
         for group in &self.model.shadowed_uses {
             let first = &self.model.funcs[group[0] as usize];
-            if std::env::var("KDBG_SEMA").is_ok() { eprintln!("group {:?} ret0={:?}", group, first.ret); }
+            if std::env::var("KDBG_SEMA").is_ok() {
+                eprintln!("group {:?} ret0={:?}", group, first.ret);
+            }
             if first.ret.is_some()
                 && group.iter().all(|f| {
                     let g = &self.model.funcs[*f as usize];
@@ -606,14 +666,29 @@ impl<'a> Builder<'a> {
         if let Some(calls) = found {
             let names: Vec<String> = calls
                 .iter()
-                .map(|f| format!("{} {}", if self.model.funcs[*f as usize].is_pred { "pred" } else { "fun" }, self.model.funcs[*f as usize].label))
+                .map(|f| {
+                    format!(
+                        "{} {}",
+                        if self.model.funcs[*f as usize].is_pred {
+                            "pred"
+                        } else {
+                            "fun"
+                        },
+                        self.model.funcs[*f as usize].label
+                    )
+                })
                 .collect();
             return Err(AlloyError::new(
                 ErrorKind::Type,
                 None,
-                format!("This name is ambiguous due to multiple matches:
-{}", names.join("
-")),
+                format!(
+                    "This name is ambiguous due to multiple matches:
+{}",
+                    names.join(
+                        "
+"
+                    )
+                ),
             ));
         }
         Ok(())
@@ -621,9 +696,18 @@ impl<'a> Builder<'a> {
 
     /// Resolves `extends` / `in` / `=` of every sig of instance `i` (the sig hierarchy).
     fn link_sigs(&mut self, i: usize) -> Result<(), AlloyError> {
-        let mut sig_next = self.model.sigs.iter().position(|x| x.module == i && x.kind == SigKind::User).unwrap_or(0);
+        let mut sig_next = self
+            .model
+            .sigs
+            .iter()
+            .position(|x| x.module == i && x.kind == SigKind::User)
+            .unwrap_or(0);
         if i == 0 {
-            sig_next += self.mods[0].module.header.as_ref().map_or(0, |h| h.params.len());
+            sig_next += self.mods[0]
+                .module
+                .header
+                .as_ref()
+                .map_or(0, |h| h.params.len());
         }
         let paragraphs = self.mods[i].module.paragraphs.clone();
         for p in &paragraphs {
@@ -661,18 +745,39 @@ impl<'a> Builder<'a> {
     /// Phase 2: resolve everything that refers to names of instance `i`.
     fn resolve(&mut self, i: usize) -> Result<(), AlloyError> {
         // Entities of one instance are declared contiguously and in source order, so counters suffice.
-        let mut sig_next = self.model.sigs.iter().position(|x| x.module == i && x.kind == SigKind::User).unwrap_or(0);
+        let mut sig_next = self
+            .model
+            .sigs
+            .iter()
+            .position(|x| x.module == i && x.kind == SigKind::User)
+            .unwrap_or(0);
         if i == 0 {
             // Root parameters were declared as sigs before the root's own sigs.
-            sig_next += self.mods[0].module.header.as_ref().map_or(0, |h| h.params.len());
+            sig_next += self.mods[0]
+                .module
+                .header
+                .as_ref()
+                .map_or(0, |h| h.params.len());
         }
-        let mut func_next = self.model.funcs.iter().position(|x| x.module == i).unwrap_or(0);
-        let mut assert_next = self.model.asserts.iter().position(|x| x.module == i).unwrap_or(0);
+        let mut func_next = self
+            .model
+            .funcs
+            .iter()
+            .position(|x| x.module == i)
+            .unwrap_or(0);
+        let mut assert_next = self
+            .model
+            .asserts
+            .iter()
+            .position(|x| x.module == i)
+            .unwrap_or(0);
         let paragraphs = self.mods[i].module.paragraphs.clone();
         for p in &paragraphs {
             match p {
                 Paragraph::Sig(s) => {
-                    let ids: Vec<SigId> = (0..s.names.len()).map(|k| (sig_next + k) as SigId).collect();
+                    let ids: Vec<SigId> = (0..s.names.len())
+                        .map(|k| (sig_next + k) as SigId)
+                        .collect();
                     sig_next += s.names.len();
                     self.resolve_sig(i, s, &ids)?;
                 }
@@ -701,7 +806,12 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    fn resolve_sig(&mut self, i: usize, s: &crate::syntax::SigDecl, ids: &[SigId]) -> Result<(), AlloyError> {
+    fn resolve_sig(
+        &mut self,
+        i: usize,
+        s: &crate::syntax::SigDecl,
+        ids: &[SigId],
+    ) -> Result<(), AlloyError> {
         for &sid in ids {
             match &s.extends {
                 Some(SigExtends::Extends(e)) => {
@@ -730,7 +840,9 @@ impl<'a> Builder<'a> {
             let mut k = 0;
             for d in &s.fields {
                 if d.disjoint && d.names.len() > 1 {
-                    self.model.field_disjoint.push(fields[k..k + d.names.len()].to_vec());
+                    self.model
+                        .field_disjoint
+                        .push(fields[k..k + d.names.len()].to_vec());
                 }
                 for _ in &d.names {
                     let fid = fields[k];
@@ -766,7 +878,12 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    fn resolve_func(&mut self, i: usize, f: &crate::syntax::Func, fid: FuncId) -> Result<(), AlloyError> {
+    fn resolve_func(
+        &mut self,
+        i: usize,
+        f: &crate::syntax::Func,
+        fid: FuncId,
+    ) -> Result<(), AlloyError> {
         let (owner_name, _) = split_owner(&f.name);
         let mark = self.locals.len();
         let mut params = Vec::new();
@@ -813,7 +930,11 @@ impl<'a> Builder<'a> {
         Ok(())
     }
 
-    fn resolve_command(&mut self, i: usize, c: &crate::syntax::Command) -> Result<RCommand, AlloyError> {
+    fn resolve_command(
+        &mut self,
+        i: usize,
+        c: &crate::syntax::Command,
+    ) -> Result<RCommand, AlloyError> {
         let name = match &c.target {
             CommandTarget::Name(n) => n.clone(),
             CommandTarget::Block(_) => String::new(),
@@ -862,7 +983,15 @@ impl<'a> Builder<'a> {
                 "String" => SIG_STRING,
                 n => match self.lookup(i, n).and_then(|v| v.into_iter().next()) {
                     Some(Sym::Sig(id)) => id,
-                    _ => return err(i, self.mods, t.loc.line, t.loc.col, format!("The name \"{n}\" cannot be found.")),
+                    _ => {
+                        return err(
+                            i,
+                            self.mods,
+                            t.loc.line,
+                            t.loc.col,
+                            format!("The name \"{n}\" cannot be found."),
+                        )
+                    }
                 },
             };
             scopes.push(RScope {
@@ -899,7 +1028,13 @@ impl<'a> Builder<'a> {
                 "String" => Ok(SIG_STRING),
                 "none" => Ok(SIG_NONE),
                 "seq/Int" => Ok(SIG_SEQINT),
-                _ => err(i, self.mods, e.loc.line, e.loc.col, format!("The name \"{n}\" cannot be found.")),
+                _ => err(
+                    i,
+                    self.mods,
+                    e.loc.line,
+                    e.loc.col,
+                    format!("The name \"{n}\" cannot be found."),
+                ),
             };
         }
         err(i, self.mods, e.loc.line, e.loc.col, "Expected a sig name.")
@@ -930,7 +1065,12 @@ impl<'a> Builder<'a> {
     }
 
     /// Appended sig fact: `this` is the sig itself.
-    fn conj_with_this(&mut self, i: usize, sid: SigId, items: &[Expr]) -> Result<RExpr, AlloyError> {
+    fn conj_with_this(
+        &mut self,
+        i: usize,
+        sid: SigId,
+        items: &[Expr],
+    ) -> Result<RExpr, AlloyError> {
         let mark = self.locals.len();
         let lid = self.new_local("this");
         self.locals.push(("this".into(), lid));
@@ -976,6 +1116,22 @@ impl<'a> Builder<'a> {
     /// public names of every module reachable through `open` (transitively). Several candidates form a choice.
     fn lookup_unqualified(&self, i: usize, name: &str) -> Option<Vec<Sym>> {
         if let Some(v) = self.scopes[i].names.get(name) {
+            // Java (CompModule.getRawNQS / populate) also sees the functions of the opened modules next to a
+            // field or sig of this module; the type checker picks one (e.g. `x.next` with util/ordering).
+            if v.iter().all(|s| matches!(s, Sym::Field(_) | Sym::Sig(_))) {
+                let mut extra: Vec<Sym> = Vec::new();
+                let mut visited = vec![i];
+                for (_, t) in &self.scopes[i].opens {
+                    self.collect_public(*t, name, &mut visited, &mut extra);
+                }
+                let mut out = v.clone();
+                for x in extra {
+                    if matches!(x, Sym::Func(_)) && !out.iter().any(|o| same_sym(o, &x)) {
+                        out.push(x);
+                    }
+                }
+                return Some(out);
+            }
             return Some(v.clone());
         }
         if let Some(s) = self.scopes[i].params.get(name) {
@@ -1005,7 +1161,10 @@ impl<'a> Builder<'a> {
                 found.push(s.clone());
             }
             for f in found {
-                if !out.iter().any(|o| same_sym(o, &f) || self.same_instance_func(o, &f)) {
+                if !out
+                    .iter()
+                    .any(|o| same_sym(o, &f) || self.same_instance_func(o, &f))
+                {
                     out.push(f);
                 }
             }
@@ -1018,17 +1177,32 @@ impl<'a> Builder<'a> {
     /// The same function of the same module file instantiated with the same arguments (Java loads such a
     /// module once, so e.g. an explicit `open util/integer` does not duplicate the implicit one).
     fn same_instance_func(&self, a: &Sym, b: &Sym) -> bool {
-        let (Sym::Func(x), Sym::Func(y)) = (a, b) else { return false };
-        let (fx, fy) = (&self.model.funcs[*x as usize], &self.model.funcs[*y as usize]);
-        if fx.name != fy.name || fx.nparams != fy.nparams || fx.is_pred != fy.is_pred || fx.module == fy.module {
+        let (Sym::Func(x), Sym::Func(y)) = (a, b) else {
+            return false;
+        };
+        let (fx, fy) = (
+            &self.model.funcs[*x as usize],
+            &self.model.funcs[*y as usize],
+        );
+        if fx.name != fy.name
+            || fx.nparams != fy.nparams
+            || fx.is_pred != fy.is_pred
+            || fx.module == fy.module
+        {
             return fx.module == fy.module && x == y;
         }
         let (mx, my) = (&self.mods[fx.module], &self.mods[fy.module]);
         if mx.path != my.path {
             return false;
         }
-        let (px, py) = (&self.scopes[fx.module].params, &self.scopes[fy.module].params);
-        px.len() == py.len() && px.iter().all(|(k, v)| py.get(k).map_or(false, |w| same_sym(v, w)))
+        let (px, py) = (
+            &self.scopes[fx.module].params,
+            &self.scopes[fy.module].params,
+        );
+        px.len() == py.len()
+            && px
+                .iter()
+                .all(|(k, v)| py.get(k).map_or(false, |w| same_sym(v, w)))
     }
 
     fn lookup_public(&self, target: usize, name: &str) -> Option<Vec<Sym>> {
@@ -1070,7 +1244,16 @@ impl<'a> Builder<'a> {
                 RExpr::Str(text.clone())
             }
             ExprKind::Unary(op, x) => {
-                if matches!(op, UnOp::Always | UnOp::Eventually | UnOp::Historically | UnOp::Once | UnOp::Before | UnOp::After | UnOp::Prime) {
+                if matches!(
+                    op,
+                    UnOp::Always
+                        | UnOp::Eventually
+                        | UnOp::Historically
+                        | UnOp::Once
+                        | UnOp::Before
+                        | UnOp::After
+                        | UnOp::Prime
+                ) {
                     self.model.temporal = true;
                 }
                 RExpr::Un(*op, Box::new(self.expr(i, x)?))
@@ -1081,12 +1264,44 @@ impl<'a> Builder<'a> {
                     let recv = self.expr(i, l)?;
                     return Ok(Self::calls(cands, vec![recv]));
                 }
+                // Java `CompModule.process`: a name that is both a one-argument function and a field/sig gives a
+                // choice between the joins and the calls; the type checker picks one.
+                let mixed = self.mixed_func_cands(i, r);
+                if !mixed.is_empty() {
+                    let recv = self.expr(i, l)?;
+                    let alts = match self.expr(i, r)? {
+                        RExpr::Choice(v) if v.len() > 1 => v,
+                        other => vec![other],
+                    };
+                    let mut out = Vec::new();
+                    for a in alts {
+                        out.push(match a {
+                            RExpr::Choice(mut v) if v.len() == 1 => {
+                                RExpr::Choice(vec![RExpr::Bin(
+                                    BinOp::Join,
+                                    Box::new(recv.clone()),
+                                    Box::new(v.remove(0)),
+                                )])
+                            }
+                            other => {
+                                RExpr::Bin(BinOp::Join, Box::new(recv.clone()), Box::new(other))
+                            }
+                        });
+                    }
+                    for f in mixed {
+                        out.push(RExpr::Call(f, vec![recv.clone()]));
+                    }
+                    return Ok(RExpr::Choice(out));
+                }
                 // Java `populate`: a field of the enclosing sig is `this.f` in every position (`x.@f` avoids it).
                 let rr = self.expr(i, r)?;
                 RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(rr))
             }
             ExprKind::Binary(op, l, r) => {
-                if matches!(op, BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered) {
+                if matches!(
+                    op,
+                    BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered
+                ) {
                     self.model.temporal = true;
                 }
                 RExpr::Bin(*op, Box::new(self.expr(i, l)?), Box::new(self.expr(i, r)?))
@@ -1102,13 +1317,15 @@ impl<'a> Builder<'a> {
                 }
                 // `Int[e]` casts an integer to its `Int` atom (Java CAST2SIGINT).
                 if matches!(&f.kind, ExprKind::Const(Const::SigInt)) && args.len() == 1 {
-                    return Ok(RExpr::Un(UnOp::IntCast, Box::new(self.expr(i, &args[0])?)));
+                    return Ok(RExpr::Un(UnOp::SigInt, Box::new(self.expr(i, &args[0])?)));
                 }
                 // `x.f[a]` where `f` takes parameters: call with the receiver first.
                 if let ExprKind::Binary(BinOp::Join, l, r) = &f.kind {
                     // Same for a macro: the receiver is its first parameter.
                     if let ExprKind::Name(mn) = &r.kind {
-                        if let Some(Sym::Macro(m)) = self.lookup(i, mn).and_then(|v| v.into_iter().next()) {
+                        if let Some(Sym::Macro(m)) =
+                            self.lookup(i, mn).and_then(|v| v.into_iter().next())
+                        {
                             if self.macros[m].params.len() == args.len() + 1 {
                                 let mut all = vec![(**l).clone()];
                                 all.extend(args.iter().cloned());
@@ -1230,17 +1447,23 @@ impl<'a> Builder<'a> {
     /// Functions a plain name may denote that take exactly `nargs` parameters (every symbol of that name
     /// must be such a function; locals shadow). Several candidates form a type-resolved overload.
     fn func_cands(&self, i: usize, e: &Expr, nargs: usize) -> Vec<FuncId> {
-        let ExprKind::Name(n) = &e.kind else { return Vec::new() };
+        let ExprKind::Name(n) = &e.kind else {
+            return Vec::new();
+        };
         let n = n.strip_prefix('@').unwrap_or(n);
         if self.locals.iter().any(|(name, _)| name == n) {
             return Vec::new();
         }
-        let Some(v) = self.lookup_any(i, n) else { return Vec::new() };
+        let Some(v) = self.lookup_any(i, n) else {
+            return Vec::new();
+        };
         let mut out = Vec::new();
         let mut others = false;
         for sym in &v {
             match sym {
-                Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == nargs && nargs > 0 => out.push(*fid),
+                Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == nargs && nargs > 0 => {
+                    out.push(*fid)
+                }
                 Sym::Func(_) => {}
                 // a field of the same name: with two or more box arguments only the function can fit
                 Sym::Field(_) if nargs >= 2 => {}
@@ -1253,11 +1476,44 @@ impl<'a> Builder<'a> {
         out
     }
 
+    /// One-argument functions named by `e` when the name also denotes a field or sig (else empty).
+    fn mixed_func_cands(&self, i: usize, e: &Expr) -> Vec<FuncId> {
+        let ExprKind::Name(n) = &e.kind else {
+            return Vec::new();
+        };
+        let n = n.strip_prefix('@').unwrap_or(n);
+        if self.locals.iter().any(|(name, _)| name == n) {
+            return Vec::new();
+        }
+        let Some(v) = self.lookup_any(i, n) else {
+            return Vec::new();
+        };
+        let mut out = Vec::new();
+        let mut others = false;
+        for sym in &v {
+            match sym {
+                Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 1 => out.push(*fid),
+                Sym::Func(_) => {}
+                Sym::Field(_) | Sym::Sig(_) => others = true,
+                _ => return Vec::new(),
+            }
+        }
+        if !others {
+            return Vec::new();
+        }
+        out
+    }
+
     fn calls(cands: Vec<FuncId>, args: Vec<RExpr>) -> RExpr {
         if cands.len() == 1 {
             RExpr::Call(cands[0], args)
         } else {
-            RExpr::Choice(cands.into_iter().map(|f| RExpr::Call(f, args.clone())).collect())
+            RExpr::Choice(
+                cands
+                    .into_iter()
+                    .map(|f| RExpr::Call(f, args.clone()))
+                    .collect(),
+            )
         }
     }
 
@@ -1286,7 +1542,11 @@ impl<'a> Builder<'a> {
         match found {
             Some(v) if v.len() == 1 => match &v[0] {
                 Sym::Sig(id) => Ok(RExpr::Sig(*id)),
-                Sym::Field(id) => Ok(if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) }),
+                Sym::Field(id) => Ok(if skip_locals {
+                    RExpr::Field(*id)
+                } else {
+                    self.field_ref(*id)
+                }),
                 Sym::Func(fid) => {
                     if self.model.funcs[*fid as usize].nparams == 0 {
                         if self.scopes[i].names.contains_key(n) && !n.contains('/') {
@@ -1299,7 +1559,13 @@ impl<'a> Builder<'a> {
                             for x in extra {
                                 if let Sym::Func(g) = x {
                                     if self.model.funcs[g as usize].nparams == 0
-                                        && !group.iter().any(|o| *o == g || self.same_instance_func(&Sym::Func(*o), &Sym::Func(g)))
+                                        && !group.iter().any(|o| {
+                                            *o == g
+                                                || self.same_instance_func(
+                                                    &Sym::Func(*o),
+                                                    &Sym::Func(g),
+                                                )
+                                        })
                                     {
                                         group.push(g);
                                     }
@@ -1311,14 +1577,26 @@ impl<'a> Builder<'a> {
                         }
                         Ok(RExpr::Call(*fid, Vec::new()))
                     } else {
-                        err(i, self.mods, e.loc.line, e.loc.col, format!("Function \"{n}\" needs arguments."))
+                        err(
+                            i,
+                            self.mods,
+                            e.loc.line,
+                            e.loc.col,
+                            format!("Function \"{n}\" needs arguments."),
+                        )
                     }
                 }
                 Sym::Macro(m) => {
                     let m = *m;
                     self.macro_call(i, e, m, &[])
                 }
-                Sym::Assert(_) => err(i, self.mods, e.loc.line, e.loc.col, format!("\"{n}\" is an assertion, not an expression.")),
+                Sym::Assert(_) => err(
+                    i,
+                    self.mods,
+                    e.loc.line,
+                    e.loc.col,
+                    format!("\"{n}\" is an assertion, not an expression."),
+                ),
             },
             Some(v) => {
                 let mut cands = Vec::new();
@@ -1326,37 +1604,62 @@ impl<'a> Builder<'a> {
                     cands.push(match sym {
                         Sym::Sig(id) => RExpr::Sig(*id),
                         Sym::Field(id) => {
-                            let r = if skip_locals { RExpr::Field(*id) } else { self.field_ref(*id) };
+                            let r = if skip_locals {
+                                RExpr::Field(*id)
+                            } else {
+                                self.field_ref(*id)
+                            };
                             // Java `populate`: inside a sig fact a field of an unrelated sig has penalty 1
                             // (a one-element `Choice` marks a penalized candidate).
-                            if matches!(r, RExpr::Field(_)) && !self.this_sigs.is_empty() && !self.in_field_decl {
+                            if matches!(r, RExpr::Field(_))
+                                && !self.this_sigs.is_empty()
+                                && !self.in_field_decl
+                            {
                                 RExpr::Choice(vec![r])
                             } else {
                                 r
                             }
                         }
-                        Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => RExpr::Call(*fid, Vec::new()),
+                        Sym::Func(fid) if self.model.funcs[*fid as usize].nparams == 0 => {
+                            RExpr::Call(*fid, Vec::new())
+                        }
                         // a function that needs arguments cannot be this bare name (Java ExprBadCall)
                         Sym::Func(_) => continue,
-                        _ => return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)"))),
+                        _ => {
+                            return Err(unsupported(format!(
+                                "overloaded name \"{n}\" with arguments (M3.3)"
+                            )))
+                        }
                     });
                 }
                 if cands.is_empty() {
-                    return Err(unsupported(format!("overloaded name \"{n}\" with arguments (M3.3)")));
+                    return Err(unsupported(format!(
+                        "overloaded name \"{n}\" with arguments (M3.3)"
+                    )));
                 }
                 if cands.len() == 1 {
                     return Ok(cands.remove(0));
                 }
                 Ok(RExpr::Choice(cands))
             }
-            None => err(i, self.mods, e.loc.line, e.loc.col, format!("The name \"{n}\" cannot be found.")),
+            None => err(
+                i,
+                self.mods,
+                e.loc.line,
+                e.loc.col,
+                format!("The name \"{n}\" cannot be found."),
+            ),
         }
     }
 
     /// Name lookup as Java `populate`: qualified or unqualified; inside a field declaration only the sig's own
     /// (and ancestors') fields and no functions are visible.
     fn lookup_any(&self, i: usize, n: &str) -> Option<Vec<Sym>> {
-        let found = if n.contains('/') { self.lookup(i, n) } else { self.lookup_unqualified(i, n) };
+        let found = if n.contains('/') {
+            self.lookup(i, n)
+        } else {
+            self.lookup_unqualified(i, n)
+        };
         if !self.in_field_decl {
             return found;
         }
@@ -1388,14 +1691,19 @@ impl<'a> Builder<'a> {
 
     /// A field named inside a sig body (own or inherited field) means `this.field`.
     fn field_ref(&self, id: FieldId) -> RExpr {
-        if let (Some(&ts), Some((_, this_l))) =
-            (self.this_sigs.last(), self.locals.iter().rev().find(|(name, _)| name == "this"))
-        {
+        if let (Some(&ts), Some((_, this_l))) = (
+            self.this_sigs.last(),
+            self.locals.iter().rev().find(|(name, _)| name == "this"),
+        ) {
             let owner = self.model.fields[id as usize].owner;
             let mut p = Some(ts);
             while let Some(x) = p {
                 if x == owner {
-                    return RExpr::Bin(BinOp::Join, Box::new(RExpr::Local(*this_l)), Box::new(RExpr::Field(id)));
+                    return RExpr::Bin(
+                        BinOp::Join,
+                        Box::new(RExpr::Local(*this_l)),
+                        Box::new(RExpr::Field(id)),
+                    );
                 }
                 p = self.model.sigs[x as usize].parent;
             }
@@ -1405,10 +1713,22 @@ impl<'a> Builder<'a> {
 
     /// Macro call: the body is resolved with the parameters bound to the argument expressions
     /// (`let` semantics, like Java's macro expansion).
-    fn macro_call(&mut self, i: usize, e: &Expr, m: usize, args: &[Expr]) -> Result<RExpr, AlloyError> {
+    fn macro_call(
+        &mut self,
+        i: usize,
+        e: &Expr,
+        m: usize,
+        args: &[Expr],
+    ) -> Result<RExpr, AlloyError> {
         let def = self.macros[m].clone();
         if def.params.len() != args.len() {
-            return err(i, self.mods, e.loc.line, e.loc.col, "Wrong number of arguments for macro.");
+            return err(
+                i,
+                self.mods,
+                e.loc.line,
+                e.loc.col,
+                "Wrong number of arguments for macro.",
+            );
         }
         let mut binds = Vec::new();
         for (p, a) in def.params.iter().zip(args.iter()) {
@@ -1416,7 +1736,9 @@ impl<'a> Builder<'a> {
             binds.push((p.clone(), v));
         }
         if self.depth > 64 {
-            return Err(unsupported("macro expansion is too deep (recursive macro?)"));
+            return Err(unsupported(
+                "macro expansion is too deep (recursive macro?)",
+            ));
         }
         // The body sees only its own parameters, never the caller's locals.
         let saved = std::mem::take(&mut self.locals);
@@ -1437,7 +1759,6 @@ impl<'a> Builder<'a> {
             Ok(RExpr::Let(lets, Box::new(body)))
         }
     }
-
 }
 
 fn same_sym(a: &Sym, b: &Sym) -> bool {
@@ -1480,7 +1801,9 @@ mod tests {
     use std::path::{Path, PathBuf};
 
     fn collect(dir: &Path, out: &mut Vec<PathBuf>) {
-        let Ok(rd) = std::fs::read_dir(dir) else { return };
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            return;
+        };
         for ent in rd.flatten() {
             let p = ent.path();
             if p.is_dir() {
@@ -1509,10 +1832,17 @@ mod tests {
                 }
                 Err(e) => {
                     other += 1;
-                    println!("ERR {}: {}", f.display(), e.msg.lines().next().unwrap_or(""));
+                    println!(
+                        "ERR {}: {}",
+                        f.display(),
+                        e.msg.lines().next().unwrap_or("")
+                    );
                 }
             }
         }
-        println!("SURVEY ok={ok} unsupported={unsup} other={other} total={}", files.len());
+        println!(
+            "SURVEY ok={ok} unsupported={unsup} other={other} total={}",
+            files.len()
+        );
     }
 }

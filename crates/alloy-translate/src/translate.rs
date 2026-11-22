@@ -8,11 +8,17 @@
 use std::collections::HashMap;
 
 use alloy_core::error::{AlloyError, ErrorKind};
-use alloy_core::sema::{FieldId, LocalId, Model, RCommand, RDecl, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_SEQINT, SIG_STRING, SIG_UNIV};
+use alloy_core::sema::{
+    FieldId, LocalId, Model, RCommand, RDecl, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_SEQINT,
+    SIG_STRING, SIG_UNIV,
+};
 use alloy_core::syntax::{BinOp, Const, Mult, Quant, UnOp};
-use kodkod::ast::{Const as KConst, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quantifier};
+use kodkod::ast::{
+    Const as KConst, Decl, Expr, Formula, IntCmp, IntExpr, Multiplicity, Quantifier,
+};
 use kodkod::instance::{Bounds, TupleSet, Universe};
 
+use crate::resolve::{is_choice, Exp, Resolver};
 use crate::scope::{compute_scopes, Layout};
 use crate::Options;
 
@@ -63,7 +69,12 @@ pub(crate) struct Temporal {
 }
 
 /// `trace`: number of states of the lasso trace when the model is temporal (`var` sigs/fields, LTL).
-pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usize>) -> Result<Problem, AlloyError> {
+pub fn translate(
+    model: &Model,
+    cmd: &RCommand,
+    opt: &Options,
+    trace: Option<usize>,
+) -> Result<Problem, AlloyError> {
     let _ = opt;
     let mut lay = compute_scopes(model, cmd)?;
     if let Some(k) = trace {
@@ -90,8 +101,11 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
         .map_err(other)?;
     // The `String` sig is exactly the string atoms; every literal is its own exact relation (Java `s2k`), so
     // different literals are distinguishable for symmetry breaking.
-    let string_tuples = TupleSet::from_tuples(1, (lay.string_range.0..lay.string_range.1).map(|a| vec![a]));
-    let string_rel = bounds.bound("String", string_tuples.clone(), string_tuples).map_err(other)?;
+    let string_tuples =
+        TupleSet::from_tuples(1, (lay.string_range.0..lay.string_range.1).map(|a| vec![a]));
+    let string_rel = bounds
+        .bound("String", string_tuples.clone(), string_tuples)
+        .map_err(other)?;
     let mut string_lits: HashMap<String, u32> = HashMap::new();
     for lit in &model.strings {
         let name = format!("\"{lit}\"");
@@ -103,17 +117,29 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
     }
     // `seq/Int`: the integers 0 .. maxseq-1 (Java `ScopeComputer`: maxseq defaults to the overall scope or 4,
     // at most the largest integer).
-    let max_int = if bitwidth > 0 { (1i64 << (bitwidth - 1)) - 1 } else { -1 };
+    let max_int = if bitwidth > 0 {
+        (1i64 << (bitwidth - 1)) - 1
+    } else {
+        -1
+    };
     let maxseq = {
-        let m = cmd.maxseq.unwrap_or_else(|| cmd.overall.filter(|o| *o >= 0).unwrap_or(4)) as i64;
+        let m = cmd
+            .maxseq
+            .unwrap_or_else(|| cmd.overall.filter(|o| *o >= 0).unwrap_or(4)) as i64;
         m.min(max_int + 1).max(0)
     };
-    let int_min_v = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
+    let int_min_v = if bitwidth > 0 {
+        -(1i64 << (bitwidth - 1))
+    } else {
+        0
+    };
     let seq_tuples = TupleSet::from_tuples(
         1,
         (0..maxseq).map(|i| vec![(n_sig_atoms as i64 + (i - int_min_v)) as u32]),
     );
-    let seqint_rel = bounds.bound("seq/Int", seq_tuples.clone(), seq_tuples).map_err(other)?;
+    let seqint_rel = bounds
+        .bound("seq/Int", seq_tuples.clone(), seq_tuples)
+        .map_err(other)?;
     // Time atoms: every state is its own exact relation (so symmetry breaking tells them apart), `loop` is free.
     let temporal = match trace {
         Some(k) => {
@@ -121,19 +147,38 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
             for i in 0..k {
                 let a = lay.time_range.0 + i as u32;
                 let ts = TupleSet::from_tuples(1, std::iter::once(vec![a]));
-                time_rel.push(bounds.bound(&format!("$time{i}"), ts.clone(), ts).map_err(other)?);
+                time_rel.push(
+                    bounds
+                        .bound(&format!("$time{i}"), ts.clone(), ts)
+                        .map_err(other)?,
+                );
             }
-            let all = TupleSet::from_tuples(1, (lay.time_range.0..lay.time_range.1).map(|a| vec![a]));
-            let time_all = bounds.bound("$Time", all.clone(), all.clone()).map_err(other)?;
-            let loop_rel = bounds.bound("$loop", TupleSet::empty(1), all).map_err(other)?;
-            Some(Temporal { k, time_rel, time_all, loop_rel })
+            let all =
+                TupleSet::from_tuples(1, (lay.time_range.0..lay.time_range.1).map(|a| vec![a]));
+            let time_all = bounds
+                .bound("$Time", all.clone(), all.clone())
+                .map_err(other)?;
+            let loop_rel = bounds
+                .bound("$loop", TupleSet::empty(1), all)
+                .map_err(other)?;
+            Some(Temporal {
+                k,
+                time_rel,
+                time_all,
+                loop_rel,
+            })
         }
         None => None,
     };
-    let time_set: Option<TupleSet> = trace.map(|_| unary((lay.time_range.0..lay.time_range.1).collect()));
+    let time_set: Option<TupleSet> =
+        trace.map(|_| unary((lay.time_range.0..lay.time_range.1).collect()));
     bounds.ordered_atoms = (n_sig_atoms..n_atoms).collect();
     bounds.int_start = n_sig_atoms;
-    bounds.int_min = if bitwidth > 0 { -(1i64 << (bitwidth - 1)) } else { 0 };
+    bounds.int_min = if bitwidth > 0 {
+        -(1i64 << (bitwidth - 1))
+    } else {
+        0
+    };
 
     // Relations of the sigs (Java `BoundsComputer.allocatePrimSig`): a sig without children is one relation; a sig
     // with children is the union of its children's expressions, plus a `_remainder` relation unless abstract.
@@ -142,7 +187,16 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
     for i in 0..model.sigs.len() {
         let s = &model.sigs[i];
         if s.kind == SigKind::User && s.parent.is_none() && s.subset_of.is_empty() {
-            allocate_prim_sig(model, &lay, n_atoms, i as SigId, &mut bounds, &mut sig_expr, &mut disjoint, time_set.as_ref())?;
+            allocate_prim_sig(
+                model,
+                &lay,
+                n_atoms,
+                i as SigId,
+                &mut bounds,
+                &mut sig_expr,
+                &mut disjoint,
+                time_set.as_ref(),
+            )?;
         }
     }
     for (i, s) in model.sigs.iter().enumerate() {
@@ -150,10 +204,16 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
             let up = sig_upper(model, &lay, i as SigId, n_atoms)?;
             let lo = lay.lower(i as SigId);
             let id = if s.is_var {
-                let ts = time_set.as_ref().ok_or_else(|| other("var sig in a static problem"))?;
-                bounds.bound(&s.label, TupleSet::empty(2), unary(up).product(ts)).map_err(other)?
+                let ts = time_set
+                    .as_ref()
+                    .ok_or_else(|| other("var sig in a static problem"))?;
+                bounds
+                    .bound(&s.label, TupleSet::empty(2), unary(up).product(ts))
+                    .map_err(other)?
             } else {
-                bounds.bound(&s.label, unary(lo), unary(up)).map_err(other)?
+                bounds
+                    .bound(&s.label, unary(lo), unary(up))
+                    .map_err(other)?
             };
             sig_expr[i] = Some(Expr::Rel(id));
         }
@@ -162,9 +222,18 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
     let mut field_rel: Vec<Option<u32>> = vec![None; model.fields.len()];
     let mut memo: Vec<Option<TupleSet>> = vec![None; model.fields.len()];
     for (fi, f) in model.fields.iter().enumerate() {
-        let upper = field_upper(model, &lay, n_atoms, fi as FieldId, &mut memo, &mut Vec::new())?;
+        let upper = field_upper(
+            model,
+            &lay,
+            n_atoms,
+            fi as FieldId,
+            &mut memo,
+            &mut Vec::new(),
+        )?;
         let upper = if f.is_var {
-            let ts = time_set.as_ref().ok_or_else(|| other("var field in a static problem"))?;
+            let ts = time_set
+                .as_ref()
+                .ok_or_else(|| other("var field in a static problem"))?;
             upper.product(ts)
         } else {
             upper
@@ -176,7 +245,8 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
 
     // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
     // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
-    let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> = std::collections::HashSet::new();
+    let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> =
+        std::collections::HashSet::new();
     for (_, body) in model.sig_facts.iter() {
         pin_total_orders(body, &mut bounds, &sig_expr, &field_rel, &mut pinned);
     }
@@ -210,7 +280,10 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
 
     let mut conjuncts = Vec::new();
     if let Some(t) = &temporal {
-        conjuncts.push(Formula::Multiplicity(Multiplicity::One, Expr::Rel(t.loop_rel)));
+        conjuncts.push(Formula::Multiplicity(
+            Multiplicity::One,
+            Expr::Rel(t.loop_rel),
+        ));
     }
     for f in &model.facts {
         conjuncts.push(tr.formula(&f.body)?);
@@ -231,7 +304,11 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
     // A `check` is solved negated: the command formula occurs in negative position, the facts in positive.
     tr.pol = !cmd.check;
     let command = tr.formula(&cmd.formula)?;
-    conjuncts.push(if cmd.check { Formula::Not(Box::new(command)) } else { command });
+    conjuncts.push(if cmd.check {
+        Formula::Not(Box::new(command))
+    } else {
+        command
+    });
     let trace_info = temporal.as_ref().map(|t| {
         let mut var_rels: Vec<u32> = Vec::new();
         for (i, sg) in model.sigs.iter().enumerate() {
@@ -248,7 +325,12 @@ pub fn translate(model: &Model, cmd: &RCommand, opt: &Options, trace: Option<usi
                 }
             }
         }
-        TraceInfo { k: t.k, var_rels, time_rel: t.time_rel.clone(), loop_rel: t.loop_rel }
+        TraceInfo {
+            k: t.k,
+            var_rels,
+            time_rel: t.time_rel.clone(),
+            loop_rel: t.loop_rel,
+        }
     });
     Ok(Problem {
         bounds,
@@ -273,7 +355,9 @@ fn allocate_prim_sig(
         // a variable sig is one relation with a time column (its sub-/super-sig relations are per-state constraints)
         let ts = time.ok_or_else(|| other("var sig in a static problem"))?;
         let up = sig_upper(model, lay, sid, n_atoms)?;
-        let id = bounds.bound(&sig.label, TupleSet::empty(2), unary(up).product(ts)).map_err(other)?;
+        let id = bounds
+            .bound(&sig.label, TupleSet::empty(2), unary(up).product(ts))
+            .map_err(other)?;
         let e = Expr::Rel(id);
         sig_expr[sid as usize] = Some(e.clone());
         return Ok(e);
@@ -298,7 +382,9 @@ fn allocate_prim_sig(
     let mut upper: Vec<u32> = sig_upper(model, lay, sid, n_atoms)?;
     let e = match sum {
         None => {
-            let id = bounds.bound(&sig.label, unary(lower), unary(upper)).map_err(other)?;
+            let id = bounds
+                .bound(&sig.label, unary(lower), unary(upper))
+                .map_err(other)?;
             Expr::Rel(id)
         }
         Some(sum) if sig.is_abstract => sum,
@@ -310,7 +396,11 @@ fn allocate_prim_sig(
                 upper.retain(|a| !known.contains(a));
             }
             let id = bounds
-                .bound(&format!("{}_remainder", sig.label), unary(lower), unary(upper))
+                .bound(
+                    &format!("{}_remainder", sig.label),
+                    unary(lower),
+                    unary(upper),
+                )
                 .map_err(other)?;
             Expr::union(sum, Expr::Rel(id))
         }
@@ -347,12 +437,18 @@ fn pin_total_orders(
                 pin_total_orders(i, bounds, sig_rel, field_rel, pinned);
             }
         }
-        RExpr::Quant(Quant::All, _, body) => pin_total_orders(body, bounds, sig_rel, field_rel, pinned),
+        RExpr::Quant(Quant::All, _, body) => {
+            pin_total_orders(body, bounds, sig_rel, field_rel, pinned)
+        }
         RExpr::TotalOrder(args) => {
-            let Some(key @ (elem, f1, f2)) = total_order_key(args) else { return };
-            let (Some(Some(er)), Some(Some(r1)), Some(Some(r2))) =
-                (sig_rel.get(elem as usize), field_rel.get(f1 as usize), field_rel.get(f2 as usize))
-            else {
+            let Some(key @ (elem, f1, f2)) = total_order_key(args) else {
+                return;
+            };
+            let (Some(Some(er)), Some(Some(r1)), Some(Some(r2))) = (
+                sig_rel.get(elem as usize),
+                field_rel.get(f1 as usize),
+                field_rel.get(f2 as usize),
+            ) else {
                 return;
             };
             let Expr::Rel(er) = er else { return };
@@ -360,18 +456,32 @@ fn pin_total_orders(
             if bounds.relations[r1].arity != 2 || bounds.relations[r2].arity != 3 {
                 return;
             }
-            let dom: Vec<u32> = bounds.relations[er].upper.tuples.iter().map(|t| t[0]).collect();
+            let dom: Vec<u32> = bounds.relations[er]
+                .upper
+                .tuples
+                .iter()
+                .map(|t| t[0])
+                .collect();
             // The owner (a `one` sig) must be a single atom: the first column of both fields.
-            let owners: std::collections::BTreeSet<u32> = bounds.relations[r1].upper.tuples.iter().map(|t| t[0]).collect();
+            let owners: std::collections::BTreeSet<u32> = bounds.relations[r1]
+                .upper
+                .tuples
+                .iter()
+                .map(|t| t[0])
+                .collect();
             if dom.is_empty() || owners.len() != 1 {
                 return;
             }
             let o = *owners.iter().next().unwrap();
-            if !dom.windows(2).all(|w| kodkod::translate::interchangeable(bounds, w[0], w[1])) {
+            if !dom
+                .windows(2)
+                .all(|w| kodkod::translate::interchangeable(bounds, w[0], w[1]))
+            {
                 return;
             }
             let first_t = vec![o, dom[0]];
-            let chain: std::collections::BTreeSet<Vec<u32>> = dom.windows(2).map(|w| vec![o, w[0], w[1]]).collect();
+            let chain: std::collections::BTreeSet<Vec<u32>> =
+                dom.windows(2).map(|w| vec![o, w[0], w[1]]).collect();
             if !bounds.relations[r1].upper.tuples.contains(&first_t)
                 || !bounds.relations[r2].lower.tuples.is_subset(&chain)
                 || !chain.is_subset(&bounds.relations[r2].upper.tuples)
@@ -411,9 +521,13 @@ fn is_numeric(e: &RExpr) -> bool {
             e,
             RExpr::Num(_)
                 | RExpr::Const(Const::IntMin | Const::IntMax)
-                | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
+                | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::SigInt | UnOp::Neg, _)
                 | RExpr::Quant(Quant::Sum, _, _)
-                | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _)
+                | RExpr::Bin(
+                    BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem,
+                    _,
+                    _
+                )
         ),
     }
 }
@@ -427,12 +541,19 @@ fn sig_upper(model: &Model, lay: &Layout, s: SigId, n_atoms: u32) -> Result<Vec<
     let sig = &model.sigs[s as usize];
     if sig.kind == SigKind::Builtin {
         return Ok(match s {
-            SIG_UNIV => (0..n_atoms).filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1).collect(),
+            SIG_UNIV => (0..n_atoms)
+                .filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1)
+                .collect(),
             SIG_NONE => Vec::new(),
             SIG_INT => (lay.atoms.len() as u32..n_atoms).collect(),
             SIG_STRING => (lay.string_range.0..lay.string_range.1).collect(),
             SIG_SEQINT => (lay.atoms.len() as u32..n_atoms).collect(),
-            _ => return Err(unsupported(format!("builtin sig {} (strings/seq)", sig.label))),
+            _ => {
+                return Err(unsupported(format!(
+                    "builtin sig {} (strings/seq)",
+                    sig.label
+                )))
+            }
         });
     }
     if !sig.subset_of.is_empty() {
@@ -476,7 +597,7 @@ fn field_upper(
 }
 
 /// Type (upper-bound tuples) of a declaration expression, used for field bounds.
-fn type_of(
+pub(crate) fn type_of(
     model: &Model,
     lay: &Layout,
     n_atoms: u32,
@@ -493,10 +614,16 @@ fn type_of(
     Ok(match e {
         RExpr::Sig(s) => unary(sig_upper(model, lay, *s, n_atoms)?),
         RExpr::Field(f) => field_upper(model, lay, n_atoms, *f, memo, stack)?,
-        RExpr::Const(Const::Univ) => unary((0..n_atoms).filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1).collect()),
+        RExpr::Const(Const::Univ) => unary(
+            (0..n_atoms)
+                .filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1)
+                .collect(),
+        ),
         RExpr::Const(Const::None) => TupleSet::empty(1),
         RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some | UnOp::Prime, x) => t!(x),
-        RExpr::Un(UnOp::Seq, x) => unary(sig_upper(model, lay, SIG_SEQINT, n_atoms)?).product(&t!(x)),
+        RExpr::Un(UnOp::Seq, x) => {
+            unary(sig_upper(model, lay, SIG_SEQINT, n_atoms)?).product(&t!(x))
+        }
         RExpr::Bin(BinOp::Plus, a, b) => t!(a).union(&t!(b)),
         RExpr::Bin(BinOp::Intersect, a, b) => {
             let (a, b) = (t!(a), t!(b));
@@ -539,7 +666,9 @@ fn type_of(
         RExpr::Choice(c) => {
             let mut acc: Option<TupleSet> = None;
             // penalized candidates (one-element `Choice`) only count when nothing else is available
-            let has_plain = c.iter().any(|x| !matches!(x, RExpr::Choice(v) if v.len() == 1));
+            let has_plain = c
+                .iter()
+                .any(|x| !matches!(x, RExpr::Choice(v) if v.len() == 1));
             for x in c {
                 if has_plain && matches!(x, RExpr::Choice(v) if v.len() == 1) {
                     continue;
@@ -564,7 +693,9 @@ fn type_of(
             let all = unary((0..n_atoms).collect());
             TupleSet::from_tuples(2, all.tuples.iter().map(|t| vec![t[0], t[0]]))
         }
-        RExpr::Const(Const::IntNext) | RExpr::Const(Const::IntMin) | RExpr::Const(Const::IntMax) => {
+        RExpr::Const(Const::IntNext)
+        | RExpr::Const(Const::IntMin)
+        | RExpr::Const(Const::IntMax) => {
             let ints = unary(sig_upper(model, lay, SIG_INT, n_atoms)?);
             if matches!(e, RExpr::Const(Const::IntNext)) {
                 ints.product(&ints)
@@ -574,16 +705,19 @@ fn type_of(
         }
         RExpr::Num(_)
         | RExpr::Quant(Quant::Sum, _, _)
-        | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _)
-        | RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
-            unary(sig_upper(model, lay, SIG_INT, n_atoms)?)
-        }
+        | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::SigInt | UnOp::Neg, _)
+        | RExpr::Bin(
+            BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem,
+            _,
+            _,
+        ) => unary(sig_upper(model, lay, SIG_INT, n_atoms)?),
         RExpr::Un(UnOp::Closure | UnOp::ReflClosure, x) => {
             // Superset: any (first column, last column) pair.
             let a = t!(x);
             let mut out = TupleSet::empty(2);
             let firsts: std::collections::BTreeSet<u32> = a.tuples.iter().map(|t| t[0]).collect();
-            let lasts: std::collections::BTreeSet<u32> = a.tuples.iter().map(|t| t[t.len() - 1]).collect();
+            let lasts: std::collections::BTreeSet<u32> =
+                a.tuples.iter().map(|t| t[t.len() - 1]).collect();
             for &f in &firsts {
                 for &l in &lasts {
                     out.tuples.insert(vec![f, l]);
@@ -597,9 +731,19 @@ fn type_of(
         RExpr::Ite(_, a, b) => t!(a).union(&t!(b)),
         RExpr::Un(UnOp::Transpose, x) => {
             let a = t!(x);
-            TupleSet::from_tuples(a.arity, a.tuples.iter().map(|t| t.iter().rev().copied().collect::<Vec<_>>()))
+            TupleSet::from_tuples(
+                a.arity,
+                a.tuples
+                    .iter()
+                    .map(|t| t.iter().rev().copied().collect::<Vec<_>>()),
+            )
         }
-        other_e => return Err(unsupported(format!("declaration type that is not a sig expression: {:.80}", format!("{other_e:?}")))),
+        other_e => {
+            return Err(unsupported(format!(
+                "declaration type that is not a sig expression: {:.80}",
+                format!("{other_e:?}")
+            )))
+        }
     })
 }
 
@@ -620,15 +764,13 @@ fn join_ts(a: &TupleSet, b: &TupleSet) -> Result<TupleSet, AlloyError> {
     Ok(out)
 }
 
-/// Expected type of an overloaded operand.
-enum Exp {
-    Any,
-    /// Same arity and at least one common tuple.
-    Same(TupleSet),
-    /// Candidate's first column must hit these atoms (it is the right operand of a join).
-    JoinRight(std::collections::BTreeSet<u32>),
-    /// Candidate's last column must hit these atoms (it is the left operand of a join).
-    JoinLeft(std::collections::BTreeSet<u32>),
+impl Resolver for Tr<'_> {
+    fn model(&self) -> &Model {
+        self.model
+    }
+    fn rty(&mut self, e: &RExpr) -> Option<TupleSet> {
+        self.ty(e)
+    }
 }
 
 struct Tr<'a> {
@@ -679,19 +821,27 @@ impl<'a> Tr<'a> {
     /// `univ` without the time atoms.
     fn univ(&self) -> Expr {
         match &self.temporal {
-            Some(t) => Expr::Difference(Box::new(Expr::Const(KConst::Univ)), Box::new(Expr::Rel(t.time_all))),
+            Some(t) => Expr::Difference(
+                Box::new(Expr::Const(KConst::Univ)),
+                Box::new(Expr::Rel(t.time_all)),
+            ),
             None => Expr::Const(KConst::Univ),
         }
     }
 
     fn time_atom(&self, s: usize) -> Result<Expr, AlloyError> {
-        let t = self.temporal.as_ref().ok_or_else(|| other("temporal construct in a static problem"))?;
+        let t = self
+            .temporal
+            .as_ref()
+            .ok_or_else(|| other("temporal construct in a static problem"))?;
         Ok(Expr::Rel(t.time_rel[s]))
     }
 
     /// The relation `e` (which has a trailing time column) read at the current time point.
     fn at_now(&self, e: Expr) -> Result<Expr, AlloyError> {
-        let tp = self.tp.ok_or_else(|| other("variable relation outside a time point"))?;
+        let tp = self
+            .tp
+            .ok_or_else(|| other("variable relation outside a time point"))?;
         Ok(Expr::join(e, self.time_atom(tp.state)?))
     }
 
@@ -712,7 +862,10 @@ impl<'a> Tr<'a> {
             SIG_SEQINT => Ok(Expr::Rel(self.seqint_rel)),
             _ => match self.sig_expr.get(s as usize).cloned().flatten() {
                 Some(e) => Ok(e),
-                None => Err(unsupported(format!("sig {} (integers/strings/seq)", self.model.sigs[s as usize].label))),
+                None => Err(unsupported(format!(
+                    "sig {} (integers/strings/seq)",
+                    self.model.sigs[s as usize].label
+                ))),
             },
         }
     }
@@ -731,11 +884,17 @@ impl<'a> Tr<'a> {
     fn arity(&self, e: &Expr) -> Result<usize, AlloyError> {
         Ok(match e {
             Expr::Rel(r) => self.bounds.rel(*r).arity,
-            Expr::Var(v) => *self.local_arity.get(v).ok_or_else(|| other("unbound variable"))?,
+            Expr::Var(v) => *self
+                .local_arity
+                .get(v)
+                .ok_or_else(|| other("unbound variable"))?,
             Expr::Const(KConst::Univ) | Expr::Const(KConst::None) => 1,
             Expr::Const(KConst::Iden) => 2,
             Expr::Literal(ts) => ts.arity,
-            Expr::Union(a, _) | Expr::Intersection(a, _) | Expr::Difference(a, _) | Expr::Override(a, _) => self.arity(a)?,
+            Expr::Union(a, _)
+            | Expr::Intersection(a, _)
+            | Expr::Difference(a, _)
+            | Expr::Override(a, _) => self.arity(a)?,
             Expr::Join(a, b) => self.arity(a)? + self.arity(b)? - 2,
             Expr::Product(a, b) => self.arity(a)? + self.arity(b)?,
             Expr::Transpose(_) | Expr::Closure(_) | Expr::ReflexiveClosure(_) => 2,
@@ -772,22 +931,45 @@ impl<'a> Tr<'a> {
         fn writes_env(e: &RExpr) -> bool {
             match e {
                 RExpr::Compr(..) | RExpr::Call(..) => true,
-                RExpr::Sig(_) | RExpr::Field(_) | RExpr::Local(_) | RExpr::Const(_) | RExpr::Num(_) | RExpr::Str(_) => {
-                    false
-                }
+                RExpr::Sig(_)
+                | RExpr::Field(_)
+                | RExpr::Local(_)
+                | RExpr::Const(_)
+                | RExpr::Num(_)
+                | RExpr::Str(_) => false,
                 RExpr::Un(_, x) => writes_env(x),
                 RExpr::Bin(_, a, b) => writes_env(a) || writes_env(b),
                 RExpr::Ite(c, a, b) => writes_env(c) || writes_env(a) || writes_env(b),
                 RExpr::Quant(_, ds, b) => ds.iter().any(|d| writes_env(&d.bound)) || writes_env(b),
                 RExpr::Let(bs, b) => bs.iter().any(|(_, x)| writes_env(x)) || writes_env(b),
-                RExpr::Block(xs) | RExpr::Disj(xs) | RExpr::TotalOrder(xs) | RExpr::Choice(xs) => xs.iter().any(writes_env),
+                RExpr::Block(xs) | RExpr::Disj(xs) | RExpr::TotalOrder(xs) | RExpr::Choice(xs) => {
+                    xs.iter().any(writes_env)
+                }
             }
         }
         if writes_env(e) {
             let mut env2 = env.clone();
-            type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), &mut env2).ok()
+            type_of(
+                self.model,
+                self.lay,
+                self.n_atoms,
+                e,
+                &mut memo,
+                &mut Vec::new(),
+                &mut env2,
+            )
+            .ok()
         } else {
-            type_of(self.model, self.lay, self.n_atoms, e, &mut memo, &mut Vec::new(), env).ok()
+            type_of(
+                self.model,
+                self.lay,
+                self.n_atoms,
+                e,
+                &mut memo,
+                &mut Vec::new(),
+                env,
+            )
+            .ok()
         }
     }
 
@@ -801,7 +983,15 @@ impl<'a> Tr<'a> {
         for _ in 0..3 {
             let mut rest = Vec::new();
             for (l, b) in pending {
-                match type_of(self.model, self.lay, self.n_atoms, b, memo, &mut Vec::new(), &mut env) {
+                match type_of(
+                    self.model,
+                    self.lay,
+                    self.n_atoms,
+                    b,
+                    memo,
+                    &mut Vec::new(),
+                    &mut env,
+                ) {
                     Ok(t) => {
                         env.insert(*l, t);
                     }
@@ -814,208 +1004,6 @@ impl<'a> Tr<'a> {
             }
         }
         env
-    }
-
-    /// Does candidate `c` fit the expected type?
-    fn compatible(&self, c: &RExpr, exp: &Exp) -> bool {
-        if matches!(exp, Exp::Any) {
-            return true;
-        }
-        let Some(t) = self.ty(c) else { return true };
-        match exp {
-            Exp::Any => true,
-            Exp::Same(w) => t.arity == w.arity && t.tuples.iter().any(|x| w.tuples.contains(x)),
-            Exp::JoinRight(cols) => t.tuples.iter().any(|x| cols.contains(&x[0])),
-            Exp::JoinLeft(cols) => t.tuples.iter().any(|x| cols.contains(&x[x.len() - 1])),
-        }
-    }
-
-    /// Java `ExprChoice` resolution by type. Candidates not fitting the expected type are dropped; overloaded
-    /// calls also need their (resolved) arguments to fit the parameter types. Several survivors stay a `Choice`.
-    fn resolve(&mut self, e: &RExpr, exp: &Exp) -> Result<RExpr, AlloyError> {
-        match e {
-            RExpr::Block(items) if items.len() == 1 => self.resolve(&items[0], exp),
-            RExpr::Choice(cands) => {
-                let mut keep = Vec::new();
-                let mut marked: Vec<bool> = Vec::new();
-                for c in cands {
-                    // a one-element `Choice` marks a penalized candidate (Java ExprChoice penalty)
-                    let (c, is_marked) = match c {
-                        RExpr::Choice(v) if v.len() == 1 => (&v[0], true),
-                        other_c => (other_c, false),
-                    };
-                    let c = match c {
-                        RExpr::Call(fid, args) => {
-                            let params = self.model.funcs[*fid as usize].params.clone();
-                            if params.len() != args.len() {
-                                continue;
-                            }
-                            let mut new_args = Vec::new();
-                            let mut ok = true;
-                            for (a, (_, pb)) in args.iter().zip(&params) {
-                                let e2 = match self.ty(pb) {
-                                    Some(w) => Exp::Same(w),
-                                    None => Exp::Any,
-                                };
-                                match self.resolve(a, &e2) {
-                                    Ok(r) => {
-                                        if Self::is_choice(&r) || self.compatible(&r, &e2) {
-                                            new_args.push(r)
-                                        } else {
-                                            ok = false;
-                                            break;
-                                        }
-                                    }
-                                    Err(_) => {
-                                        ok = false;
-                                        break;
-                                    }
-                                }
-                            }
-                            if !ok {
-                                continue;
-                            }
-                            RExpr::Call(*fid, new_args)
-                        }
-                        other_c => other_c.clone(),
-                    };
-                    if self.compatible(&c, exp) {
-                        keep.push(c);
-                        marked.push(is_marked);
-                    }
-                }
-                // lowest penalty wins
-                if marked.iter().any(|m| !*m) && marked.iter().any(|m| *m) {
-                    let mut k = Vec::new();
-                    for (c, m) in keep.into_iter().zip(&marked) {
-                        if !*m {
-                            k.push(c);
-                        }
-                    }
-                    keep = k;
-                }
-                match keep.len() {
-                    0 => {
-                        // Java types a join/equality of disjoint columns as an (irrelevant, warned) empty
-                        // relation: no candidate fits, so any candidate with the right shape gives the same result.
-                        let shape_ok = |t: &RExpr, tr: &Self| match (exp, tr.ty(t)) {
-                            (Exp::Same(w), Some(ty)) => ty.arity == w.arity,
-                            (Exp::JoinLeft(_) | Exp::JoinRight(_), Some(_)) | (_, None) => true,
-                            _ => true,
-                        };
-                        for c in cands {
-                            let inner = match c {
-                                RExpr::Choice(v) if v.len() == 1 => &v[0],
-                                other_c => other_c,
-                            };
-                            if shape_ok(inner, self) {
-                                return Ok(inner.clone());
-                            }
-                        }
-                        let desc = format!("{:.300}", format!("{:?}", cands));
-                        Err(other(format!("no overloaded candidate matches the expected type: {desc}")))
-                    }
-                    1 => Ok(keep.remove(0)),
-                    _ => Ok(RExpr::Choice(keep)),
-                }
-            }
-            RExpr::Bin(op @ (BinOp::Plus | BinOp::Intersect | BinOp::Override), a, b) if Self::is_choice(e) => {
-                let a2 = self.resolve(a, exp)?;
-                let b2 = self.resolve(b, exp)?;
-                let (a2, b2) = self.resolve_pair(&a2, &b2)?;
-                Ok(RExpr::Bin(*op, Box::new(a2), Box::new(b2)))
-            }
-            RExpr::Bin(BinOp::Minus, a, b) if Self::is_choice(e) => {
-                let a2 = self.resolve(a, exp)?;
-                let b2 = self.resolve_pair(&a2, b)?.1;
-                Ok(RExpr::Bin(BinOp::Minus, Box::new(a2), Box::new(b2)))
-            }
-            RExpr::Un(UnOp::Transpose, x) if Self::is_choice(e) => {
-                let flipped = match exp {
-                    Exp::Any => Exp::Any,
-                    Exp::Same(w) => {
-                        Exp::Same(TupleSet::from_tuples(w.arity, w.tuples.iter().map(|t| t.iter().rev().copied().collect::<Vec<_>>())))
-                    }
-                    Exp::JoinRight(c) => Exp::JoinLeft(c.clone()),
-                    Exp::JoinLeft(c) => Exp::JoinRight(c.clone()),
-                };
-                Ok(RExpr::Un(UnOp::Transpose, Box::new(self.resolve(x, &flipped)?)))
-            }
-            RExpr::Un(op @ (UnOp::Closure | UnOp::ReflClosure | UnOp::Set), x) if Self::is_choice(e) => {
-                let exp2 = match exp {
-                    Exp::Any => Exp::Any,
-                    Exp::Same(w) => Exp::Same(w.clone()),
-                    Exp::JoinRight(c) => Exp::JoinRight(c.clone()),
-                    Exp::JoinLeft(c) => Exp::JoinLeft(c.clone()),
-                };
-                Ok(RExpr::Un(*op, Box::new(self.resolve(x, &exp2)?)))
-            }
-            _ => Ok(e.clone()),
-        }
-    }
-
-    /// Does `e` contain an unresolved overload at a position `resolve` can reach?
-    fn is_choice(e: &RExpr) -> bool {
-        match e {
-            RExpr::Choice(c) => c.len() > 1,
-            RExpr::Block(items) if items.len() == 1 => Self::is_choice(&items[0]),
-            RExpr::Bin(BinOp::Plus | BinOp::Minus | BinOp::Intersect | BinOp::Override, a, b) => {
-                Self::is_choice(a) || Self::is_choice(b)
-            }
-            RExpr::Un(UnOp::Transpose | UnOp::Closure | UnOp::ReflClosure | UnOp::Set, x) => Self::is_choice(x),
-            _ => false,
-        }
-    }
-
-    /// Resolves the overloaded operands of a binary operator against each other (same arity/overlapping types).
-    fn resolve_pair(&mut self, a: &RExpr, b: &RExpr) -> Result<(RExpr, RExpr), AlloyError> {
-        let (mut a, mut b) = (a.clone(), b.clone());
-        if Self::is_choice(&a) {
-            let exp = if Self::is_choice(&b) { None } else { self.ty(&b) };
-            a = self.resolve(&a, &exp.map_or(Exp::Any, Exp::Same))?;
-        }
-        if Self::is_choice(&b) {
-            let exp = self.ty(&a);
-            b = self.resolve(&b, &exp.map_or(Exp::Any, Exp::Same))?;
-        }
-        if Self::is_choice(&a) && !Self::is_choice(&b) {
-            let exp = self.ty(&b);
-            a = self.resolve(&a, &exp.map_or(Exp::Any, Exp::Same))?;
-        }
-        Ok((a, b))
-    }
-
-    /// Overloads of `a <: r` (domain = true: `a` against the first column of `r`) and `r :> b`.
-    fn resolve_restrict(&mut self, a: &RExpr, b: &RExpr, domain: bool) -> Result<(RExpr, RExpr), AlloyError> {
-        let (mut a, mut b) = (a.clone(), b.clone());
-        if domain {
-            if Self::is_choice(&b) {
-                let exp = self.ty(&a).map(|t| Exp::JoinRight(t.tuples.iter().map(|x| x[0]).collect()));
-                b = self.resolve(&b, &exp.unwrap_or(Exp::Any))?;
-            }
-        } else if Self::is_choice(&a) {
-            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
-            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
-        }
-        Ok((a, b))
-    }
-
-    /// Resolves the operands of a join `a.b`: last column of `a` against first column of `b`.
-    fn resolve_join(&mut self, a: &RExpr, b: &RExpr) -> Result<(RExpr, RExpr), AlloyError> {
-        let (mut a, mut b) = (a.clone(), b.clone());
-        if Self::is_choice(&a) && !Self::is_choice(&b) {
-            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
-            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
-        }
-        if Self::is_choice(&b) {
-            let exp = self.ty(&a).map(|t| Exp::JoinRight(t.tuples.iter().map(|x| x[x.len() - 1]).collect()));
-            b = self.resolve(&b, &exp.unwrap_or(Exp::Any))?;
-        }
-        if Self::is_choice(&a) {
-            let exp = self.ty(&b).map(|t| Exp::JoinLeft(t.tuples.iter().map(|x| x[0]).collect()));
-            a = self.resolve(&a, &exp.unwrap_or(Exp::Any))?;
-        }
-        Ok((a, b))
     }
 
     /// `univ^k` for the k-ary complement used by domain/range restriction.
@@ -1048,24 +1036,32 @@ impl<'a> Tr<'a> {
                 ),
                 None => Expr::Const(KConst::Iden),
             },
-            RExpr::Const(c @ (Const::IntMin | Const::IntMax)) => Expr::IntToExpr(Box::new(self.int_of(&RExpr::Const(*c))?)),
+            RExpr::Const(c @ (Const::IntMin | Const::IntMax)) => {
+                Expr::IntToExpr(Box::new(self.int_of(&RExpr::Const(*c))?))
+            }
             RExpr::Const(Const::IntNext) => self.int_next()?,
             RExpr::Const(other_c) => {
                 return Err(unsupported(format!("constant {other_c:?} (temporal)")))
             }
-            e @ (RExpr::Num(_) | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::Neg, _) | RExpr::Quant(Quant::Sum, _, _)) => {
-                Expr::IntToExpr(Box::new(self.int_of(e)?))
-            }
-            RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem, _, _) => {
-                Expr::IntToExpr(Box::new(self.int_of(e)?))
-            }
+            e @ (RExpr::Num(_)
+            | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::SigInt | UnOp::Neg, _)
+            | RExpr::Quant(Quant::Sum, _, _)) => Expr::IntToExpr(Box::new(self.int_of(e)?)),
+            RExpr::Bin(
+                BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem,
+                _,
+                _,
+            ) => Expr::IntToExpr(Box::new(self.int_of(e)?)),
             RExpr::Un(UnOp::Prime, x) => self.prime_expr(x)?,
             RExpr::Un(UnOp::Set, x) => self.expr(x)?,
             RExpr::Un(UnOp::Seq, x) => Expr::product(Expr::Rel(self.seqint_rel), self.expr(x)?),
             RExpr::Un(UnOp::Transpose, x) => Expr::Transpose(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Closure, x) => Expr::Closure(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::ReflClosure, x) => Expr::ReflexiveClosure(Box::new(self.expr(x)?)),
-            RExpr::Un(op, _) => return Err(unsupported(format!("unary operator {op:?} in expression position"))),
+            RExpr::Un(op, _) => {
+                return Err(unsupported(format!(
+                    "unary operator {op:?} in expression position"
+                )))
+            }
             RExpr::Bin(BinOp::Join, a, b) => {
                 let (a, b) = self.resolve_join(a, b)?;
                 Expr::join(self.expr(&a)?, self.expr(&b)?)
@@ -1104,7 +1100,11 @@ impl<'a> Tr<'a> {
                 let k = self.arity(&r)? - 1;
                 Expr::Intersection(Box::new(Expr::product(self.univ_pow(k), b)), Box::new(r))
             }
-            RExpr::Bin(op, _, _) => return Err(unsupported(format!("binary operator {op:?} in expression position"))),
+            RExpr::Bin(op, _, _) => {
+                return Err(unsupported(format!(
+                    "binary operator {op:?} in expression position"
+                )))
+            }
             RExpr::Compr(decls, body) => {
                 let (kdecls, disj, guards) = self.decls(decls)?;
                 let f = self.formula(body)?;
@@ -1113,7 +1113,11 @@ impl<'a> Tr<'a> {
             }
             RExpr::Ite(c, a, b) => {
                 let c = self.formula(c)?;
-                Expr::IfThenElse(Box::new(c), Box::new(self.expr(a)?), Box::new(self.expr(b)?))
+                Expr::IfThenElse(
+                    Box::new(c),
+                    Box::new(self.expr(a)?),
+                    Box::new(self.expr(b)?),
+                )
             }
             RExpr::Let(binds, body) => {
                 let saved = self.bind_lets(binds)?;
@@ -1134,7 +1138,7 @@ impl<'a> Tr<'a> {
             RExpr::Choice(cands) if cands.len() == 1 => self.expr(&cands[0])?,
             RExpr::Choice(_) => {
                 let r = self.resolve(e, &Exp::Any)?;
-                if Self::is_choice(&r) {
+                if is_choice(&r) {
                     let names: Vec<String> = match &r {
                         RExpr::Choice(cs) => cs
                             .iter()
@@ -1147,7 +1151,10 @@ impl<'a> Tr<'a> {
                             .collect(),
                         _ => Vec::new(),
                     };
-                    return Err(unsupported(format!("overloaded name still ambiguous after type resolution (M3.4): {}", names.join(" | "))));
+                    return Err(unsupported(format!(
+                        "overloaded name still ambiguous after type resolution (M3.4): {}",
+                        names.join(" | ")
+                    )));
                 }
                 self.expr(&r)?
             }
@@ -1165,8 +1172,8 @@ impl<'a> Tr<'a> {
             RExpr::Const(Const::IntMin) => IntExpr::Const(self.int_min()),
             RExpr::Const(Const::IntMax) => IntExpr::Const(-self.int_min() - 1),
             RExpr::Un(UnOp::Card, x) => IntExpr::Card(Box::new(self.expr(x)?)),
-            RExpr::Un(UnOp::IntCast, x) if is_numeric(x) => self.int_of(x)?,
-            RExpr::Un(UnOp::IntCast, x) => IntExpr::Sum(Box::new(self.expr(x)?)),
+            RExpr::Un(UnOp::IntCast | UnOp::SigInt, x) if is_numeric(x) => self.int_of(x)?,
+            RExpr::Un(UnOp::IntCast | UnOp::SigInt, x) => IntExpr::Sum(Box::new(self.expr(x)?)),
             RExpr::Un(UnOp::Neg, x) => IntExpr::Neg(Box::new(self.int_of(x)?)),
             RExpr::Block(items) if items.len() == 1 => self.int_of(&items[0])?,
             RExpr::Quant(Quant::Sum, decls, body) => {
@@ -1177,11 +1184,21 @@ impl<'a> Tr<'a> {
                 }
                 IntExpr::SumOver(kdecls, Box::new(b))
             }
-            RExpr::Bin(BinOp::IntPlus, a, b) => IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
-            RExpr::Bin(BinOp::IntMinus, a, b) => IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
-            RExpr::Bin(BinOp::Mul, a, b) => IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
-            RExpr::Bin(BinOp::Div, a, b) => IntExpr::Div(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
-            RExpr::Bin(BinOp::Rem, a, b) => IntExpr::Rem(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?)),
+            RExpr::Bin(BinOp::IntPlus, a, b) => {
+                IntExpr::Add(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?))
+            }
+            RExpr::Bin(BinOp::IntMinus, a, b) => {
+                IntExpr::Sub(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?))
+            }
+            RExpr::Bin(BinOp::Mul, a, b) => {
+                IntExpr::Mul(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?))
+            }
+            RExpr::Bin(BinOp::Div, a, b) => {
+                IntExpr::Div(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?))
+            }
+            RExpr::Bin(BinOp::Rem, a, b) => {
+                IntExpr::Rem(Box::new(self.int_of(a)?), Box::new(self.int_of(b)?))
+            }
             other => IntExpr::Sum(Box::new(self.expr(other)?)),
         })
     }
@@ -1193,16 +1210,28 @@ impl<'a> Tr<'a> {
 
     /// `Int`'s successor relation `next = {(i, i+1)}` over the integer atoms (Java `Const.IntNext`).
     fn int_next(&self) -> Result<Expr, AlloyError> {
-        let n = if self.bounds.bitwidth == 0 { 0 } else { 1u32 << self.bounds.bitwidth };
+        let n = if self.bounds.bitwidth == 0 {
+            0
+        } else {
+            1u32 << self.bounds.bitwidth
+        };
         let start = self.bounds.int_start;
-        let ts = TupleSet::from_tuples(2, (0..n.saturating_sub(1)).map(|k| vec![start + k, start + k + 1]));
+        let ts = TupleSet::from_tuples(
+            2,
+            (0..n.saturating_sub(1)).map(|k| vec![start + k, start + k + 1]),
+        );
         Ok(Expr::Literal(ts))
     }
 
     /// Formula of an Alloy formula expression.
     fn formula(&mut self, e: &RExpr) -> Result<Formula, AlloyError> {
         Ok(match e {
-            RExpr::Block(items) => Formula::And(items.iter().map(|x| self.formula(x)).collect::<Result<_, _>>()?),
+            RExpr::Block(items) => Formula::And(
+                items
+                    .iter()
+                    .map(|x| self.formula(x))
+                    .collect::<Result<_, _>>()?,
+            ),
             RExpr::Bin(BinOp::And, a, b) => Formula::And(vec![self.formula(a)?, self.formula(b)?]),
             RExpr::Bin(BinOp::Or, a, b) => Formula::Or(vec![self.formula(a)?, self.formula(b)?]),
             RExpr::Bin(BinOp::Implies, a, b) => {
@@ -1211,7 +1240,9 @@ impl<'a> Tr<'a> {
                 self.pol = !self.pol;
                 Formula::Implies(Box::new(a?), Box::new(self.formula(b)?))
             }
-            RExpr::Bin(BinOp::Iff, a, b) => Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?)),
+            RExpr::Bin(BinOp::Iff, a, b) => {
+                Formula::Iff(Box::new(self.formula(a)?), Box::new(self.formula(b)?))
+            }
             // Java `visit(ExprBinary) EQUALS`: integer equality only when both sides are integer-typed, else set equality.
             RExpr::Bin(BinOp::Equals, a, b) if is_numeric(a) && is_numeric(b) => {
                 Formula::IntCompare(IntCmp::Eq, self.int_of(a)?, self.int_of(b)?)
@@ -1225,14 +1256,32 @@ impl<'a> Tr<'a> {
                 let lhs = self.expr(&a)?;
                 self.in_formula(lhs, &b)?
             }
-            RExpr::Bin(BinOp::Lt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(a)?, self.int_of(b)?),
-            RExpr::Bin(BinOp::Le, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?),
-            RExpr::Bin(BinOp::Gt, a, b) => Formula::IntCompare(IntCmp::Lt, self.int_of(b)?, self.int_of(a)?),
-            RExpr::Bin(BinOp::Ge, a, b) => Formula::IntCompare(IntCmp::Le, self.int_of(b)?, self.int_of(a)?),
-            RExpr::Un(op @ (UnOp::Always | UnOp::Eventually | UnOp::After | UnOp::Before | UnOp::Historically | UnOp::Once), x) => {
-                self.ltl_unary(*op, x)?
+            RExpr::Bin(BinOp::Lt, a, b) => {
+                Formula::IntCompare(IntCmp::Lt, self.int_of(a)?, self.int_of(b)?)
             }
-            RExpr::Bin(op @ (BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered), a, b) => self.ltl_binary(*op, a, b)?,
+            RExpr::Bin(BinOp::Le, a, b) => {
+                Formula::IntCompare(IntCmp::Le, self.int_of(a)?, self.int_of(b)?)
+            }
+            RExpr::Bin(BinOp::Gt, a, b) => {
+                Formula::IntCompare(IntCmp::Lt, self.int_of(b)?, self.int_of(a)?)
+            }
+            RExpr::Bin(BinOp::Ge, a, b) => {
+                Formula::IntCompare(IntCmp::Le, self.int_of(b)?, self.int_of(a)?)
+            }
+            RExpr::Un(
+                op @ (UnOp::Always
+                | UnOp::Eventually
+                | UnOp::After
+                | UnOp::Before
+                | UnOp::Historically
+                | UnOp::Once),
+                x,
+            ) => self.ltl_unary(*op, x)?,
+            RExpr::Bin(
+                op @ (BinOp::Until | BinOp::Releases | BinOp::Since | BinOp::Triggered),
+                a,
+                b,
+            ) => self.ltl_binary(*op, a, b)?,
             RExpr::Un(UnOp::Not, x) => {
                 self.pol = !self.pol;
                 let r = self.formula(x);
@@ -1274,7 +1323,8 @@ impl<'a> Tr<'a> {
                 let mut parts = Vec::new();
                 for i in 0..ks.len() {
                     for j in i + 1..ks.len() {
-                        let inter = Expr::Intersection(Box::new(ks[i].clone()), Box::new(ks[j].clone()));
+                        let inter =
+                            Expr::Intersection(Box::new(ks[i].clone()), Box::new(ks[j].clone()));
                         parts.push(Formula::Multiplicity(Multiplicity::No, inter));
                     }
                 }
@@ -1295,9 +1345,15 @@ impl<'a> Tr<'a> {
                 let next = self.expr(&args[2])?;
                 let f1 = Formula::Subset(
                     elem.clone(),
-                    Expr::join(first.clone(), Expr::ReflexiveClosure(Box::new(next.clone()))),
+                    Expr::join(
+                        first.clone(),
+                        Expr::ReflexiveClosure(Box::new(next.clone())),
+                    ),
                 );
-                let f2 = Formula::Multiplicity(Multiplicity::No, Expr::join(next.clone(), first.clone()));
+                let f2 = Formula::Multiplicity(
+                    Multiplicity::No,
+                    Expr::join(next.clone(), first.clone()),
+                );
                 let e = self.fresh();
                 let ev = Expr::Var(e);
                 let f3 = Formula::Or(vec![
@@ -1318,7 +1374,12 @@ impl<'a> Tr<'a> {
                 )));
                 let all = Formula::Quantified(
                     Quantifier::All,
-                    vec![Decl { var: e, domain: elem.clone(), disjoint: false, set: false }],
+                    vec![Decl {
+                        var: e,
+                        domain: elem.clone(),
+                        disjoint: false,
+                        set: false,
+                    }],
                     Box::new(Formula::And(vec![f3, f4, f5])),
                 );
                 // The native predicate (used by Java for relation arguments) also requires `first` to be one atom of `elem`.
@@ -1333,16 +1394,38 @@ impl<'a> Tr<'a> {
             RExpr::Choice(cands) if cands.len() == 1 => self.formula(&cands[0])?,
             RExpr::Choice(_) => return Err(unsupported("overloaded name (ExprChoice, M3.4)")),
             other_e => {
-                let dbg = format!("{other_e:?} :: {}", self.model.funcs.iter().enumerate().filter(|(i, _)| [35usize, 36, 138].contains(i)).map(|(i, f)| format!("{i}={} params={}", f.label, f.params.len())).collect::<Vec<_>>().join(", "));
-                return Err(other(format!("expression used as a formula: {} {}", kind_name(other_e), &dbg[..dbg.len().min(400)])))
+                let dbg = format!(
+                    "{other_e:?} :: {}",
+                    self.model
+                        .funcs
+                        .iter()
+                        .enumerate()
+                        .filter(|(i, _)| [35usize, 36, 138].contains(i))
+                        .map(|(i, f)| format!("{i}={} params={}", f.label, f.params.len()))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                );
+                return Err(other(format!(
+                    "expression used as a formula: {} {}",
+                    kind_name(other_e),
+                    &dbg[..dbg.len().min(400)]
+                )));
             }
         })
     }
 
-    fn quantified(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
+    fn quantified(
+        &mut self,
+        q: Quant,
+        decls: &[RDecl],
+        body: &RExpr,
+    ) -> Result<Formula, AlloyError> {
         // Effective quantifier after polarity: `all` in positive position (or `some` in negative) is universal.
         let eff_universal = (q == Quant::All) == self.pol;
-        let has_set = decls.iter().any(|d| matches!(d.bound, RExpr::Un(UnOp::Set | UnOp::Lone | UnOp::Some, _)) || self.ty(&d.bound).map_or(false, |t| t.arity > 1));
+        let has_set = decls.iter().any(|d| {
+            matches!(d.bound, RExpr::Un(UnOp::Set | UnOp::Lone | UnOp::Some, _))
+                || self.ty(&d.bound).map_or(false, |t| t.arity > 1)
+        });
         if has_set && (eff_universal || self.under_universal) {
             return Err(AlloyError::new(
                 ErrorKind::Type,
@@ -1357,14 +1440,23 @@ impl<'a> Tr<'a> {
         r
     }
 
-    fn quantified_body(&mut self, q: Quant, decls: &[RDecl], body: &RExpr) -> Result<Formula, AlloyError> {
+    fn quantified_body(
+        &mut self,
+        q: Quant,
+        decls: &[RDecl],
+        body: &RExpr,
+    ) -> Result<Formula, AlloyError> {
         let (kdecls, disj, guards) = self.decls(decls)?;
         let b = self.formula(body)?;
         let b = with_disjointness(b, &disj, &guards, q == Quant::All);
         Ok(match q {
             Quant::All => Formula::Quantified(Quantifier::All, kdecls, Box::new(b)),
             Quant::Some => Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)),
-            Quant::No => Formula::Not(Box::new(Formula::Quantified(Quantifier::Some, kdecls, Box::new(b)))),
+            Quant::No => Formula::Not(Box::new(Formula::Quantified(
+                Quantifier::Some,
+                kdecls,
+                Box::new(b),
+            ))),
             Quant::Lone | Quant::One => {
                 // "at most one": for all bindings x, y: f(x) & f(y) => x = y (one copy of the declarations per side).
                 let (kdecls2, disj2, guards2) = self.decls(decls)?;
@@ -1381,7 +1473,10 @@ impl<'a> Tr<'a> {
                 let uniq = Formula::Quantified(
                     Quantifier::All,
                     all_decls,
-                    Box::new(Formula::Implies(Box::new(Formula::And(vec![bx, by])), Box::new(eq))),
+                    Box::new(Formula::Implies(
+                        Box::new(Formula::And(vec![bx, by])),
+                        Box::new(eq),
+                    )),
                 );
                 if q == Quant::Lone {
                     uniq
@@ -1401,10 +1496,18 @@ impl<'a> Tr<'a> {
     fn in_formula(&mut self, lhs: Expr, rhs: &RExpr) -> Result<Formula, AlloyError> {
         match rhs {
             RExpr::Block(items) if items.len() == 1 => self.in_formula(lhs, &items[0]),
-            RExpr::Bin(BinOp::Arrow(ml, mr), l, r) if *ml != Mult::Set || *mr != Mult::Set || has_arrow_mult(l) || has_arrow_mult(r) => {
+            RExpr::Bin(BinOp::Arrow(ml, mr), l, r)
+                if *ml != Mult::Set
+                    || *mr != Mult::Set
+                    || has_arrow_mult(l)
+                    || has_arrow_mult(r) =>
+            {
                 let (l, r) = self.resolve_pair(l, r)?;
                 let (lx, rx) = (self.expr(&l)?, self.expr(&r)?);
-                let mut out = vec![Formula::Subset(lhs.clone(), Expr::product(lx.clone(), rx.clone()))];
+                let mut out = vec![Formula::Subset(
+                    lhs.clone(),
+                    Expr::product(lx.clone(), rx.clone()),
+                )];
                 // m2: every left tuple has m2 images.
                 if mr_is_mult(*mr) || has_arrow_mult(&r) {
                     let x = self.fresh();
@@ -1423,7 +1526,12 @@ impl<'a> Tr<'a> {
                     };
                     out.push(Formula::Quantified(
                         Quantifier::All,
-                        vec![Decl { var: x, domain: lx.clone(), disjoint: false, set: false }],
+                        vec![Decl {
+                            var: x,
+                            domain: lx.clone(),
+                            disjoint: false,
+                            set: false,
+                        }],
                         Box::new(body),
                     ));
                 }
@@ -1444,7 +1552,12 @@ impl<'a> Tr<'a> {
                     };
                     out.push(Formula::Quantified(
                         Quantifier::All,
-                        vec![Decl { var: y, domain: rx.clone(), disjoint: false, set: false }],
+                        vec![Decl {
+                            var: y,
+                            domain: rx.clone(),
+                            disjoint: false,
+                            set: false,
+                        }],
                         Box::new(body),
                     ));
                 }
@@ -1469,8 +1582,16 @@ impl<'a> Tr<'a> {
                 self.local_arity.insert(i, 1);
                 parts.push(Formula::Quantified(
                     Quantifier::All,
-                    vec![Decl { var: i, domain: idx, disjoint: false, set: false }],
-                    Box::new(Formula::Multiplicity(Multiplicity::Lone, Expr::join(Expr::Var(i), lhs.clone()))),
+                    vec![Decl {
+                        var: i,
+                        domain: idx,
+                        disjoint: false,
+                        set: false,
+                    }],
+                    Box::new(Formula::Multiplicity(
+                        Multiplicity::Lone,
+                        Expr::join(Expr::Var(i), lhs.clone()),
+                    )),
                 ));
                 // domain minus its successors only holds 0: a prefix of the indices
                 let mut dom = lhs.clone();
@@ -1480,7 +1601,10 @@ impl<'a> Tr<'a> {
                 }
                 let zero = Expr::IntToExpr(Box::new(IntExpr::Const(0)));
                 let succ = Expr::join(dom.clone(), self.int_next()?);
-                parts.push(Formula::Subset(Expr::Difference(Box::new(dom), Box::new(succ)), zero));
+                parts.push(Formula::Subset(
+                    Expr::Difference(Box::new(dom), Box::new(succ)),
+                    zero,
+                ));
                 Ok(Formula::And(parts))
             }
             other_r => Ok(Formula::Subset(lhs, self.expr(other_r)?)),
@@ -1489,7 +1613,10 @@ impl<'a> Tr<'a> {
 
     /// Declares the variables of `decls` (one kodkod variable per Alloy variable) and returns the
     /// kodkod declarations plus the `disj` groups as lists of variable ids.
-    fn decls(&mut self, decls: &[RDecl]) -> Result<(Vec<Decl>, Vec<Vec<u32>>, Vec<Formula>), AlloyError> {
+    fn decls(
+        &mut self,
+        decls: &[RDecl],
+    ) -> Result<(Vec<Decl>, Vec<Vec<u32>>, Vec<Formula>), AlloyError> {
         let mut out = Vec::new();
         let mut disj = Vec::new();
         let mut guards = Vec::new();
@@ -1546,7 +1673,10 @@ impl<'a> Tr<'a> {
         Ok((out, disj, guards))
     }
 
-    fn bind_lets(&mut self, binds: &[(LocalId, RExpr)]) -> Result<Vec<(LocalId, Option<Expr>)>, AlloyError> {
+    fn bind_lets(
+        &mut self,
+        binds: &[(LocalId, RExpr)],
+    ) -> Result<Vec<(LocalId, Option<Expr>)>, AlloyError> {
         let mut saved = Vec::new();
         for (l, e) in binds {
             let v = self.expr(e)?;
@@ -1578,14 +1708,20 @@ impl<'a> Tr<'a> {
         body: impl FnOnce(&mut Self) -> Result<T, AlloyError>,
     ) -> Result<T, AlloyError> {
         if params.len() != args.len() {
-            return Err(other(format!("call with {} arguments, but the callee takes {}", args.len(), params.len())));
+            return Err(other(format!(
+                "call with {} arguments, but the callee takes {}",
+                args.len(),
+                params.len()
+            )));
         }
         if self.depth >= MAX_CALL_DEPTH {
-            return Err(unsupported("recursive predicate/function (too deep to inline)"));
+            return Err(unsupported(
+                "recursive predicate/function (too deep to inline)",
+            ));
         }
         let mut vals = Vec::new();
         for (a, (_, pb)) in args.iter().zip(params) {
-            let a = if Self::is_choice(a) {
+            let a = if is_choice(a) {
                 let exp = self.ty(pb).map_or(Exp::Any, Exp::Same);
                 self.resolve(a, &exp)?
             } else {
@@ -1610,12 +1746,19 @@ impl<'a> Tr<'a> {
     // ---- temporal logic over the unrolled lasso trace ----------------------------------------------------------
 
     fn k(&self) -> Result<usize, AlloyError> {
-        Ok(self.temporal.as_ref().ok_or_else(|| other("temporal operator in a static problem"))?.k)
+        Ok(self
+            .temporal
+            .as_ref()
+            .ok_or_else(|| other("temporal operator in a static problem"))?
+            .k)
     }
 
     fn loop_is(&self, l: usize) -> Result<Formula, AlloyError> {
         let t = self.temporal.as_ref().ok_or_else(|| other("no trace"))?;
-        Ok(Formula::Subset(Expr::Rel(t.time_rel[l]), Expr::Rel(t.loop_rel)))
+        Ok(Formula::Subset(
+            Expr::Rel(t.time_rel[l]),
+            Expr::Rel(t.loop_rel),
+        ))
     }
 
     /// State `s` belongs to the loop part (`s >= loop`).
@@ -1676,7 +1819,13 @@ impl<'a> Tr<'a> {
     fn next_tps(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
         let k = self.k()?;
         if tp.state + 1 < k {
-            return Ok(vec![(None, Tp { level: tp.level, state: tp.state + 1 })]);
+            return Ok(vec![(
+                None,
+                Tp {
+                    level: tp.level,
+                    state: tp.state + 1,
+                },
+            )]);
         }
         let mut out = Vec::new();
         for l in 0..k {
@@ -1688,24 +1837,52 @@ impl<'a> Tr<'a> {
     fn prev_tps(&self, tp: Tp) -> Result<Vec<(Option<Formula>, Tp)>, AlloyError> {
         let k = self.k()?;
         if tp.level == 1 {
-            return Ok(if tp.state == 0 { Vec::new() } else { vec![(None, Tp { level: 1, state: tp.state - 1 })] });
+            return Ok(if tp.state == 0 {
+                Vec::new()
+            } else {
+                vec![(
+                    None,
+                    Tp {
+                        level: 1,
+                        state: tp.state - 1,
+                    },
+                )]
+            });
         }
         let s = tp.state;
-        let mut out = vec![(Some(self.loop_is(s)?), Tp { level: 1, state: k - 1 })];
+        let mut out = vec![(
+            Some(self.loop_is(s)?),
+            Tp {
+                level: 1,
+                state: k - 1,
+            },
+        )];
         if s > 0 {
             out.push((
-                Some(Formula::And(vec![self.reach2(s)?, Formula::Not(Box::new(self.loop_is(s)?))])),
-                Tp { level: 2, state: s - 1 },
+                Some(Formula::And(vec![
+                    self.reach2(s)?,
+                    Formula::Not(Box::new(self.loop_is(s)?)),
+                ])),
+                Tp {
+                    level: 2,
+                    state: s - 1,
+                },
             ));
         }
         Ok(out)
     }
 
     fn ltl_unary(&mut self, op: UnOp, f: &RExpr) -> Result<Formula, AlloyError> {
-        let tp = self.tp.ok_or_else(|| other("temporal operator without a time point"))?;
+        let tp = self
+            .tp
+            .ok_or_else(|| other("temporal operator without a time point"))?;
         match op {
             UnOp::Always | UnOp::Eventually | UnOp::Historically | UnOp::Once => {
-                let path = if matches!(op, UnOp::Always | UnOp::Eventually) { self.future_path(tp)? } else { self.past_path(tp)? };
+                let path = if matches!(op, UnOp::Always | UnOp::Eventually) {
+                    self.future_path(tp)?
+                } else {
+                    self.past_path(tp)?
+                };
                 let universal = matches!(op, UnOp::Always | UnOp::Historically);
                 let mut parts = Vec::new();
                 for (g, p) in path {
@@ -1716,10 +1893,18 @@ impl<'a> Tr<'a> {
                         (Some(g), false) => Formula::And(vec![g, body]),
                     });
                 }
-                Ok(if universal { Formula::And(parts) } else { Formula::Or(parts) })
+                Ok(if universal {
+                    Formula::And(parts)
+                } else {
+                    Formula::Or(parts)
+                })
             }
             UnOp::After | UnOp::Before => {
-                let tps = if op == UnOp::After { self.next_tps(tp)? } else { self.prev_tps(tp)? };
+                let tps = if op == UnOp::After {
+                    self.next_tps(tp)?
+                } else {
+                    self.prev_tps(tp)?
+                };
                 let mut parts = Vec::new();
                 for (g, p) in tps {
                     let body = self.at_formula(p, f)?;
@@ -1768,7 +1953,9 @@ impl<'a> Tr<'a> {
     }
 
     fn ltl_binary(&mut self, op: BinOp, a: &RExpr, b: &RExpr) -> Result<Formula, AlloyError> {
-        let tp = self.tp.ok_or_else(|| other("temporal operator without a time point"))?;
+        let tp = self
+            .tp
+            .ok_or_else(|| other("temporal operator without a time point"))?;
         Ok(match op {
             BinOp::Until => {
                 let path = self.future_path(tp)?;
@@ -1823,8 +2010,13 @@ impl<'a> Tr<'a> {
     fn sig_involves_var(&self, s: SigId) -> bool {
         let sig = &self.model.sigs[s as usize];
         sig.is_var
-            || sig.parent.map_or(false, |p| self.model.sigs[p as usize].is_var)
-            || sig.subset_of.iter().any(|t| self.model.sigs[*t as usize].is_var)
+            || sig
+                .parent
+                .map_or(false, |p| self.model.sigs[p as usize].is_var)
+            || sig
+                .subset_of
+                .iter()
+                .any(|t| self.model.sigs[*t as usize].is_var)
     }
 
     fn sig_constraints(&mut self) -> Result<Vec<Formula>, AlloyError> {
@@ -1919,7 +2111,14 @@ impl<'a> Tr<'a> {
             return Formula::Multiplicity(Multiplicity::No, a);
         }
         if n == 1 {
-            return Formula::Multiplicity(if exact { Multiplicity::One } else { Multiplicity::Lone }, a);
+            return Formula::Multiplicity(
+                if exact {
+                    Multiplicity::One
+                } else {
+                    Multiplicity::Lone
+                },
+                a,
+            );
         }
         let mut decls = Vec::new();
         let mut sum: Option<Expr> = None;
@@ -1927,7 +2126,12 @@ impl<'a> Tr<'a> {
         for _ in 0..n {
             let v = self.fresh();
             self.local_arity.insert(v, 1);
-            decls.push(Decl { var: v, domain: a.clone(), disjoint: false, set: false });
+            decls.push(Decl {
+                var: v,
+                domain: a.clone(),
+                disjoint: false,
+                set: false,
+            });
             let ve = Expr::Var(v);
             match sum.take() {
                 None => sum = Some(ve),
@@ -1964,7 +2168,10 @@ impl<'a> Tr<'a> {
                 self.tp = p;
                 for i in 0..g.len() {
                     for j in i + 1..g.len() {
-                        let inter = Expr::Intersection(Box::new(self.field_expr(g[i])?), Box::new(self.field_expr(g[j])?));
+                        let inter = Expr::Intersection(
+                            Box::new(self.field_expr(g[i])?),
+                            Box::new(self.field_expr(g[j])?),
+                        );
                         out.push(Formula::Multiplicity(Multiplicity::No, inter));
                     }
                 }
@@ -1989,60 +2196,65 @@ impl<'a> Tr<'a> {
 
     fn field_constraint_one(&mut self, fi: usize) -> Result<Vec<Formula>, AlloyError> {
         let mut out = Vec::new();
-            let f = self.model.fields[fi].clone();
-            let rel = self.field_expr(fi as FieldId)?;
-            let owner = self.sig_expr(f.owner)?;
-            if f.defined {
-                let rhs = self.expr(&f.decl)?;
-                out.push(Formula::Equal(rel.clone(), rhs));
-                return Ok(out);
-            }
-            // `all this: owner | this.f in decl` (the multiplicity keyword or arrow multiplicities apply per `this`).
-            let this = self.fresh();
-            self.local_arity.insert(this, 1);
-            self.locals.insert(f.this_local, Expr::Var(this));
-            self.set_local_bound(f.this_local, &RExpr::Sig(f.owner));
-            let lhs = Expr::join(Expr::Var(this), rel.clone());
-            let decl = match f.mult {
-                Some(m) => RExpr::Un(
-                    match m {
-                        Mult::One => UnOp::One,
-                        Mult::Lone => UnOp::Lone,
-                        Mult::Some => UnOp::Some,
-                        Mult::Set => UnOp::Set,
-                    },
-                    Box::new(f.decl.clone()),
-                ),
-                None => {
-                    // Java `Sig.addField`: no multiplicity symbol on a unary bound means `one`.
-                    let unary = match self.expr(&f.decl) {
-                        Ok(e) => self.arity(&e).map_or(false, |a| a == 1),
-                        Err(_) => false,
-                    };
-                    if unary {
-                        RExpr::Un(UnOp::One, Box::new(f.decl.clone()))
-                    } else {
-                        f.decl.clone()
-                    }
+        let f = self.model.fields[fi].clone();
+        let rel = self.field_expr(fi as FieldId)?;
+        let owner = self.sig_expr(f.owner)?;
+        if f.defined {
+            let rhs = self.expr(&f.decl)?;
+            out.push(Formula::Equal(rel.clone(), rhs));
+            return Ok(out);
+        }
+        // `all this: owner | this.f in decl` (the multiplicity keyword or arrow multiplicities apply per `this`).
+        let this = self.fresh();
+        self.local_arity.insert(this, 1);
+        self.locals.insert(f.this_local, Expr::Var(this));
+        self.set_local_bound(f.this_local, &RExpr::Sig(f.owner));
+        let lhs = Expr::join(Expr::Var(this), rel.clone());
+        let decl = match f.mult {
+            Some(m) => RExpr::Un(
+                match m {
+                    Mult::One => UnOp::One,
+                    Mult::Lone => UnOp::Lone,
+                    Mult::Some => UnOp::Some,
+                    Mult::Set => UnOp::Set,
+                },
+                Box::new(f.decl.clone()),
+            ),
+            None => {
+                // Java `Sig.addField`: no multiplicity symbol on a unary bound means `one`.
+                let unary = match self.expr(&f.decl) {
+                    Ok(e) => self.arity(&e).map_or(false, |a| a == 1),
+                    Err(_) => false,
+                };
+                if unary {
+                    RExpr::Un(UnOp::One, Box::new(f.decl.clone()))
+                } else {
+                    f.decl.clone()
                 }
-            };
-            let body = self.in_formula(lhs, &decl);
-            self.locals.remove(&f.this_local);
-            if self.local_bound.remove(&f.this_local).is_some() {
-                self.lb_version += 1;
             }
-            let body = body?;
-            // Java: the first column of the field is inside the owner sig (`f.univ.univ... in sig`).
-            let mut first_col = rel.clone();
-            for _ in 1..self.arity(&rel)? {
-                first_col = Expr::join(first_col, Expr::Const(KConst::Univ));
-            }
-            out.push(Formula::Subset(first_col, owner.clone()));
-            out.push(Formula::Quantified(
-                Quantifier::All,
-                vec![Decl { var: this, domain: owner, disjoint: false, set: false }],
-                Box::new(body),
-            ));
+        };
+        let body = self.in_formula(lhs, &decl);
+        self.locals.remove(&f.this_local);
+        if self.local_bound.remove(&f.this_local).is_some() {
+            self.lb_version += 1;
+        }
+        let body = body?;
+        // Java: the first column of the field is inside the owner sig (`f.univ.univ... in sig`).
+        let mut first_col = rel.clone();
+        for _ in 1..self.arity(&rel)? {
+            first_col = Expr::join(first_col, Expr::Const(KConst::Univ));
+        }
+        out.push(Formula::Subset(first_col, owner.clone()));
+        out.push(Formula::Quantified(
+            Quantifier::All,
+            vec![Decl {
+                var: this,
+                domain: owner,
+                disjoint: false,
+                set: false,
+            }],
+            Box::new(body),
+        ));
         Ok(out)
     }
 }
@@ -2054,7 +2266,9 @@ fn mr_is_mult(m: Mult) -> bool {
 /// Is `e` an arrow with a multiplicity somewhere inside?
 fn has_arrow_mult(e: &RExpr) -> bool {
     match e {
-        RExpr::Bin(BinOp::Arrow(a, b), l, r) => *a != Mult::Set || *b != Mult::Set || has_arrow_mult(l) || has_arrow_mult(r),
+        RExpr::Bin(BinOp::Arrow(a, b), l, r) => {
+            *a != Mult::Set || *b != Mult::Set || has_arrow_mult(l) || has_arrow_mult(r)
+        }
         RExpr::Block(items) if items.len() == 1 => has_arrow_mult(&items[0]),
         _ => false,
     }
@@ -2071,12 +2285,20 @@ fn mult_of(m: Option<Mult>) -> Option<Multiplicity> {
 
 /// `disj` groups: every pair of variables in a group is distinct. For a body `b`, the constraint
 /// is added as a guard, so both `all` (implication) and `some` (conjunction) read it correctly.
-fn with_disjointness(b: Formula, groups: &[Vec<u32>], guards: &[Formula], universal: bool) -> Formula {
+fn with_disjointness(
+    b: Formula,
+    groups: &[Vec<u32>],
+    guards: &[Formula],
+    universal: bool,
+) -> Formula {
     let mut parts: Vec<Formula> = guards.to_vec();
     for g in groups {
         for i in 0..g.len() {
             for j in i + 1..g.len() {
-                parts.push(Formula::Not(Box::new(Formula::Equal(Expr::Var(g[i]), Expr::Var(g[j])))));
+                parts.push(Formula::Not(Box::new(Formula::Equal(
+                    Expr::Var(g[i]),
+                    Expr::Var(g[j]),
+                ))));
             }
         }
     }

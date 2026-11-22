@@ -257,6 +257,8 @@ pub enum UnOp {
     Neg,
     /// `sum e` / `int e` (Java `CAST2SIGINT(CAST2INT(e))`); also `int[e]`, `sum[e]`.
     IntCast,
+    /// `Int[e]` (Java `CompModule.visit(ExprBadJoin)`): `e` itself when `e` is an integer, else the join `e.Int`.
+    SigInt,
     /// postfix `'`
     Prime,
     /// Java `EXACTLYOF`: the right side of a defined field `f = e`.

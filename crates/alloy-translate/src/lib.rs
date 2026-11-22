@@ -10,6 +10,8 @@
 //! symmetry breaking, skolemization, `pred/totalOrder` and `disj` translation, solution enumeration.
 //! Anything not handled returns `AlloyError::unsupported`, never a guessed answer.
 
+pub mod exact;
+mod resolve;
 mod scope;
 mod translate;
 
@@ -82,7 +84,9 @@ impl Solution {
     /// Advance to the next solution (blocks the current one), like `A4Solution.next()`.
     /// Returns Ok(true) if a new solution was found.
     pub fn next(&mut self) -> Result<bool, AlloyError> {
-        Err(AlloyError::unsupported("Solution::next not implemented yet (M7)"))
+        Err(AlloyError::unsupported(
+            "Solution::next not implemented yet (M7)",
+        ))
     }
 }
 
@@ -122,7 +126,11 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
     let mut solve_ms = 0.0;
     let mut result = None;
     let mut trace_len = 1;
-    let ks: Vec<Option<usize>> = if temporal { (min_trace..=max_trace).map(|k| Some(k as usize)).collect() } else { vec![None] };
+    let ks: Vec<Option<usize>> = if temporal {
+        (min_trace..=max_trace).map(|k| Some(k as usize)).collect()
+    } else {
+        vec![None]
+    };
     let mut run = |k: Option<usize>| -> Result<(translate::Problem, kodkod::translate::Solution), AlloyError> {
         let t1 = Instant::now();
         let problem = translate::translate(&model, cmd, opt, k)?;
@@ -152,7 +160,11 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
                 probe = Some((problem, sol));
             }
         }
-        let (problem, sol) = if n + 1 == ks.len() && probe.is_some() { probe.take().unwrap() } else { run(k)? };
+        let (problem, sol) = if n + 1 == ks.len() && probe.is_some() {
+            probe.take().unwrap()
+        } else {
+            run(k)?
+        };
         let sat = sol.sat == Some(true);
         trace_len = k.unwrap_or(1) as i32;
         result = Some((problem, sol));
@@ -160,7 +172,8 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
             break;
         }
     }
-    let (problem, sol) = result.ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace length to try"))?;
+    let (problem, sol) =
+        result.ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace length to try"))?;
     let _ = t0;
     let instance = sol.instance.as_ref().map(|i| {
         if temporal {
@@ -186,7 +199,12 @@ pub fn execute_command(world: &World, index: usize, opt: &Options) -> Result<Sol
 }
 
 /// Splits the time column off the variable relations: one atom-name map per state, plus the loop position.
-fn to_temporal_instance(model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod::instance::Instance, k: usize) -> Instance {
+fn to_temporal_instance(
+    model: &Model,
+    bounds: &kodkod::instance::Bounds,
+    inst: &kodkod::instance::Instance,
+    k: usize,
+) -> Instance {
     let mut var_names: std::collections::HashSet<String> = std::collections::HashSet::new();
     for s in &model.sigs {
         if s.is_var {
@@ -199,7 +217,11 @@ fn to_temporal_instance(model: &Model, bounds: &kodkod::instance::Bounds, inst: 
         }
     }
     let time_index = |a: u32| -> Option<usize> {
-        bounds.universe.atom(a).strip_prefix("$time$").and_then(|x| x.parse::<usize>().ok())
+        bounds
+            .universe
+            .atom(a)
+            .strip_prefix("$time$")
+            .and_then(|x| x.parse::<usize>().ok())
     };
     let mut states: Vec<BTreeMap<String, Vec<Vec<String>>>> = vec![BTreeMap::new(); k];
     let mut loop_state = -1;
@@ -220,29 +242,43 @@ fn to_temporal_instance(model: &Model, bounds: &kodkod::instance::Bounds, inst: 
             for t in &ts.tuples {
                 let (last, rest) = t.split_last().unwrap();
                 if let Some(si) = time_index(*last) {
-                    states[si]
-                        .entry(name.clone())
-                        .or_default()
-                        .push(rest.iter().map(|&a| bounds.universe.atom(a).to_string()).collect());
+                    states[si].entry(name.clone()).or_default().push(
+                        rest.iter()
+                            .map(|&a| bounds.universe.atom(a).to_string())
+                            .collect(),
+                    );
                 }
             }
         } else {
             let tuples: Vec<Vec<String>> = ts
                 .tuples
                 .iter()
-                .map(|t| t.iter().map(|&a| bounds.universe.atom(a).to_string()).collect())
+                .map(|t| {
+                    t.iter()
+                        .map(|&a| bounds.universe.atom(a).to_string())
+                        .collect()
+                })
                 .collect();
             for st in states.iter_mut() {
                 st.insert(name.clone(), tuples.clone());
             }
         }
     }
-    Instance { trace_length: k as i32, loop_state, states }
+    Instance {
+        trace_length: k as i32,
+        loop_state,
+        states,
+    }
 }
 
 /// Number of solutions of command `index` (Kodkod `solveAll` semantics, no symmetry breaking), counted up to `limit`:
 /// `(count, capped)`. Temporal problems are counted at the first trace length that has a solution.
-pub fn count_solutions(world: &World, index: usize, opt: &Options, limit: u32) -> Result<(u32, bool), AlloyError> {
+pub fn count_solutions(
+    world: &World,
+    index: usize,
+    opt: &Options,
+    limit: u32,
+) -> Result<(u32, bool), AlloyError> {
     let model = sema::build(&world.modules)?;
     let cmd: &RCommand = model
         .commands
@@ -251,34 +287,50 @@ pub fn count_solutions(world: &World, index: usize, opt: &Options, limit: u32) -
     let kerr = |e: String| AlloyError::new(ErrorKind::Other, None, e);
     if !model.temporal {
         let problem = translate::translate(&model, cmd, opt, None)?;
-        return kodkod::translate::count_all(&problem.bounds, &problem.formula, limit).map_err(kerr);
+        return kodkod::translate::count_all(&problem.bounds, &problem.formula, limit)
+            .map_err(kerr);
     }
     // Temporal (Pardinus `next()`): after the first solution the static part is fixed and only different traces are
     // enumerated, over increasing trace lengths; a trace is counted once, at its minimal lasso length.
     let (smin, smax) = cmd.steps.map_or((None, -1), |(a, b)| (a, b));
     if smax == i32::MAX {
-        return Err(AlloyError::new(ErrorKind::Other, None, "Bounded engines do not support complete model checking."));
+        return Err(AlloyError::new(
+            ErrorKind::Other,
+            None,
+            "Bounded engines do not support complete model checking.",
+        ));
     }
     let (min_k, max_k) = (smin.unwrap_or(1).max(1), if smax > 0 { smax } else { 10 });
     let mut statics: Option<Vec<(String, kodkod::instance::TupleSet)>> = None;
     let mut total = 0u32;
     for k in min_k..=max_k {
         let mut problem = translate::translate(&model, cmd, opt, Some(k as usize))?;
-        let info = problem.trace.clone().ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace info"))?;
+        let info = problem
+            .trace
+            .clone()
+            .ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace info"))?;
         if statics.is_none() {
             let static_ids: Vec<usize> = (0..problem.bounds.relations.len())
                 .filter(|&i| {
                     let rb = &problem.bounds.relations[i];
-                    !rb.name.starts_with('$') && !info.var_rels.contains(&(i as u32)) && rb.upper.tuples != rb.lower.tuples
+                    !rb.name.starts_with('$')
+                        && !info.var_rels.contains(&(i as u32))
+                        && rb.upper.tuples != rb.lower.tuples
                 })
                 .collect();
-            let Some(inst) = kodkod::translate::first_instance(&problem.bounds, &problem.formula, &static_ids).map_err(kerr)? else {
+            let Some(inst) =
+                kodkod::translate::first_instance(&problem.bounds, &problem.formula, &static_ids)
+                    .map_err(kerr)?
+            else {
                 continue;
             };
             let mut st = Vec::new();
             for (id, rb) in problem.bounds.relations.iter().enumerate() {
                 let id = id as u32;
-                if rb.name.starts_with('$') || info.var_rels.contains(&id) || rb.upper.tuples == rb.lower.tuples {
+                if rb.name.starts_with('$')
+                    || info.var_rels.contains(&id)
+                    || rb.upper.tuples == rb.lower.tuples
+                {
                     continue;
                 }
                 if let Some(ts) = inst.relations.get(&rb.name) {
@@ -294,7 +346,14 @@ pub fn count_solutions(world: &World, index: usize, opt: &Options, limit: u32) -
         }
         let mut extra: Vec<kodkod::ast::Formula> = vec![problem.formula.clone()];
         for (name, ts) in statics.as_ref().unwrap() {
-            let Some(id) = problem.bounds.relations.iter().position(|r| &r.name == name) else { continue };
+            let Some(id) = problem
+                .bounds
+                .relations
+                .iter()
+                .position(|r| &r.name == name)
+            else {
+                continue;
+            };
             extra.push(kodkod::ast::Formula::Equal(
                 kodkod::ast::Expr::Rel(id as u32),
                 kodkod::ast::Expr::Literal(ts.clone()),
@@ -304,10 +363,18 @@ pub fn count_solutions(world: &World, index: usize, opt: &Options, limit: u32) -
         problem.formula = kodkod::ast::Formula::And(extra);
         let mut proj: Vec<usize> = info.var_rels.iter().map(|r| *r as usize).collect();
         proj.push(info.loop_rel as usize);
-        let (c, capped) =
-            kodkod::translate::count_projected(&problem.bounds, &problem.formula, limit - total, Some(&proj)).map_err(kerr)?;
+        let (c, capped) = kodkod::translate::count_projected(
+            &problem.bounds,
+            &problem.formula,
+            limit - total,
+            Some(&proj),
+        )
+        .map_err(kerr)?;
         if std::env::var("KCOUNT").is_ok() {
-            eprintln!("k={k} count={c} capped={capped} var_rels={:?}", info.var_rels);
+            eprintln!(
+                "k={k} count={c} capped={capped} var_rels={:?}",
+                info.var_rels
+            );
         }
         total += c;
         if capped {
@@ -350,13 +417,20 @@ fn canonical_lasso(info: &translate::TraceInfo) -> kodkod::ast::Formula {
                 conds.push(Formula::Not(Box::new(Formula::And(rep))));
             }
         }
-        cases.push(Formula::Implies(Box::new(is_l), Box::new(Formula::And(conds))));
+        cases.push(Formula::Implies(
+            Box::new(is_l),
+            Box::new(Formula::And(conds)),
+        ));
     }
     Formula::And(cases)
 }
 
 /// Atom names of every relation of a kodkod instance, under the Java key names.
-fn to_instance(_model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod::instance::Instance) -> Instance {
+fn to_instance(
+    _model: &Model,
+    bounds: &kodkod::instance::Bounds,
+    inst: &kodkod::instance::Instance,
+) -> Instance {
     let mut st = BTreeMap::new();
     for (name, ts) in &inst.relations {
         if name.starts_with('$') {
@@ -365,7 +439,11 @@ fn to_instance(_model: &Model, bounds: &kodkod::instance::Bounds, inst: &kodkod:
         let tuples: Vec<Vec<String>> = ts
             .tuples
             .iter()
-            .map(|t| t.iter().map(|&a| bounds.universe.atom(a).to_string()).collect())
+            .map(|t| {
+                t.iter()
+                    .map(|&a| bounds.universe.atom(a).to_string())
+                    .collect()
+            })
             .collect();
         st.insert(name.clone(), tuples);
     }
@@ -386,7 +464,8 @@ mod temporal_tests {
     fn run(src: &str, idx: usize) -> Result<Solution, AlloyError> {
         static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
         let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        let dir = std::env::temp_dir().join(format!("alloy_rs_temporal_{}_{}", std::process::id(), n));
+        let dir =
+            std::env::temp_dir().join(format!("alloy_rs_temporal_{}_{}", std::process::id(), n));
         std::fs::create_dir_all(&dir).unwrap();
         let f = dir.join("t.als");
         std::fs::write(&f, src).unwrap();
@@ -402,8 +481,10 @@ mod temporal_tests {
             "check b { always (some P implies once some P) } for 2",
             "run c { always no P and eventually some P } for 2",
         ]
-        .join("
-");
+        .join(
+            "
+",
+        );
         assert!(run(&src, 0).unwrap().sat);
         assert!(!run(&src, 1).unwrap().sat);
         assert!(!run(&src, 2).unwrap().sat);
@@ -417,8 +498,10 @@ mod temporal_tests {
             "run a { eventually (no P and once some P) } for 2",
             "run b { always some P } for 2",
         ]
-        .join("
-");
+        .join(
+            "
+",
+        );
         assert!(run(&src, 0).unwrap().sat);
         assert!(!run(&src, 1).unwrap().sat);
     }

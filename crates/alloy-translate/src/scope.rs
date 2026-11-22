@@ -28,6 +28,8 @@ pub struct Layout {
     pub string_range: (u32, u32),
     /// Atom range of the time atoms of a temporal problem (`(0, 0)` when static).
     pub time_range: (u32, u32),
+    /// The sig whose computeLowerBound step created each sig atom (exact pipeline renames atoms Java's way).
+    pub atom_sig: Vec<SigId>,
 }
 
 impl Layout {
@@ -113,7 +115,11 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
         }
         let i = rs.sig as usize;
         if !is_user(i) {
-            return err(model, cmd, format!("You cannot set a scope on \"{}\".", model.sigs[i].label));
+            return err(
+                model,
+                cmd,
+                format!("You cannot set a scope on \"{}\".", model.sigs[i].label),
+            );
         }
         scope[i] = Some(rs.start);
         exact[i] = rs.exact;
@@ -202,7 +208,10 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
                 return err(
                     model,
                     cmd,
-                    format!("You must specify a scope for sig \"{}\"", model.sigs[i].name),
+                    format!(
+                        "You must specify a scope for sig \"{}\"",
+                        model.sigs[i].name
+                    ),
                 )
             }
         }
@@ -247,15 +256,28 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
         model_sigs_len: n,
         string_range: (0, 0),
         time_range: (0, 0),
+        atom_sig: Vec::new(),
     };
     let mut atoms = Vec::new();
     let mut range = vec![(0u32, 0u32); n];
     let mut used = std::collections::HashSet::new();
+    let mut atom_sig = Vec::new();
     for i in 0..n {
         if is_user(i) && parent[i].is_none() && !is_subset[i] {
-            lower_bound(model, i, &scope, &exact, &children, &mut atoms, &mut range, &mut used);
+            lower_bound(
+                model,
+                i,
+                &scope,
+                &exact,
+                &children,
+                &mut atoms,
+                &mut range,
+                &mut used,
+                &mut atom_sig,
+            );
         }
     }
+    layout.atom_sig = atom_sig;
     layout.atoms = atoms;
     layout.range = range;
     // String atoms: the literals (named with their quotes), padded with `"String0"`, ... up to the String scope.
@@ -282,11 +304,14 @@ fn lower_bound(
     atoms: &mut Vec<String>,
     range: &mut [(u32, u32)],
     used: &mut std::collections::HashSet<String>,
+    atom_sig: &mut Vec<SigId>,
 ) -> i32 {
     let start = atoms.len() as u32;
     let mut lower: i32 = 0;
     for &c in &children[s] {
-        lower += lower_bound(model, c as usize, scope, exact, children, atoms, range, used);
+        lower += lower_bound(
+            model, c as usize, scope, exact, children, atoms, range, used, atom_sig,
+        );
     }
     let mut nsc = scope[s].unwrap_or(0);
     if nsc < lower {
@@ -302,6 +327,7 @@ fn lower_bound(
         }
         for i in 0..k {
             atoms.push(format!("{name}${i}"));
+            atom_sig.push(s as SigId);
         }
         lower = nsc;
     }

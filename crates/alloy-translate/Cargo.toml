@@ -8,3 +8,4 @@ description = "Alloy AST -> Kodkod translation and solving (port of edu.mit.csai
 alloy-core = { path = "../alloy-core" }
 kodkod = { path = "../kodkod" }
 pardinus = { path = "../pardinus" }
+satsolver = { path = "../satsolver" }

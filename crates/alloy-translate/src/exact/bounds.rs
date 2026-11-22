@@ -163,6 +163,7 @@ impl<'a> Cx<'a> {
             sigs,
             alloc_order: Vec::new(),
             lazy: Vec::new(),
+            typed_vars: Default::default(),
             ltypes: Vec::new(),
             ty_memo: vec![None; model.fields.len()],
             ub: HashMap::new(),
@@ -399,6 +400,24 @@ impl<'a> Cx<'a> {
                 h.join(&x, &y)
             }
             RExpr::Block(items) if items.len() == 1 => self.expr_type(&items[0], tenv)?,
+            // ExprQt.Op.COMPREHENSION: the product of the variables' types
+            RExpr::Compr(ds, _) => {
+                let old = tenv.len();
+                let mut t: Option<JType> = None;
+                for d in ds {
+                    let (_, inner) = super::visit::decl_mult(&d.bound);
+                    let dt = self.expr_type(inner, tenv)?;
+                    for &v in &d.vars {
+                        tenv.push((v, dt.clone()));
+                        t = Some(match t {
+                            None => dt.clone(),
+                            Some(x) => h.product(&x, &dt),
+                        });
+                    }
+                }
+                tenv.truncate(old);
+                t.unwrap_or_default()
+            }
             _ => {
                 return Err(unsupported(format!(
                     "Java type of field bound {:.80}",

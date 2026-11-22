@@ -302,6 +302,7 @@ impl Hier<'_> {
 
 mod bounds;
 mod facts;
+mod instance;
 mod resolve;
 mod simplify;
 mod visit;
@@ -401,11 +402,32 @@ pub fn java_labels(world: &alloy_core::World, model: &Model) -> Vec<String> {
 }
 
 /// Builds the Kodkod problem Java Alloy would hand to `PardinusSolver.solveAll` for command `idx`.
+pub use instance::{solve_first, ExactOutcome};
+
 pub fn build(
     world: &alloy_core::World,
     model: &Model,
     idx: usize,
 ) -> Result<(Problem, ExactInfo), AlloyError> {
+    let (cx, p) = prepare(world, model, idx)?;
+    let info = ExactInfo {
+        sig_expr: cx.a2k_sig.clone(),
+        field_expr: cx.a2k_field.clone(),
+        int_min: cx.min,
+        int_max: cx.max,
+        n_sig_atoms: cx.int_atom0,
+        string_atoms: Vec::new(),
+        var_types: cx.var_types.clone(),
+    };
+    Ok((p, info))
+}
+
+/// The Kodkod problem of a command (and the translation state, for the instance output).
+fn prepare<'a>(
+    world: &alloy_core::World,
+    model: &'a Model,
+    idx: usize,
+) -> Result<(Cx<'a>, Problem), AlloyError> {
     if model.temporal {
         return Err(unsupported(
             "temporal models are not supported by the exact pipeline yet",
@@ -438,23 +460,16 @@ pub fn build(
         symmetry: if expects == 1 { 0 } else { 20 },
         ..Default::default()
     };
-    let info = ExactInfo {
-        sig_expr: cx.a2k_sig.clone(),
-        field_expr: cx.a2k_field.clone(),
-        int_min: cx.min,
-        int_max: cx.max,
-        n_sig_atoms: cx.int_atom0,
-        string_atoms: Vec::new(),
-        var_types: cx.var_types.clone(),
-    };
+    let ast = std::mem::take(&mut cx.ast);
+    let bounds = std::mem::take(&mut cx.bounds);
     Ok((
+        cx,
         Problem {
-            ast: cx.ast,
-            bounds: cx.bounds,
+            ast,
+            bounds,
             options,
             goal,
         },
-        info,
     ))
 }
 
@@ -508,6 +523,8 @@ pub struct Cx<'a> {
     env: Vec<(LocalId, V)>,
     /// macro parameters: the argument expression, translated again at every use (Java Macro.instantiate)
     lazy: Vec<(LocalId, RExpr)>,
+    /// Kodkod variables with an Alloy type (A4Solution.decl2type)
+    typed_vars: std::collections::HashSet<N>,
     current_function: Vec<FuncId>,
     const_cache: HashMap<FuncId, V>,
     ftypes: HashMap<FieldId, JType>,

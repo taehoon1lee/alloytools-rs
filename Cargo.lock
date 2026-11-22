@@ -22,6 +22,7 @@ dependencies = [
  "alloy-core",
  "kodkod",
  "pardinus",
+ "satsolver",
 ]
 
 [[package]]

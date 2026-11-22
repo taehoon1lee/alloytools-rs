@@ -578,7 +578,13 @@ impl<'a> Cx<'a> {
         self.ltypes = oldtypes;
         self.lazy = oldlazy;
         self.current_function.pop();
-        let ans = ans?;
+        let mut ans = ans?;
+        // CompModule.resolveFuncBody: a fun body is `resolve_as_set`, so a small-int body becomes `Int[body]`
+        if !self.model.funcs[fid as usize].is_pred && java_small_int(&body, &mut Vec::new()) {
+            if let V::I(i) = ans {
+                ans = V::E(self.ast.add(Node::I2E(CastOp::IntCast, i)));
+            }
+        }
         if n == 0 {
             self.const_cache.insert(fid, ans);
         }
@@ -903,6 +909,8 @@ impl<'a> Cx<'a> {
             for &l in &d.vars {
                 let name = self.skolem_name(&self.model.locals[l as usize].clone());
                 let v = self.ast.var(&name, arity);
+                // A4Solution.kv2typepos: only these variables have an Alloy type (skolems of others are not shown)
+                self.typed_vars.insert(v);
                 self.env.push((l, V::E(v)));
                 self.bind_type(l, inner);
                 let newd = if arity != 1 {
@@ -1009,5 +1017,31 @@ impl From<AQuant> for QtOp {
             AQuant::One => QtOp::One,
             AQuant::Sum => QtOp::Sum,
         }
+    }
+}
+
+/// Java `Type.is_small_int()` of an expression (`Type.smallIntType()`): numbers, `#`, integer arithmetic, `sum`,
+/// and lets / `Int[..]` of those. `small` holds the let-bound locals that are small ints.
+fn java_small_int(e: &RExpr, small: &mut Vec<LocalId>) -> bool {
+    match e {
+        RExpr::Num(_) => true,
+        RExpr::Un(UnOp::Card | UnOp::Neg, _) => true,
+        RExpr::Un(UnOp::SigInt, x) => java_small_int(x, small),
+        RExpr::Bin(BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem | BinOp::Shl | BinOp::Shr | BinOp::Sha, ..) => true,
+        RExpr::Quant(AQuant::Sum, ..) => true,
+        RExpr::Block(v) if v.len() == 1 => java_small_int(&v[0], small),
+        RExpr::Local(l) => small.contains(l),
+        RExpr::Let(binds, b) => {
+            let old = small.len();
+            for (l, x) in binds {
+                if java_small_int(x, small) {
+                    small.push(*l);
+                }
+            }
+            let r = java_small_int(b, small);
+            small.truncate(old);
+            r
+        }
+        _ => false,
     }
 }

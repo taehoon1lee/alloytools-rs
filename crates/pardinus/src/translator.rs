@@ -24,7 +24,7 @@ pub struct Translation {
 }
 
 /// Evaluates a (constant) expression over the given relation tuples (`Evaluator` / `Translator.evaluate`).
-fn evaluate(ast: &Ast, e: N, n: u32, rels: HashMap<N, TupleSet>, ints: &std::collections::BTreeMap<i32, TupleSet>, bitwidth: i32) -> Result<TupleSet, String> {
+pub fn evaluate(ast: &Ast, e: N, n: u32, rels: HashMap<N, TupleSet>, ints: &std::collections::BTreeMap<i32, TupleSet>, bitwidth: i32) -> Result<TupleSet, String> {
     let ann = annotate(ast, e);
     let leaf = Leaf::constant(n, rels, ints.clone());
     let mut f = Factory::new(0, 3, bitwidth, false);

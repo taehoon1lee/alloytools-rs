@@ -64,6 +64,7 @@ pub fn solve_first(
     stop: Option<Arc<AtomicBool>>,
 ) -> Result<ExactOutcome, AlloyError> {
     let (mut cx, mut p) = prepare(world, model, idx, symmetry)?;
+    p.options.stop = stop.clone();
     if p.options.temporal {
         let ts = pardinus::temporal::solve(&mut p, stop, false).map_err(fatal)?;
         let mut out = ExactOutcome {

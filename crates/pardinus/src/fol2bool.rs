@@ -154,6 +154,9 @@ pub struct Fol2Bool<'a> {
     leaf_cache: HashMap<N, Matrix>,
     const_cache: [Option<Matrix>; 4],
     approx: bool,
+    /// cooperative cancellation (checked every few thousand nodes)
+    pub stop: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
+    ticks: u32,
 }
 
 impl<'a> Fol2Bool<'a> {
@@ -166,7 +169,7 @@ impl<'a> Fol2Bool<'a> {
                 (n, Record { vars, tuples: vec![0; k], translation: None })
             })
             .collect();
-        Fol2Bool { ast, f, leaf, env: Vec::new(), records, leaf_cache: HashMap::new(), const_cache: [None, None, None, None], approx }
+        Fol2Bool { ast, f, leaf, env: Vec::new(), records, leaf_cache: HashMap::new(), const_cache: [None, None, None, None], approx, stop: None, ticks: 0 }
     }
 
     /// Evaluation under an initial environment (Skolemizer `upperBound`).
@@ -243,6 +246,14 @@ impl<'a> Fol2Bool<'a> {
     }
 
     fn visit(&mut self, n: N) -> Result<Val, String> {
+        self.ticks = self.ticks.wrapping_add(1);
+        if self.ticks & 0xfff == 0 {
+            if let Some(s) = &self.stop {
+                if s.load(std::sync::atomic::Ordering::Relaxed) {
+                    return Err("translation interrupted".into());
+                }
+            }
+        }
         let node = self.ast.get(n).clone();
         Ok(match node {
             Node::Var { .. } => {

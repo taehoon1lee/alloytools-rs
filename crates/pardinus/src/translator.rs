@@ -177,6 +177,7 @@ pub fn translate_expanded(p: &mut Problem, sink: &mut dyn CnfSink) -> Result<Tra
     let mut factory = Factory::new(nvars, opt.sharing, opt.bitwidth, opt.no_overflow);
     let circuit = {
         let mut t = Fol2Bool::new(ast, &ann3, &leaf, &mut factory, false);
+        t.stop = opt.stop.clone();
         match t.translate(ann3.node)? {
             Val::B(b) => b,
             _ => return Err("goal is not a formula".into()),

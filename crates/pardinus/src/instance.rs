@@ -119,11 +119,23 @@ pub struct Options {
     pub temporal: bool,
     pub min_trace: i32,
     pub max_trace: i32,
+    /// cooperative cancellation: the translation gives up once this is set (not a Kodkod option)
+    pub stop: Option<std::sync::Arc<std::sync::atomic::AtomicBool>>,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options { bitwidth: 4, symmetry: 20, skolem_depth: 0, sharing: 3, no_overflow: false, temporal: false, min_trace: -1, max_trace: -1 }
+        Options {
+            bitwidth: 4,
+            symmetry: 20,
+            skolem_depth: 0,
+            sharing: 3,
+            no_overflow: false,
+            temporal: false,
+            min_trace: -1,
+            max_trace: -1,
+            stop: None,
+        }
     }
 }
 

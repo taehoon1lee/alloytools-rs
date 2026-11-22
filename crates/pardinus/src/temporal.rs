@@ -760,6 +760,9 @@ pub fn solve(p: &mut Problem, stop: Option<Arc<AtomicBool>>, record: bool) -> Re
         let ext0 = ltl2fol(&mut ast, tr, &exp, f0, depth0 > 1)?;
         let mut first = Some((ext0, b0, depth0));
         loop {
+            if stop.as_ref().map_or(false, |s| s.load(std::sync::atomic::Ordering::Relaxed)) {
+                return Err("solver interrupted".into());
+            }
             if steps > max {
                 return Ok(TemporalSolution {
                     sat: false,

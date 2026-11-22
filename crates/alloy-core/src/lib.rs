@@ -8,6 +8,7 @@
 //!   * [`World::commands`]             ~ `CompModule.getAllCommands`
 
 pub mod error;
+pub mod jtype;
 pub mod lexer;
 pub mod loader;
 pub mod parser;

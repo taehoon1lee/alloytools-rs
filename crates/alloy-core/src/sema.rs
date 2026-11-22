@@ -233,6 +233,8 @@ struct Scope {
     params: HashMap<String, Sym>,
     /// (alias, target instance) in source order.
     opens: Vec<(String, usize)>,
+    /// `private open` flags, parallel to `opens` (Java follows them only from the module doing the lookup)
+    open_private: Vec<bool>,
 }
 
 struct Builder<'a> {
@@ -310,6 +312,8 @@ pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
             });
         }
     }
+    // Java typecheck of calls: inapplicable overloads are dropped, a call with no legal candidate is a type error
+    crate::jtype::check_calls(&mut b.model)?;
     Ok(b.model)
 }
 
@@ -513,6 +517,7 @@ impl<'a> Builder<'a> {
             let resolved = self.mods[i].opens.clone();
             for r in &resolved {
                 self.scopes[i].opens.push((r.alias.clone(), r.target));
+                self.scopes[i].open_private.push(r.is_private);
                 let Some(k) = r.paragraph else { continue };
                 let Some((oloc, oargs)) = crate::loader::open_args(&self.mods[i].module, k) else {
                     continue;
@@ -1128,35 +1133,25 @@ impl<'a> Builder<'a> {
         None
     }
 
-    /// Unqualified name (Java `getRawQS` then `getRawNQS`): the module's own names first; otherwise the
-    /// public names of every module reachable through `open` (transitively). Several candidates form a choice.
+    /// Unqualified name (Java `CompModule.getRawNQS` + `populate`): the names of this module and the public names
+    /// of every module reachable through `open` (private opens only from this module), without shadowing, then a
+    /// parameter of this module. Several candidates form a choice resolved by type.
     fn lookup_unqualified(&self, i: usize, name: &str) -> Option<Vec<Sym>> {
-        if let Some(v) = self.scopes[i].names.get(name) {
-            // Java (CompModule.getRawNQS / populate) also sees the functions of the opened modules next to a
-            // field or sig of this module; the type checker picks one (e.g. `x.next` with util/ordering).
-            if v.iter().all(|s| matches!(s, Sym::Field(_) | Sym::Sig(_))) {
-                let mut extra: Vec<Sym> = Vec::new();
-                let mut visited = vec![i];
-                for (_, t) in &self.scopes[i].opens {
-                    self.collect_public(*t, name, &mut visited, &mut extra);
-                }
-                let mut out = v.clone();
-                for x in extra {
-                    if matches!(x, Sym::Func(_)) && !out.iter().any(|o| same_sym(o, &x)) {
-                        out.push(x);
-                    }
-                }
-                return Some(out);
+        let mut out: Vec<Sym> = self.scopes[i].names.get(name).cloned().unwrap_or_default();
+        let mut visited = vec![i];
+        let mut extra: Vec<Sym> = Vec::new();
+        for (_, t) in &self.scopes[i].opens {
+            self.collect_public(*t, name, &mut visited, &mut extra);
+        }
+        for x in extra {
+            if !out.iter().any(|o| same_sym(o, &x) || self.same_instance_func(o, &x)) {
+                out.push(x);
             }
-            return Some(v.clone());
         }
         if let Some(s) = self.scopes[i].params.get(name) {
-            return Some(vec![s.clone()]);
-        }
-        let mut out: Vec<Sym> = Vec::new();
-        let mut visited = vec![i];
-        for (_, t) in &self.scopes[i].opens {
-            self.collect_public(*t, name, &mut visited, &mut out);
+            if !out.iter().any(|o| same_sym(o, s)) {
+                out.push(s.clone());
+            }
         }
         if out.is_empty() {
             None
@@ -1185,8 +1180,10 @@ impl<'a> Builder<'a> {
                 }
             }
         }
-        for (_, t2) in &sc.opens {
-            self.collect_public(*t2, name, visited, out);
+        for (k, (_, t2)) in sc.opens.iter().enumerate() {
+            if !sc.open_private.get(k).copied().unwrap_or(false) {
+                self.collect_public(*t2, name, visited, out);
+            }
         }
     }
 

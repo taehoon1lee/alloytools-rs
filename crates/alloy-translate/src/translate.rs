@@ -1316,6 +1316,7 @@ impl<'a> Tr<'a> {
                 self.inline(&params, args, |tr| tr.formula(&body))?
             }
             RExpr::Disj(args) => {
+                let args = &self.resolve_disj(args)?;
                 let mut ks = Vec::new();
                 for a in args {
                     ks.push(self.expr(a)?);
@@ -1337,6 +1338,7 @@ impl<'a> Tr<'a> {
                 if args.len() != 3 {
                     return Err(other("pred/totalOrder takes exactly three arguments"));
                 }
+                let args = &self.resolve_total_order(args)?;
                 if total_order_key(args).map_or(false, |k| self.pinned.contains(&k)) {
                     return Ok(Formula::True);
                 }

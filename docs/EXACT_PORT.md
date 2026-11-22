@@ -76,6 +76,11 @@ DECL var mult expr, DECLS d…, UTEMPF/BTEMPF/TEMPE); then `R relid` (bounds.rel
   `util/ordering[this/E]` with alias `open$N` (renamed by `doneParsing`), and BoundsComputer pre-binds its
   First/Next; merged module instantiations keep the path minimal by (`$`, `Util.slashComparator`); skolems are shown
   only for variables with an Alloy type (`kv2typepos`).
+- Name lookup is Java's `getRawNQS`/`populate`: names of this module and of every module reachable through opens
+  (private opens only from the module itself), without shadowing; `jtype::check_calls` (port of
+  `CompModule.applicable` on Java's sig-level `Type`) drops overloaded calls whose arguments cannot fit and reports
+  a type error when no candidate is left (`isIntsNotUsed` is `false` in Java, so `integer/` functions always
+  compete). `pred/totalOrder` / `disj` arguments are resolved against each other like `ExprList.resolve`.
 - Temporal: symbolic-bound constraints over variable relations are wrapped in `always` (PardinusBounds.resolve); the
   lex-leader SBP takes the static entries first, then the entries of each time step (`[HASLab]` loop over
   `lowerBound(STATE)`); LTL2FOL builds fresh nodes per occurrence except for unchanged subtrees.

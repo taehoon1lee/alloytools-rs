@@ -261,6 +261,7 @@ impl<'a> Cx<'a> {
                 V::F(self.single_formula(true, 1, &fs)?)
             }
             RExpr::Disj(args) => {
+                let args = &self.resolve_disj(args)?;
                 let mut answer: Option<N> = None;
                 let mut a: Option<N> = None;
                 for arg in args {
@@ -286,7 +287,10 @@ impl<'a> Cx<'a> {
                     None => self.ast.tru(),
                 })
             }
-            RExpr::TotalOrder(args) => self.visit_total_order(args)?,
+            RExpr::TotalOrder(args) => {
+                let args = self.resolve_total_order(args)?;
+                self.visit_total_order(&args)?
+            }
             RExpr::Quant(q, decls, body) => self.visit_qt_desugar(QtOp::from(*q), decls, body)?,
             RExpr::Compr(decls, body) => self.visit_qt_desugar(QtOp::Compr, decls, body)?,
             RExpr::Choice(c) if c.len() == 1 => self.visit(&c[0].clone())?,

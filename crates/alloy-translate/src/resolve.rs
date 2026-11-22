@@ -363,4 +363,54 @@ pub(crate) trait Resolver {
         }
         Ok((a, b))
     }
+
+    /// `ExprList.resolve` for `pred/totalOrder[elem, first, next]`: `first` against elem's type, `next` against
+    /// elem->elem.
+    fn resolve_total_order(&mut self, args: &[RExpr]) -> Result<Vec<RExpr>, AlloyError> {
+        let mut out = args.to_vec();
+        if out.len() != 3 || !out.iter().any(is_choice) {
+            return Ok(out);
+        }
+        if is_choice(&out[0]) {
+            out[0] = self.resolve(&out[0], &Exp::Any)?;
+        }
+        if let Some(t) = self.rty(&out[0]) {
+            if is_choice(&out[1]) {
+                out[1] = self.resolve(&out[1], &Exp::Same(t.clone()))?;
+            }
+            if is_choice(&out[2]) {
+                let pairs: Vec<Vec<u32>> =
+                    t.tuples.iter().flat_map(|a| t.tuples.iter().map(move |b| vec![a[0], b[0]])).collect();
+                let tt = TupleSet::from_tuples(2, pairs);
+                out[2] = self.resolve(&out[2], &Exp::Same(tt))?;
+            }
+        }
+        Ok(out)
+    }
+
+    /// `ExprList.resolve` for `disj[a, b, ..]`: every argument against the union of the arguments' types.
+    fn resolve_disj(&mut self, args: &[RExpr]) -> Result<Vec<RExpr>, AlloyError> {
+        if !args.iter().any(is_choice) {
+            return Ok(args.to_vec());
+        }
+        let mut p: Option<TupleSet> = None;
+        for a in args {
+            if is_choice(a) {
+                continue;
+            }
+            if let Some(t) = self.rty(a) {
+                p = Some(match p {
+                    None => t,
+                    Some(x) if x.arity == t.arity => TupleSet::from_tuples(x.arity, x.tuples.iter().chain(t.tuples.iter()).cloned()),
+                    Some(x) => x,
+                });
+            }
+        }
+        let exp = p.map_or(Exp::Any, Exp::Same);
+        let mut out = Vec::with_capacity(args.len());
+        for a in args {
+            out.push(if is_choice(a) { self.resolve(a, &exp)? } else { a.clone() });
+        }
+        Ok(out)
+    }
 }

@@ -112,12 +112,11 @@ impl<'a> Cx<'a> {
         let mut strings = Vec::new();
         for (k, s) in str_atoms.iter().enumerate() {
             let a = str0 + k as u32;
-            let lit = s.trim_matches('"').to_string();
-            if model.strings.contains(&lit) {
-                let r = ast.rel("", 1);
-                bounds.bound_exactly(r, ts(1, vec![a]));
-                s2k.insert(lit, r);
-            }
+            // A4Solution: one exactly-bound relation per String atom
+            let lit = s[1..s.len() - 1].to_string();
+            let r = ast.rel("", 1);
+            bounds.bound_exactly(r, ts(1, vec![a]));
+            s2k.insert(lit, r);
             strings.push(a);
         }
         bounds.bound_exactly(kk_string, ts(1, strings.clone()));
@@ -163,6 +162,7 @@ impl<'a> Cx<'a> {
             var_types: HashMap::new(),
             sigs,
             alloc_order: Vec::new(),
+            lazy: Vec::new(),
             ltypes: Vec::new(),
             ty_memo: vec![None; model.fields.len()],
             ub: HashMap::new(),
@@ -435,10 +435,8 @@ impl<'a> Cx<'a> {
         for &s in &sigs {
             let fields = self.model.sigs[s as usize].fields.clone();
             let one = self.is_one(s);
-            if one && fields.len() == 2 && self.is_enum_order(s) {
-                return Err(unsupported(
-                    "ordering over an enum (BoundsComputer special case)",
-                ));
+            if one && fields.len() == 2 && self.enum_order(s)? {
+                continue;
             }
             for f in fields {
                 let fd = self.model.fields[f as usize].clone();
@@ -550,10 +548,76 @@ impl<'a> Cx<'a> {
         Ok(())
     }
 
-    fn is_enum_order(&self, s: SigId) -> bool {
-        self.model.sig_facts.iter().any(|(x, f)| {
-            *x == s && matches!(f, RExpr::TotalOrder(a) if matches!(a.first(), Some(RExpr::Sig(e)) if self.model.sigs[*e as usize].is_enum))
-        })
+    /// BoundsComputer: a one sig with two fields `f1: set E, f2: E -> E` and the single fact
+    /// `pred/totalOrder[E, s.f1, s.f2]` over an enum E is bound exactly (first value, successor pairs).
+    /// Returns false (nothing bound) when the pattern does not apply.
+    fn enum_order(&mut self, s: SigId) -> Result<bool, AlloyError> {
+        let facts: Vec<&RExpr> = self.model.sig_facts.iter().filter(|(x, _)| *x == s).map(|(_, f)| f).collect();
+        if facts.len() != 1 {
+            return Ok(false);
+        }
+        let (this_l, body) = match facts[0] {
+            RExpr::Quant(AQuant::All, ds, b) if ds.len() == 1 && ds[0].vars.len() == 1 => (Some(ds[0].vars[0]), &**b),
+            other => (None, other),
+        };
+        let body = match body {
+            RExpr::Block(v) if v.len() == 1 => &v[0],
+            other => other,
+        };
+        let RExpr::TotalOrder(args) = body else { return Ok(false) };
+        if args.len() != 3 {
+            return Ok(false);
+        }
+        let (f1, f2) = (self.model.sigs[s as usize].fields[0], self.model.sigs[s as usize].fields[1]);
+        let (d1, d2) = (&self.model.fields[f1 as usize], &self.model.fields[f2 as usize]);
+        let RExpr::Sig(sub) = d1.decl else { return Ok(false) };
+        if d1.mult != Some(AMult::Set) || !self.is_prim(sub) || !self.model.sigs[sub as usize].is_enum {
+            return Ok(false);
+        }
+        match &d2.decl {
+            RExpr::Bin(BinOp::Arrow(AMult::Set, AMult::Set), a, b) if **a == RExpr::Sig(sub) && **b == RExpr::Sig(sub) => {}
+            _ => return Ok(false),
+        }
+        let is_s = |e: &RExpr| matches!(e, RExpr::Sig(x) if *x == s) || matches!(e, RExpr::Local(l) if Some(*l) == this_l);
+        let joins = |e: &RExpr, f: FieldId| matches!(e, RExpr::Bin(BinOp::Join, a, b) if is_s(a) && **b == RExpr::Field(f));
+        if args[0] != RExpr::Sig(sub) || !joins(&args[1], f1) || !joins(&args[2], f2) {
+            return Ok(false);
+        }
+        let se = self.a2k(s);
+        let me = self.query(true, se)?;
+        if me.len() != 1 {
+            return Ok(false);
+        }
+        let n = self.bounds.universe_size();
+        let kids = self.hier().children(sub);
+        let (mut first, mut next): (Vec<u32>, Vec<u32>) = (Vec::new(), Vec::new());
+        let mut last: Option<u32> = None;
+        for &c in &kids {
+            let ce = self.a2k(c);
+            let t = self.query(true, ce)?;
+            if t.len() != 1 {
+                first.clear();
+                next.clear();
+                break;
+            }
+            match last {
+                None => first.push(me[0] * n + t[0]),
+                Some(l) => next.push((me[0] * n + l) * n + t[0]),
+            }
+            last = Some(t[0]);
+        }
+        let k = kids.len();
+        if first.len() != usize::from(k > 0) || next.len() + 1 != k.max(1) {
+            return Ok(false);
+        }
+        next.sort_unstable();
+        let l1 = format!("{}.{}", self.label(s), d1.name);
+        let l2 = format!("{}.{}", self.label(s), d2.name);
+        let r1 = self.add_rel(&l1, Some(first.clone()), first, 2, false);
+        let r2 = self.add_rel(&l2, Some(next.clone()), next, 3, false);
+        self.a2k_field[f1 as usize] = Some(r1);
+        self.a2k_field[f2 as usize] = Some(r2);
+        Ok(true)
     }
 
     /// `BoundsComputer.sim(expr)`

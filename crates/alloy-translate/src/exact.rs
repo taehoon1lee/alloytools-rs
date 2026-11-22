@@ -303,31 +303,81 @@ impl Hier<'_> {
 mod bounds;
 mod facts;
 mod resolve;
+mod simplify;
 mod visit;
 
 /// Java module paths (`CompModule.path`): root "", an opened instance `parent/alias` (first DFS visit).
 pub fn java_paths(world: &alloy_core::World) -> Vec<String> {
+    // Every instantiation of a module has the path `opener path/alias` (CompUtil.parseRecursively); merged
+    // instantiations keep the smallest path by (contains '$', Util.slashComparator) (CompModule.resolveModules).
     let n = world.modules.len();
-    let mut path: Vec<Option<String>> = vec![None; n];
     if n == 0 {
         return Vec::new();
     }
-    path[0] = Some(String::new());
-    fn dfs(world: &alloy_core::World, m: usize, path: &mut Vec<Option<String>>) {
-        for o in &world.modules[m].opens {
-            if path[o.target].is_none() {
-                let pm = path[m].clone().unwrap_or_default();
-                path[o.target] = Some(if pm.is_empty() {
-                    o.alias.clone()
-                } else {
-                    format!("{pm}/{}", o.alias)
-                });
-                dfs(world, o.target, path);
+    let mut cands: Vec<Vec<String>> = vec![Vec::new(); n];
+    cands[0].push(String::new());
+    // modules are loaded in pre-order, so an opener precedes what it opens; repeat until stable for safety
+    for _ in 0..n {
+        let mut changed = false;
+        for m in 0..n {
+            let prefixes = cands[m].clone();
+            for o in &world.modules[m].opens {
+                if o.target == 0 {
+                    continue;
+                }
+                for pm in &prefixes {
+                    let c = if pm.is_empty() { o.alias.clone() } else { format!("{pm}/{}", o.alias) };
+                    if !cands[o.target].contains(&c) && cands[o.target].len() < 64 {
+                        cands[o.target].push(c);
+                        changed = true;
+                    }
+                }
             }
         }
+        if !changed {
+            break;
+        }
     }
-    dfs(world, 0, &mut path);
-    path.into_iter().map(|p| p.unwrap_or_default()).collect()
+    cands
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| {
+            if i == 0 {
+                return String::new();
+            }
+            c.into_iter().min_by(|a, b| (a.contains('$'), 0).cmp(&(b.contains('$'), 0)).then_with(|| slash_cmp(a, b))).unwrap_or_default()
+        })
+        .collect()
+}
+
+/// Java `Util.slashComparator`.
+pub fn slash_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    if a == b {
+        return Ordering::Equal;
+    }
+    for special in ["extends", "in"] {
+        if a == special {
+            return Ordering::Less;
+        }
+        if b == special {
+            return Ordering::Greater;
+        }
+    }
+    match (a.starts_with("this/"), b.starts_with("this/")) {
+        (true, false) => return Ordering::Less,
+        (false, true) => return Ordering::Greater,
+        _ => {}
+    }
+    let (sa, sb) = (a.matches('/').count(), b.matches('/').count());
+    if sa != sb {
+        return sa.cmp(&sb);
+    }
+    let r = a.to_lowercase().cmp(&b.to_lowercase());
+    if r != Ordering::Equal {
+        return r;
+    }
+    a.cmp(b)
 }
 
 /// Java label of every sig of the model.
@@ -370,7 +420,11 @@ pub fn build(
     let mut cx = Cx::new(model, cmd, labels)?;
     cx.compute_bounds()?;
     cx.make_facts()?;
-    // A4Solution.solve: (Simplifier), then `r = r` for every relation, then Formula.and(formulas)
+    // A4Solution.solve: Simplifier (inferPartialInstance), then `r = r` for every relation, then Formula.and(formulas)
+    if !cx.formulas.is_empty() && !cx.simplify() {
+        let f = cx.ast.fls();
+        cx.add_formula(f);
+    }
     let rels = cx.bounds.relations();
     for r in rels {
         let f = cx.ast.eq(r, r);
@@ -452,6 +506,8 @@ pub struct Cx<'a> {
     strings: Vec<u32>,
     cnt: u32,
     env: Vec<(LocalId, V)>,
+    /// macro parameters: the argument expression, translated again at every use (Java Macro.instantiate)
+    lazy: Vec<(LocalId, RExpr)>,
     current_function: Vec<FuncId>,
     const_cache: HashMap<FuncId, V>,
     ftypes: HashMap<FieldId, JType>,

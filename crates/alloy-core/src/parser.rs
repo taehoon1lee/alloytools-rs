@@ -38,6 +38,8 @@ pub struct Parser {
     toks: Vec<Token>,
     pos: usize,
     uses_seq: bool,
+    seq_paragraph: Option<usize>,
+    paragraph_count: usize,
 }
 
 impl Parser {
@@ -53,6 +55,8 @@ impl Parser {
             toks,
             pos: 0,
             uses_seq: false,
+            seq_paragraph: None,
+            paragraph_count: 0,
         }
     }
 
@@ -304,6 +308,9 @@ impl Parser {
                 Tok::One => UnOp::One,
                 Tok::Set => UnOp::Set,
                 _ => {
+                    if !self.uses_seq {
+                        self.seq_paragraph = Some(self.paragraph_count);
+                    }
                     self.uses_seq = true;
                     UnOp::Seq
                 }
@@ -830,8 +837,9 @@ pub fn parse_module(file: &str, src: &str) -> PResult<Module> {
     let mut paragraphs = Vec::new();
     while *p.peek() != Tok::Eof {
         paragraphs.push(p.paragraph()?);
+        p.paragraph_count = paragraphs.len();
     }
-    Ok(Module { header, paragraphs, uses_seq: p.uses_seq })
+    Ok(Module { header, paragraphs, uses_seq: p.uses_seq, seq_paragraph: p.seq_paragraph })
 }
 
 /// Result of a Java `TypeNumber` production (`CommandScope` start/end/increment/isExact).

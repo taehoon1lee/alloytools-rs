@@ -105,7 +105,7 @@ fn main() {
             Ok(Ok((a, b, d))) => {
                 kk += a as i32;
                 cnf += b as i32;
-                if !b {
+                if !a || !b {
                     println!(
                         "{} {} {tag} {d}",
                         if a { "KK " } else { "kk!" },
@@ -115,7 +115,7 @@ fn main() {
             }
             Ok(Err(e)) => {
                 err += 1;
-                println!("ERR {tag}: {}", &e[..e.len().min(200)]);
+                println!("ERR {tag}: {}", &e[..e.len().min(2000)]);
             }
             Err(_) => {
                 err += 1;

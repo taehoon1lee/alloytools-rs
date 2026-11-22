@@ -282,14 +282,7 @@ pub fn compute_scopes(model: &Model, cmd: &RCommand) -> Result<Layout, AlloyErro
     layout.range = range;
     // String atoms: the literals (named with their quotes), padded with `"String0"`, ... up to the String scope.
     let s0 = layout.atoms.len() as u32;
-    for lit in &model.strings {
-        layout.atoms.push(format!("\"{lit}\""));
-    }
-    let mut k = 0;
-    while (layout.atoms.len() as u32 - s0) < maxstring.unwrap_or(0).max(0) as u32 {
-        layout.atoms.push(format!("\"String{k}\""));
-        k += 1;
-    }
+    layout.atoms.extend(java_string_atoms(model, cmd, maxstring.unwrap_or(-1)));
     layout.string_range = (s0, layout.atoms.len() as u32);
     Ok(layout)
 }
@@ -333,4 +326,107 @@ fn lower_bound(
     }
     range[s] = (start, atoms.len() as u32);
     lower
+}
+
+/// Java `Command.getAllStringConstants` + `ScopeComputer.compute`: the string literals reached from the facts and
+/// the command formula (a call contributes its body, then its arguments), then from every sig's facts and field
+/// bounds, padded with `"String<i>"` up to the String scope; Java keeps them in a `HashSet`, so the atoms come in
+/// `HashSet` iteration order.
+fn java_string_atoms(model: &Model, cmd: &RCommand, maxstring: i32) -> Vec<String> {
+    use alloy_core::sema::RExpr;
+    fn walk(model: &Model, e: &RExpr, out: &mut Vec<String>, seen: &mut Vec<u32>) {
+        match e {
+            RExpr::Str(t) => {
+                let q = format!("\"{t}\"");
+                if !out.contains(&q) {
+                    out.push(q);
+                }
+            }
+            RExpr::Sig(_) | RExpr::Field(_) | RExpr::Local(_) | RExpr::Const(_) | RExpr::Num(_) => {}
+            RExpr::Un(_, x) => walk(model, x, out, seen),
+            RExpr::Bin(_, a, b) => {
+                walk(model, a, out, seen);
+                walk(model, b, out, seen);
+            }
+            RExpr::Quant(_, ds, b) | RExpr::Compr(ds, b) => {
+                for d in ds {
+                    walk(model, &d.bound, out, seen);
+                }
+                walk(model, b, out, seen);
+            }
+            RExpr::Ite(c, a, b) => {
+                walk(model, c, out, seen);
+                walk(model, a, out, seen);
+                walk(model, b, out, seen);
+            }
+            RExpr::Let(bs, b) => {
+                for (_, x) in bs {
+                    walk(model, x, out, seen);
+                }
+                walk(model, b, out, seen);
+            }
+            RExpr::Call(f, args) => {
+                if !seen.contains(f) {
+                    seen.push(*f);
+                    walk(model, &model.funcs[*f as usize].body, out, seen);
+                }
+                for a in args {
+                    walk(model, a, out, seen);
+                }
+            }
+            RExpr::Block(xs) | RExpr::Disj(xs) | RExpr::TotalOrder(xs) | RExpr::Choice(xs) => {
+                for x in xs {
+                    walk(model, x, out, seen);
+                }
+            }
+        }
+    }
+    let mut out = Vec::new();
+    let mut seen = Vec::new();
+    for f in &model.facts {
+        walk(model, &f.body, &mut out, &mut seen);
+    }
+    walk(model, &cmd.formula, &mut out, &mut seen);
+    for (s, sig) in model.sigs.iter().enumerate() {
+        for (x, b) in &model.sig_facts {
+            if *x as usize == s {
+                walk(model, b, &mut out, &mut seen);
+            }
+        }
+        for &f in &sig.fields {
+            walk(model, &model.fields[f as usize].decl, &mut out, &mut seen);
+        }
+    }
+    let mut i = 0;
+    while (out.len() as i64) < maxstring as i64 {
+        let x = format!("\"String{i}\"");
+        if !out.contains(&x) {
+            out.push(x);
+        }
+        i += 1;
+    }
+    java_hashset_order(out)
+}
+
+/// Iteration order of a `java.util.HashSet<String>` filled in the given order (bucket = spread hash & (cap - 1),
+/// insertion order inside a bucket; the table doubles from 16 whenever it is more than 3/4 full).
+fn java_hashset_order(v: Vec<String>) -> Vec<String> {
+    let mut cap = 16usize;
+    while v.len() > cap * 3 / 4 {
+        cap *= 2;
+    }
+    let mut keyed: Vec<(usize, usize)> = v
+        .iter()
+        .enumerate()
+        .map(|(i, s)| {
+            let mut h: i32 = 0;
+            for c in s.encode_utf16() {
+                h = h.wrapping_mul(31).wrapping_add(c as i32);
+            }
+            let h = h as u32;
+            (((h ^ (h >> 16)) as usize) & (cap - 1), i)
+        })
+        .collect();
+    keyed.sort_unstable();
+    keyed.into_iter().map(|(_, i)| v[i].clone()).collect()
 }

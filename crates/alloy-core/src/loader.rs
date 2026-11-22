@@ -12,7 +12,7 @@ use std::path::Path;
 use crate::error::{AlloyError, ErrorKind, Pos};
 use crate::parser::parse_module;
 use crate::stdlib;
-use crate::syntax::{Loc, Module, Open, Paragraph};
+use crate::syntax::{Expr, ExprKind, Loc, Module, Open, Paragraph};
 
 /// One parsed module instance (Java `CompModule`). Index 0 of the loaded list is the root.
 #[derive(Debug)]
@@ -102,9 +102,9 @@ fn merge_instances(mods: Vec<LoadedModule>) -> Vec<LoadedModule> {
             continue;
         };
         let o = rep[o];
-        let Paragraph::Open(open) = &mods[o].module.paragraphs[k] else { continue };
+        let Some((_, open_args)) = open_args(&mods[o].module, k) else { continue };
         let mut args: Option<Vec<SigKey>> = Some(Vec::new());
-        for a in &open.args {
+        for a in &open_args {
             let crate::syntax::ExprKind::Name(nm) = &a.kind else {
                 args = None;
                 break;
@@ -267,7 +267,49 @@ fn load_one(
         opens: Vec::new(),
     });
 
+    // Java's alias map in insertion order: the implicit `integer` (added before parsing), the explicit opens,
+    // then (in source order) `seq` at its first use (`addSeq`) and `util/ordering[E]` of every `enum E`
+    // (`addEnum`). A missing alias is `open$N`, N = 1 + the number of opens so far (`addOpen`).
     let mut resolved = Vec::new();
+    // (file to load, alias or None, loc, is_private, paragraph)
+    let mut plan: Vec<(String, Option<String>, Loc, bool, Option<usize>)> = Vec::new();
+    for (o, (k, _)) in opens.iter().zip(open_at.iter()) {
+        plan.push((o.name.clone(), o.alias.clone(), o.loc, o.is_private, Some(*k)));
+    }
+    let mut late: Vec<(usize, String, Option<String>, Loc, Option<usize>)> = Vec::new();
+    if uses_seq {
+        let at = out[idx].module.seq_paragraph.unwrap_or(0);
+        late.push((at, "util/sequniv".to_string(), Some("seq".to_string()), Loc { line: 1, col: 1 }, None));
+    }
+    for (k, p) in out[idx].module.paragraphs.iter().enumerate() {
+        if let Paragraph::Enum(e) = p {
+            late.push((k, "util/ordering".to_string(), None, e.loc, Some(k)));
+        }
+    }
+    late.sort_by_key(|x| x.0);
+    for (_, file, alias, loc, k) in late {
+        // `seq` again (e.g. an explicit `open util/sequniv as seq`) is the same open
+        if alias.as_deref() == Some("seq") && plan.iter().any(|(f, a, ..)| a.as_deref() == Some("seq") && f == &file) {
+            continue;
+        }
+        plan.push((file, alias, loc, false, k));
+    }
+    let base_count = usize::from(implicit);
+    let mut aliases: Vec<String> = Vec::new();
+    for (j, (file, alias, ..)) in plan.iter().enumerate() {
+        aliases.push(match alias {
+            Some(a) => a.clone(),
+            None => {
+                let explicit_plain = j < opens.len() && opens[j].args.is_empty() && is_identifier(file);
+                if explicit_plain {
+                    file.clone()
+                } else {
+                    format!("open${}", 1 + base_count + j)
+                }
+            }
+        });
+    }
+    rename_dollar_aliases(&plan.iter().map(|p| p.0.clone()).collect::<Vec<_>>(), &mut aliases);
     if implicit {
         // Java's implicit open uses the platform separator (`util\integer`), which never matches a module-relative
         // file, so it always loads the library resource.
@@ -284,31 +326,19 @@ fn load_one(
             paragraph: None,
         });
     }
-    // Java `CompModule.addSeq`: using the `seq` keyword implicitly opens util/sequniv as `seq`.
-    if uses_seq {
-        let child_src = stdlib::lookup("util/sequniv").expect("embedded util/sequniv").to_string();
-        let child_path = "models/util/sequniv.als".to_string();
-        chain.push(child_path.clone());
-        let target = load_one(&child_path, &child_src, chain, out)?;
-        chain.pop();
-        resolved.push(ResolvedOpen {
-            loc: Loc { line: 1, col: 1 },
-            is_private: false,
-            alias: "seq".to_string(),
-            target,
-            paragraph: None,
-        });
-    }
-    let first_explicit = resolved.len();
-    for (o, (k, _)) in opens.iter().zip(open_at.iter()) {
-        let (child_path, child_src) = find_module(&o.name, &name, path)?;
+    for ((file, _, loc, is_private, k), alias) in plan.into_iter().zip(aliases) {
+        let (child_path, child_src) = if file == "util/sequniv" && k.is_none() {
+            ("models/util/sequniv.als".to_string(), stdlib::lookup("util/sequniv").expect("embedded util/sequniv").to_string())
+        } else {
+            find_module(&file, &name, path)?
+        };
         if chain.contains(&child_path) {
             return Err(AlloyError::new(
                 ErrorKind::Syntax,
                 Some(Pos {
                     file: path.to_string(),
-                    line: o.loc.line,
-                    col: o.loc.col,
+                    line: loc.line,
+                    col: loc.col,
                 }),
                 format!(
                     "Circular dependency in module import. The file \"{}\" is imported infinitely often.",
@@ -319,17 +349,20 @@ fn load_one(
         chain.push(child_path.clone());
         let target = load_one(&child_path, &child_src, chain, out)?;
         chain.pop();
-        resolved.push(ResolvedOpen {
-            loc: o.loc,
-            is_private: o.is_private,
-            alias: o.alias.clone().unwrap_or_default(),
-            target,
-            paragraph: Some(*k),
-        });
+        resolved.push(ResolvedOpen { loc, is_private, alias, target, paragraph: k });
     }
-    default_aliases(&opens, &mut resolved[first_explicit..]);
     out[idx].opens = resolved;
     Ok(idx)
+}
+
+/// The arguments of the open recorded at paragraph `k`: an `open`, or the implicit `open util/ordering[this/E]`
+/// of an `enum E` (Java `CompModule.addEnum`).
+pub fn open_args(m: &Module, k: usize) -> Option<(Loc, Vec<Expr>)> {
+    match m.paragraphs.get(k)? {
+        Paragraph::Open(o) => Some((o.loc, o.args.clone())),
+        Paragraph::Enum(e) => Some((e.loc, vec![Expr { loc: e.loc, kind: ExprKind::Name(format!("this/{}", e.name)) }])),
+        _ => None,
+    }
 }
 
 /// Java `CompModule.addOpen`: an `open` must come before any sig/fact/pred/fun/assert/macro/command.
@@ -354,29 +387,18 @@ fn check_open_order(path: &str, module: &Module) -> Result<(), AlloyError> {
     Ok(())
 }
 
-/// Java default alias of an `open` without `as`: the module's last path segment when it is a plain
-/// identifier and there are no arguments, else `open$N`, renamed afterwards to that last segment
-/// when it does not clash (CompModule `addOpen` + the `$` pass of its alias map).
-fn default_aliases(opens: &[Open], resolved: &mut [ResolvedOpen]) {
-    for (i, o) in opens.iter().enumerate() {
-        if o.alias.is_some() {
+/// Java `CompModule.doneParsing`: an `open$N` alias becomes the module's last path segment when that is a plain
+/// identifier not used as an alias (neither originally nor by an earlier renamed open).
+fn rename_dollar_aliases(files: &[String], aliases: &mut [String]) {
+    let original: Vec<String> = aliases.to_vec();
+    for i in 0..aliases.len() {
+        if !aliases[i].contains('$') {
             continue;
         }
-        let plain = o.args.is_empty() && is_identifier(&o.name);
-        resolved[i].alias = if plain {
-            o.name.clone()
-        } else {
-            format!("open${}", i + 1)
-        };
-    }
-    for i in 0..resolved.len() {
-        if !resolved[i].alias.contains('$') {
-            continue;
-        }
-        let last = opens[i].name.rsplit('/').next().unwrap_or(&opens[i].name).to_string();
-        let taken = resolved.iter().any(|r| r.alias == last);
+        let last = files[i].rsplit('/').next().unwrap_or(&files[i]).to_string();
+        let taken = original.iter().any(|a| *a == last) || aliases[..i].iter().any(|a| *a == last);
         if is_identifier(&last) && !taken {
-            resolved[i].alias = last;
+            aliases[i] = last;
         }
     }
 }

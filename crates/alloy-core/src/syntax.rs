@@ -20,6 +20,8 @@ pub struct Module {
     pub paragraphs: Vec<Paragraph>,
     /// The `seq` keyword is used in an expression: Java adds `open util/sequniv as seq` (`CompModule.addSeq`).
     pub uses_seq: bool,
+    /// Index of the paragraph in which `seq` is first used (orders the implicit open among the enum opens).
+    pub seq_paragraph: Option<usize>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

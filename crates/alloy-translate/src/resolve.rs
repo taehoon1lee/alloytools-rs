@@ -157,9 +157,9 @@ pub(crate) trait Resolver {
                             }
                             RExpr::Call(*fid, new_args)
                         }
-                        // a join candidate whose type is empty is never chosen (Java: EMPTY type)
+                        // a join candidate whose type is empty (or ill-formed) is never an exact match (Java: EMPTY type)
                         RExpr::Bin(BinOp::Join, ..)
-                            if self.rty(c).map_or(false, |t| t.tuples.is_empty()) =>
+                            if self.rty(c).map_or(true, |t| t.tuples.is_empty()) =>
                         {
                             continue
                         }
@@ -182,27 +182,53 @@ pub(crate) trait Resolver {
                 }
                 match keep.len() {
                     0 => {
-                        // Java types a join/equality of disjoint columns as an (irrelevant, warned) empty
-                        // relation: no candidate fits, so any candidate with the right shape gives the same result.
+                        // No exact match: Java keeps the candidates of the right arity ("legal matches"). Two or
+                        // more that are all empty of the same arity resolve to `none` (ExprChoice.resolveHelper);
+                        // otherwise any of them gives the same (empty, warned) result.
+                        let mut legal: Vec<(RExpr, Option<TupleSet>)> = Vec::new();
                         for c in cands {
                             let inner = match c {
                                 RExpr::Choice(v) if v.len() == 1 => &v[0],
                                 other_c => other_c,
                             };
-                            let shape_ok = match (exp, self.rty(inner)) {
+                            let t = self.rty(inner);
+                            let shape_ok = match (exp, &t) {
                                 (Exp::Same(w), Some(ty)) => ty.arity == w.arity,
                                 _ => true,
                             };
                             if shape_ok {
-                                return Ok(inner.clone());
+                                legal.push((inner.clone(), t));
                             }
+                        }
+                        if legal.len() > 1 {
+                            let ar = legal[0].1.as_ref().map(|t| t.arity);
+                            let all_empty = legal.iter().all(|(_, t)| matches!(t, Some(t) if t.tuples.is_empty() && Some(t.arity) == ar));
+                            if let (true, Some(ar)) = (all_empty, ar) {
+                                let none = || RExpr::Sig(alloy_core::sema::SIG_NONE);
+                                let mut ans = none();
+                                for _ in 1..ar {
+                                    ans = RExpr::Bin(BinOp::Arrow(alloy_core::syntax::Mult::Set, alloy_core::syntax::Mult::Set), Box::new(ans), Box::new(none()));
+                                }
+                                return Ok(ans);
+                            }
+                        }
+                        if let Some((c, _)) = legal.into_iter().next() {
+                            return if is_choice(&c) { self.resolve(&c, exp) } else { Ok(c) };
                         }
                         let desc = format!("{:.300}", format!("{:?}", cands));
                         Err(err(format!(
                             "no overloaded candidate matches the expected type: {desc}"
                         )))
                     }
-                    1 => Ok(keep.remove(0)),
+                    // Java: the single match is resolved further (`ch.get(0).resolve(t)`)
+                    1 => {
+                        let c = keep.remove(0);
+                        if is_choice(&c) {
+                            self.resolve(&c, exp)
+                        } else {
+                            Ok(c)
+                        }
+                    }
                     _ => Ok(RExpr::Choice(keep)),
                 }
             }

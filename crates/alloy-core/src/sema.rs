@@ -203,6 +203,8 @@ pub struct Model {
     pub shadowed_uses: Vec<Vec<FuncId>>,
     /// `disj f, g: e` field declarations: the fields of each group are pairwise disjoint.
     pub field_disjoint: Vec<Vec<FieldId>>,
+    /// Locals standing for macro parameters (Java substitutes the argument expression at every use).
+    pub macro_locals: Vec<LocalId>,
 }
 
 #[derive(Debug, Clone)]
@@ -509,7 +511,7 @@ impl<'a> Builder<'a> {
             for r in &resolved {
                 self.scopes[i].opens.push((r.alias.clone(), r.target));
                 let Some(k) = r.paragraph else { continue };
-                let Paragraph::Open(o) = &self.mods[i].module.paragraphs[k] else {
+                let Some((oloc, oargs)) = crate::loader::open_args(&self.mods[i].module, k) else {
                     continue;
                 };
                 let target = r.target;
@@ -519,20 +521,20 @@ impl<'a> Builder<'a> {
                     .as_ref()
                     .map(|h| h.params.clone())
                     .unwrap_or_default();
-                if params.len() != o.args.len() {
+                if params.len() != oargs.len() {
                     return err(
                         i,
                         self.mods,
-                        o.loc.line,
-                        o.loc.col,
+                        oloc.line,
+                        oloc.col,
                         format!(
                             "You supplied {} arguments to the open statement, but the imported module requires {} arguments.",
-                            o.args.len(),
+                            oargs.len(),
                             params.len()
                         ),
                     );
                 }
-                let args = o.args.clone();
+                let args = oargs.clone();
                 let exact_params = self.mods[target]
                     .module
                     .header
@@ -1295,7 +1297,8 @@ impl<'a> Builder<'a> {
                 }
                 // Java `populate`: a field of the enclosing sig is `this.f` in every position (`x.@f` avoids it).
                 let rr = self.expr(i, r)?;
-                RExpr::Bin(BinOp::Join, Box::new(self.expr(i, l)?), Box::new(rr))
+                let ll = self.expr(i, l)?;
+                Self::join_over(ll, rr)
             }
             ExprKind::Binary(op, l, r) => {
                 if matches!(
@@ -1371,7 +1374,7 @@ impl<'a> Builder<'a> {
                 let mut acc = self.expr(i, f)?;
                 for a in args {
                     let arg = self.expr(i, a)?;
-                    acc = RExpr::Bin(BinOp::Join, Box::new(arg), Box::new(acc));
+                    acc = Self::join_over(arg, acc);
                 }
                 acc
             }
@@ -1502,6 +1505,23 @@ impl<'a> Builder<'a> {
             return Vec::new();
         }
         out
+    }
+
+    /// `l.r`; an overloaded `r` gives the choice of the joins (Java `CompModule.process`).
+    fn join_over(l: RExpr, r: RExpr) -> RExpr {
+        match r {
+            RExpr::Choice(v) if v.len() > 1 => RExpr::Choice(
+                v.into_iter()
+                    .map(|c| match c {
+                        RExpr::Choice(mut w) if w.len() == 1 => {
+                            RExpr::Choice(vec![RExpr::Bin(BinOp::Join, Box::new(l.clone()), Box::new(w.remove(0)))])
+                        }
+                        other => RExpr::Bin(BinOp::Join, Box::new(l.clone()), Box::new(other)),
+                    })
+                    .collect(),
+            ),
+            other => RExpr::Bin(BinOp::Join, Box::new(l), Box::new(other)),
+        }
     }
 
     fn calls(cands: Vec<FuncId>, args: Vec<RExpr>) -> RExpr {
@@ -1746,6 +1766,7 @@ impl<'a> Builder<'a> {
         for (p, v) in binds {
             let lid = self.new_local(&p);
             self.locals.push((p, lid));
+            self.model.macro_locals.push(lid);
             lets.push((lid, v));
         }
         self.depth += 1;

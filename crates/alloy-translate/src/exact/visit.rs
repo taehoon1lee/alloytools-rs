@@ -180,6 +180,10 @@ impl<'a> Cx<'a> {
                 self.a2k_field[*f as usize]
                     .ok_or_else(|| fatal("Field is not bound during translation"))?,
             ),
+            RExpr::Local(l) if self.lazy.iter().any(|(x, _)| x == l) => {
+                let x = self.lazy.iter().rev().find(|(x, _)| x == l).map(|(_, e)| e.clone()).expect("checked");
+                self.visit(&x)?
+            }
             RExpr::Local(l) => self.env_get(*l).ok_or_else(|| {
                 fatal(format!(
                     "Variable \"{}\" is not bound to a legal value during translation.",
@@ -232,14 +236,20 @@ impl<'a> Cx<'a> {
             RExpr::Let(binds, body) => {
                 let old = self.env.len();
                 let oldt = self.ltypes.len();
+                let oldl = self.lazy.len();
                 for (l, x) in binds {
-                    let v = self.visit(x)?;
-                    self.env.push((*l, v));
+                    if self.model.macro_locals.contains(l) {
+                        self.lazy.push((*l, x.clone()));
+                    } else {
+                        let v = self.visit(x)?;
+                        self.env.push((*l, v));
+                    }
                     self.bind_type(*l, x);
                 }
                 let r = self.visit(body)?;
                 self.env.truncate(old);
                 self.ltypes.truncate(oldt);
+                self.lazy.truncate(oldl);
                 r
             }
             RExpr::Call(fid, args) => self.visit_call(*fid, args)?,
@@ -283,9 +293,10 @@ impl<'a> Cx<'a> {
             RExpr::Choice(_) => {
                 let r = self.resolve(e, &crate::resolve::Exp::Any)?;
                 if crate::resolve::is_choice(&r) {
-                    return Err(unsupported(
-                        "overloaded name still ambiguous after type resolution",
-                    ));
+                    return Err(unsupported(format!(
+                        "overloaded name still ambiguous after type resolution: {:.700}",
+                        format!("{r:?}")
+                    )));
                 }
                 self.visit(&r)?
             }
@@ -560,10 +571,12 @@ impl<'a> Cx<'a> {
         let body = self.model.funcs[fid as usize].body.clone();
         let oldenv = std::mem::replace(&mut self.env, newenv);
         let oldtypes = std::mem::replace(&mut self.ltypes, newtypes);
+        let oldlazy = std::mem::take(&mut self.lazy);
         self.current_function.push(fid);
         let ans = self.visit(&body);
         self.env = oldenv;
         self.ltypes = oldtypes;
+        self.lazy = oldlazy;
         self.current_function.pop();
         let ans = ans?;
         if n == 0 {
@@ -583,9 +596,35 @@ impl<'a> Cx<'a> {
             let lst = self.add_rel(&name, None, up, 1, false);
             return Ok(V::F(self.ast.add(Node::PTotal(next, elem, first, lst))));
         }
-        Err(unsupported(
-            "pred/totalOrder over non-relations in the exact pipeline",
-        ))
+        // every element is in the order; the first has no predecessor; each element but the first has one
+        // predecessor, each but the last one successor; no cycles
+        let rc = self.ast.add(Node::UnE(EOp::ReflexiveClosure, next));
+        let fr = self.ast.join(first, rc);
+        let f1 = self.ast.in_(elem, fr);
+        let nf = self.ast.join(next, first);
+        let f2 = self.ast.mult(Mult::No, nf);
+        let e = self.ast.var(&format!("v{}", self.cnt), 1);
+        self.cnt += 1;
+        let ef = self.ast.eq(e, first);
+        let ne = self.ast.join(next, e);
+        let ne1 = self.ast.mult(Mult::One, ne);
+        let f3 = self.ast.binf(ef, FOp::Or, ne1);
+        let nel = self.ast.join(next, elem);
+        let last = self.ast.difference(elem, nel);
+        let el = self.ast.eq(e, last);
+        let en = self.ast.join(e, next);
+        let en1 = self.ast.mult(Mult::One, en);
+        let f4 = self.ast.binf(el, FOp::Or, en1);
+        let nc = self.ast.closure(next);
+        let enc = self.ast.join(e, nc);
+        let cyc = self.ast.in_(e, enc);
+        let f5 = self.ast.not(cyc);
+        let f34 = self.ast.binf(f3, FOp::And, f4);
+        let f345 = self.ast.binf(f34, FOp::And, f5);
+        let d = self.ast.one_of(e, elem);
+        let all = self.ast.quantify(Quant::All, d, f345);
+        let a1 = self.ast.binf(all, FOp::And, f1);
+        Ok(V::F(self.ast.binf(a1, FOp::And, f2)))
     }
 
     // ---------------------------------------------------------------- isIn / isInBinary

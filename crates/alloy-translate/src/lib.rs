@@ -347,7 +347,9 @@ pub fn count_solutions(
         ));
     }
     let (min_k, max_k) = (smin.unwrap_or(1).max(1), if smax > 0 { smax } else { 10 });
-    let mut statics: Option<Vec<(String, kodkod::instance::TupleSet)>> = None;
+    // Each entry is `(ordinal among non-$ relations, display name, tuples)` so multiple relations with the
+    // same label (e.g. two opened module instances) are pinned independently across trace lengths `k`.
+    let mut statics: Option<Vec<(usize, String, kodkod::instance::TupleSet)>> = None;
     let mut total = 0u32;
     for k in min_k..=max_k {
         let mut problem = translate::translate(&model, cmd, opt, Some(k as usize))?;
@@ -355,13 +357,21 @@ pub fn count_solutions(
             .trace
             .clone()
             .ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "no trace info"))?;
+        let non_internal: Vec<usize> = problem
+            .bounds
+            .relations
+            .iter()
+            .enumerate()
+            .filter(|(_, rb)| !rb.name.starts_with('$'))
+            .map(|(i, _)| i)
+            .collect();
         if statics.is_none() {
-            let static_ids: Vec<usize> = (0..problem.bounds.relations.len())
+            let static_ids: Vec<usize> = non_internal
+                .iter()
+                .copied()
                 .filter(|&i| {
                     let rb = &problem.bounds.relations[i];
-                    !rb.name.starts_with('$')
-                        && !info.var_rels.contains(&(i as u32))
-                        && rb.upper.tuples != rb.lower.tuples
+                    !info.var_rels.contains(&(i as u32)) && rb.upper.tuples != rb.lower.tuples
                 })
                 .collect();
             let Some(inst) =
@@ -371,35 +381,28 @@ pub fn count_solutions(
                 continue;
             };
             let mut st = Vec::new();
-            for (id, rb) in problem.bounds.relations.iter().enumerate() {
-                let id = id as u32;
-                if rb.name.starts_with('$')
-                    || info.var_rels.contains(&id)
-                    || rb.upper.tuples == rb.lower.tuples
-                {
+            for (ord, &id) in non_internal.iter().enumerate() {
+                let rb = &problem.bounds.relations[id];
+                if info.var_rels.contains(&(id as u32)) || rb.upper.tuples == rb.lower.tuples {
                     continue;
                 }
-                if let Some(ts) = inst.relations.get(&rb.name) {
-                    st.push((rb.name.clone(), ts.clone()));
+                if let Some(ts) = inst.by_id.get(id) {
+                    st.push((ord, rb.name.clone(), ts.clone()));
                 }
             }
             if std::env::var("KCOUNT").is_ok() {
-                for (n, ts) in &st {
-                    eprintln!("static {n}: {:?}", ts.tuples);
+                for (ord, n, ts) in &st {
+                    eprintln!("static #{ord} {n}: {:?}", ts.tuples);
                 }
             }
             statics = Some(st);
         }
         let mut extra: Vec<kodkod::ast::Formula> = vec![problem.formula.clone()];
-        for (name, ts) in statics.as_ref().unwrap() {
-            let Some(id) = problem
-                .bounds
-                .relations
-                .iter()
-                .position(|r| &r.name == name)
-            else {
+        for (ord, name, ts) in statics.as_ref().unwrap() {
+            let Some(&id) = non_internal.get(*ord) else {
                 continue;
             };
+            debug_assert_eq!(problem.bounds.relations[id].name, *name);
             extra.push(kodkod::ast::Formula::Equal(
                 kodkod::ast::Expr::Rel(id as u32),
                 kodkod::ast::Expr::Literal(ts.clone()),
@@ -558,5 +561,56 @@ mod temporal_tests {
 run a { some P } for 2 but 1.. steps
 ";
         assert!(run(src, 0).is_err());
+    }
+
+    fn count_src(files: &[(&str, &str)], main_file: &str, idx: usize, limit: u32) -> Result<(u32, bool), AlloyError> {
+        static N: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(1000);
+        let n = N.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        let dir =
+            std::env::temp_dir().join(format!("alloy_rs_count_{}_{}", std::process::id(), n));
+        std::fs::create_dir_all(&dir).unwrap();
+        for (name, content) in files {
+            std::fs::write(dir.join(name), content).unwrap();
+        }
+        let world = alloy_core::parse_everything_from_file(&dir.join(main_file))?;
+        let mut opt = Options::default();
+        opt.symmetry = 0;
+        opt.want_instance = false;
+        count_solutions(&world, idx, &opt, limit)
+    }
+
+    #[test]
+    fn enum_ordering_is_prebound_in_count() {
+        // 3-element enum has a single fixed declaration order (A -> B -> C), not 3! = 6 permutations.
+        let src = "\
+enum E { A, B, C }
+sig X { e: one E }
+run {} for exactly 1 X
+run { A.next = B and B.next = C and no C.next } for exactly 1 X
+run { B.next = A } for exactly 1 X
+";
+        assert_eq!(count_src(&[("m.als", src)], "m.als", 0, 100).unwrap(), (3, false));
+        assert_eq!(count_src(&[("m.als", src)], "m.als", 1, 100).unwrap(), (3, false));
+        assert_eq!(count_src(&[("m.als", src)], "m.als", 2, 100).unwrap(), (0, false));
+    }
+
+    #[test]
+    fn temporal_count_handles_enum_and_duplicate_static_relation_names() {
+        // Two module instances declare static fields with the same label (`this/Box.v`) in a temporal model.
+        let helper = "\
+module helper[T]
+one sig Box { v: one T }
+";
+        let main = "\
+open helper[A] as h1
+open helper[B] as h2
+enum Color { Red, Green }
+sig A {}
+sig B {}
+var sig P in A {}
+run {} for exactly 2 A, exactly 2 B, 2 steps
+";
+        let (c, capped) = count_src(&[("helper.als", helper), ("main.als", main)], "main.als", 0, 100).unwrap();
+        assert!(c > 0 && !capped, "expected positive finite trace count, got ({c}, {capped})");
     }
 }

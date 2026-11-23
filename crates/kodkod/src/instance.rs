@@ -188,4 +188,7 @@ impl Bounds {
 #[derive(Debug, Clone, Default)]
 pub struct Instance {
     pub relations: BTreeMap<String, TupleSet>,
+    /// Tuples of every relation indexed by its `RelId` in `Bounds::relations`
+    /// (preserves distinct relations even when multiple modules share a display label).
+    pub by_id: Vec<TupleSet>,
 }

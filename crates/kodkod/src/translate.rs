@@ -1449,6 +1449,7 @@ pub fn first_instance(bounds: &Bounds, formula: &Formula, minimize: &[usize]) ->
                 ts.tuples.insert(t.atoms(rb.arity));
             }
         }
+        inst.by_id.push(ts.clone());
         inst.relations.insert(rb.name.clone(), ts);
     }
     Ok(Some(inst))
@@ -1592,6 +1593,7 @@ fn solve_ordered<S: SatSolver>(bounds: &Bounds, formula: &Formula, sat: S, order
                     ts.tuples.insert(t.atoms(rb.arity));
                 }
             }
+            inst.by_id.push(ts.clone());
             inst.relations.insert(rb.name.clone(), ts);
         }
         Some(inst)

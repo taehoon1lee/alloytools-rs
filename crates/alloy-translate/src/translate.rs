@@ -243,12 +243,22 @@ pub fn translate(
         field_rel[fi] = Some(id);
     }
 
-    // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
-    // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
+    // Java `BoundsComputer`: pre-bind `util/ordering` over an `enum` (fixed declaration order, regardless of symmetry).
     let mut pinned: std::collections::HashSet<(SigId, FieldId, FieldId)> =
         std::collections::HashSet::new();
+    pin_enum_orders(
+        model,
+        &lay,
+        &mut bounds,
+        &field_rel,
+        &mut pinned,
+        time_set.as_ref(),
+    );
+
+    // Kodkod `SymmetryBreaker.breakTotalOrder`: `util/ordering`-style total orders over interchangeable atoms
+    // get constant bounds (first = lowest atom, next = the natural chain) and their predicate becomes true.
     for (_, body) in model.sig_facts.iter() {
-        pin_total_orders(body, &mut bounds, &sig_expr, &field_rel, &mut pinned);
+        pin_total_orders(model, body, &mut bounds, &sig_expr, &field_rel, &mut pinned);
     }
 
     let mut tr = Tr {
@@ -409,11 +419,139 @@ fn allocate_prim_sig(
     Ok(e)
 }
 
+/// Java `BoundsComputer` lines 367-422: a `one sig` with two fields `f1: set E, f2: E -> E` and the single
+/// fact `pred/totalOrder[E, s.f1, s.f2]` over an `enum` `E` has `f1` and `f2` bound exactly to `E`'s
+/// declaration order (first value and consecutive pairs), independently of symmetry breaking.
+fn pin_enum_orders(
+    model: &Model,
+    lay: &Layout,
+    bounds: &mut Bounds,
+    field_rel: &[Option<u32>],
+    pinned: &mut std::collections::HashSet<(SigId, FieldId, FieldId)>,
+    time_set: Option<&TupleSet>,
+) {
+    for (si, sig) in model.sigs.iter().enumerate() {
+        let s = si as SigId;
+        if sig.kind != SigKind::User
+            || sig.mult != Some(Mult::One)
+            || sig.is_var
+            || sig.fields.len() != 2
+        {
+            continue;
+        }
+        let facts: Vec<&RExpr> = model
+            .sig_facts
+            .iter()
+            .filter(|(x, _)| *x == s)
+            .map(|(_, f)| f)
+            .collect();
+        if facts.len() != 1 {
+            continue;
+        }
+        let (this_l, body) = match facts[0] {
+            RExpr::Quant(Quant::All, ds, b) if ds.len() == 1 && ds[0].vars.len() == 1 => {
+                (Some(ds[0].vars[0]), &**b)
+            }
+            other => (None, other),
+        };
+        let body = match body {
+            RExpr::Block(v) if v.len() == 1 => &v[0],
+            other => other,
+        };
+        let RExpr::TotalOrder(args) = body else {
+            continue;
+        };
+        if args.len() != 3 {
+            continue;
+        }
+        let (f1, f2) = (sig.fields[0], sig.fields[1]);
+        let (d1, d2) = (&model.fields[f1 as usize], &model.fields[f2 as usize]);
+        let RExpr::Sig(sub) = d1.decl else {
+            continue;
+        };
+        let sub_sig = &model.sigs[sub as usize];
+        if d1.mult != Some(Mult::Set)
+            || sub_sig.kind != SigKind::User
+            || !sub_sig.subset_of.is_empty()
+            || !sub_sig.is_enum
+        {
+            continue;
+        }
+        match &d2.decl {
+            RExpr::Bin(BinOp::Arrow(Mult::Set, Mult::Set), a, b)
+                if **a == RExpr::Sig(sub) && **b == RExpr::Sig(sub) => {}
+            _ => continue,
+        }
+        let is_s = |e: &RExpr| {
+            matches!(e, RExpr::Sig(x) if *x == s)
+                || matches!(e, RExpr::Local(l) if Some(*l) == this_l)
+        };
+        let joins = |e: &RExpr, f: FieldId| {
+            matches!(e, RExpr::Bin(BinOp::Join, a, b) if is_s(a) && **b == RExpr::Field(f))
+        };
+        if args[0] != RExpr::Sig(sub) || !joins(&args[1], f1) || !joins(&args[2], f2) {
+            continue;
+        }
+        let (Some(r1), Some(r2)) = (field_rel[f1 as usize], field_rel[f2 as usize]) else {
+            continue;
+        };
+        let me = lay.upper(s);
+        if me.len() != 1 {
+            continue;
+        }
+        let kids = lay.children(sub);
+        let mut first: Vec<Vec<u32>> = Vec::new();
+        let mut next: Vec<Vec<u32>> = Vec::new();
+        let mut last: Option<u32> = None;
+        let mut all_exact_distinct = sub_sig.is_abstract && lay.lower(s) == me;
+        let mut seen = std::collections::HashSet::new();
+        for &c in kids {
+            let up = lay.upper(c);
+            if up.len() != 1 {
+                first.clear();
+                next.clear();
+                break;
+            }
+            if lay.lower(c) != up || !seen.insert(up[0]) {
+                all_exact_distinct = false;
+            }
+            match last {
+                None => first.push(vec![me[0], up[0]]),
+                Some(l) => next.push(vec![me[0], l, up[0]]),
+            }
+            last = Some(up[0]);
+        }
+        // Matches Java `firstTS.size() != (n > 0 ? 1 : 0) || nextTS.size() != n - 1`
+        if kids.is_empty() || first.len() != 1 || next.len() + 1 != kids.len() {
+            continue;
+        }
+        let mut first_ts = TupleSet::from_tuples(2, first);
+        let mut next_ts = TupleSet::from_tuples(3, next);
+        if d1.is_var {
+            let Some(ts) = time_set else { continue };
+            first_ts = first_ts.product(ts);
+        }
+        if d2.is_var {
+            let Some(ts) = time_set else { continue };
+            next_ts = next_ts.product(ts);
+        }
+        let (r1, r2) = (r1 as usize, r2 as usize);
+        bounds.relations[r1].lower = first_ts.clone();
+        bounds.relations[r1].upper = first_ts;
+        bounds.relations[r2].lower = next_ts.clone();
+        bounds.relations[r2].upper = next_ts;
+        if all_exact_distinct && !d1.is_var && !d2.is_var {
+            pinned.insert((sub, f1, f2));
+        }
+    }
+}
+
 /// `(elem, first field, next field)` of `pred/totalOrder[elem, this.first, this.next]`.
-fn total_order_key(args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
+fn total_order_key(model: &Model, args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
     let field_of = |e: &RExpr| match e {
         RExpr::Bin(BinOp::Join, a, b) => match (&**a, &**b) {
             (RExpr::Local(_), RExpr::Field(f)) => Some(*f),
+            (RExpr::Sig(s), RExpr::Field(f)) if *s == model.fields[*f as usize].owner => Some(*f),
             _ => None,
         },
         _ => None,
@@ -425,6 +563,7 @@ fn total_order_key(args: &[RExpr]) -> Option<(SigId, FieldId, FieldId)> {
 }
 
 fn pin_total_orders(
+    model: &Model,
     e: &RExpr,
     bounds: &mut Bounds,
     sig_rel: &[Option<Expr>],
@@ -434,14 +573,14 @@ fn pin_total_orders(
     match e {
         RExpr::Block(items) => {
             for i in items {
-                pin_total_orders(i, bounds, sig_rel, field_rel, pinned);
+                pin_total_orders(model, i, bounds, sig_rel, field_rel, pinned);
             }
         }
         RExpr::Quant(Quant::All, _, body) => {
-            pin_total_orders(body, bounds, sig_rel, field_rel, pinned)
+            pin_total_orders(model, body, bounds, sig_rel, field_rel, pinned)
         }
         RExpr::TotalOrder(args) => {
-            let Some(key @ (elem, f1, f2)) = total_order_key(args) else {
+            let Some(key @ (elem, f1, f2)) = total_order_key(model, args) else {
                 return;
             };
             let (Some(Some(er)), Some(Some(r1)), Some(Some(r2))) = (
@@ -1339,7 +1478,7 @@ impl<'a> Tr<'a> {
                     return Err(other("pred/totalOrder takes exactly three arguments"));
                 }
                 let args = &self.resolve_total_order(args)?;
-                if total_order_key(args).map_or(false, |k| self.pinned.contains(&k)) {
+                if total_order_key(self.model, args).map_or(false, |k| self.pinned.contains(&k)) {
                     return Ok(Formula::True);
                 }
                 let elem = self.expr(&args[0])?;

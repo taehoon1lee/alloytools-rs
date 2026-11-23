@@ -17,14 +17,16 @@ harness/                      the judge — must not be edited inside the loop
   check.py                    runs Rust → compares with golden → scoreboard / regression check
   quick.txt                   16-model smoke set
   SCHEMA.md                   JSON protocol shared by Java and Rust
-crates/                       Rust workspace (filled in by Haiku)
-  alloy-core  kodkod  satsolver  alloy-translate  alloy-cli (→ target/release/alloy-rs.exe)
+crates/                       Rust workspace
+  alloy-core  kodkod  satsolver  batsat  pardinus  alloy-translate  alloy-cli (→ target/release/alloy-rs.exe)
 loop/
   PROMPT.md                   procedure for one Haiku iteration (do not edit)
   TASKS.md                    milestone task list M1~M9 (ticked off by Haiku)
   PROGRESS.md / NOTES.md      iteration log / knowledge base (memory across sessions)
   run-loop.ps1                loop driver
 CLAUDE.md                     rules every session reads automatically
+THIRD_PARTY_LICENSES.md       upstream component licenses & SAT4J LGPL-2.1 notice
+docs/EXACT_PORT.md            bit-exact Java instance pipeline (Pardinus + SAT4J 2.3.1)
 docs/JAVA_MAP.md              Java file ↔ Rust module map
 ```
 
@@ -37,21 +39,22 @@ docs/JAVA_MAP.md              Java file ↔ Rust module map
 | perf | verdict matches **and** `rust_ms ≤ 1.1 × java_ms + 20ms` |
 | --count | (M7) the number of solutions with symmetry=0 equals Java's |
 
-## Current status (2026-11-22)
+## Current status (2026-11-23, rev `cd6bc87`)
 | Item | Result |
 |---|---|
-| parse / commands | 199/199, 199/199 |
-| verdict | 465/465 (SAT/UNSAT/ERROR identical to Java) |
-| perf (sequential `--perf`) | 465/465; total time Rust 28.5 s vs Java 285.7 s (about 0.10×; was 44.3 s before the SAT/BVE/temporal work) |
-| `--count` (symmetry=0) | 432/432 (the 34 commands Java timed out on are not scored) |
-| temporal logic (`var`, LTL, steps) | implemented; every temporal command in the corpus matches |
+| parse / commands | 199/199, 199/199 (`error_line_match` is 1/5, ungated; 4 `type_error` files differ in line/col) |
+| verdict | 465/465 (SAT 215, UNSAT 238, ERROR 12; 1 Java timeout skipped) |
+| perf (sequential `--perf`) | 465/465; Rust 23.23 s vs Java 285.66 s (~12.3× faster, `x0.08`; single-run timings swing 10–20% with machine load) |
+| exact first instances (`cmp_inst.py --all`) | 465/465 agreement (215/215 SAT first instances byte-identical; `cmp_alloy.py`: 215/215 `.kk` and CNF identical) |
+| `--count` (symmetry=0) | 432/432 (the 34 commands Java timed out on are not scored; `Solution::next()` is `Unsupported`) |
+| temporal logic (`var`, LTL, steps) | implemented; all temporal verdict, exact-instance, and `--count` commands match |
 
 - `--gate` runs 8 commands in parallel, so the perf score of borderline commands fluctuates with machine load
-  (409–465/465 observed). Check speed with the sequential `python harness/check.py --perf`.
-- In `--count` mode `check.py` prints "REGRESSIONS vs best.json". That is not a real regression: the verdict-mode
-  `best.json` contains commands that Java timed out on, which count mode does not score.
+  (398–465/465 observed). Check speed with the sequential `python harness/check.py --perf`.
+- In `--count` mode `check.py` prints "REGRESSIONS vs best.json" on commands Java timed out on or skipped in `--count`,
+  because verdict-mode `best.json` includes commands not scored in `--count` mode.
 - Debug environment variables: `KTIME`, `KPROF`, `KSAT_CONFIGS`, `KSAT_STATS`, `KCOUNT`, `KSAT_WHO`, `KSAT_DUMP`,
-  `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL` (see loop/NOTES.md).
+  `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL`, `ALLOY_RS_NO_EXACT` (see `loop/NOTES.md` and `docs/EXACT_PORT.md`).
 
 ## Implementation notes: temporal logic (Alloy 6)
 (`crates/alloy-translate/src/translate.rs`, `lib.rs`)
@@ -141,5 +144,16 @@ python harness/gen_golden.py --count-mode --force -j 4
   guarded twice: the deny rules in `loop/haiku-settings.json` (the driver applies them to Haiku only, via `--settings`)
   and the driver's automatic revert. The deny rules do not apply to interactive sessions (Option B), so start those
   with `claude --model haiku --settings loop/haiku-settings.json`.
-- Instances themselves can legitimately differ between SAT solvers, so they are not compared; semantic equality is
-  checked through solution counts (symmetry=0) instead (M7).
+- **Dual fast + exact pipeline**: the fast pipeline (`crates/kodkod` + `batsat` portfolio) decides verdicts and
+  gives ~13× sequential speedup, while the exact pipeline (`crates/pardinus` + `satsolver::sat4j`, see
+  `docs/EXACT_PORT.md`) races on a second thread to reproduce Java Alloy 6.2.0's exact first instance on all 215 SAT
+  corpus commands (`ALLOY_RS_NO_EXACT=1` disables it).
+
+## Licensing
+
+See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Briefly:
+- Ports of Alloy Analyzer 6.2.0 and Kodkod/Pardinus, plus vendored `batsat`, are **MIT**.
+- `crates/satsolver/src/sat4j.rs` is a direct port of **SAT4J 2.3.1** (**GNU LGPL-2.1**; upstream dual-licensed
+  EPL-1.0 / LGPL-2.1) and is currently compiled into `satsolver` and statically linked into `alloy-rs`. Builds
+  from the current workspace configuration therefore carry LGPL-2.1/EPL-1.0 obligations until `sat4j.rs` is isolated
+  behind an optional crate/feature.

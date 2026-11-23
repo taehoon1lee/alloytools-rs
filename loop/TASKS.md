@@ -6,14 +6,14 @@ Scores come from `python harness/check.py` (see CLAUDE.md). Java paths are relat
 `reference/alloy-java/` (abbrev: `CORE` = `org.alloytools.alloy.core/src/main/java/edu/mit/csail/sdg`,
 `KK` = `org.alloytools.pardinus.core/src/main/java/kodkod`).
 
-## STATUS (2026-11-22) — verdict 442/465, perf 420/465 (sequential), parse 195/199, commands 195/199; gate green
-Done: M1-M5 (parser, modules incl. instance merge, sema/overloads/types, kodkod engine with skolemization, FOL cache, Java SBP,
-ordering pinning, size constraints, strings, seq, integers incl. div/rem/sum), M6 mostly (portfolio + geometric restarts).
-Open (all outside `reference/models` except the first two):
-- [ ] perf: hard UNSAT commands 2-5x slower than Java (firewire#4, hotel2#2, ceilingsAndFloors#4, iolus, ringlead#4, p306-hotel#2 which exceeds 60 s)
-- [ ] parse: the 4 `models/utilities/types/*` type_error files (Java reports ambiguity / failed typecheck inside library bodies)
-- [ ] M8 temporal (extra/examples/temporal: buffer, leader, leader_events, trash = 21 commands)
-- [x] M7 `--count` (solution enumeration)
+## STATUS (2026-11-23, rev `cd6bc87`) — parse 199/199, commands 199/199, verdict 465/465, perf 465/465 (sequential 23.23 s vs Java 285.66 s); exact 215/215; `--count` 432/432; gate green
+Done: M1-M8 (incl. temporal and `--count` 432/432) and bit-exact instance pipeline (`pardinus` + `sat4j` 2.3.1; `cmp_inst.py --all` 465/465, `cmp_alloy.py` 215/215 `.kk`/CNF).
+Open / known gaps on `cd6bc87`:
+- [x] `--count` regressions fixed in `cd6bc87` (432/432: enum `util/ordering` pre-binding + RelId-based temporal static pinning)
+- [ ] M9 error parity: `error_line_match` 1/5 (`models/utilities/types/{seqrel,integer,sequniv,sequence}` report `-1` pos and differing error text)
+- [ ] Product API & options wiring: `Solution::next()` (`Unsupported`), `Options.{skolem_depth,no_overflow,unrolls}`, CLI subcommands/flags beyond `exec`
+- [ ] Licensing isolation: isolate `crates/satsolver/src/sat4j.rs` (LGPL-2.1 / EPL-1.0) behind an opt-in crate/feature so default `batsat` builds remain pure MIT (`THIRD_PARTY_LICENSES.md`)
+- [ ] Unseen holdout & Migration Harness Coverage PoCs (JaCoCo Java coverage, differential fuzzing, completion-gap curve)
 
 ## M0 — Environment (done by the environment builder)
 - [x] Java oracle, golden outputs, corpus (199 models, 465 Java-decided commands), harness, loop driver

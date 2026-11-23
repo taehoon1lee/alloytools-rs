@@ -114,3 +114,11 @@ addField/query/addFormula/solve), `Simplifier`.
 - isIn/isInBinary: arrow multiplicities expand to quantified formulas with fresh `v<cnt>` variables (am=true).
 - ExprQt: desugar (disj), addOne (unary decl without multiplicity → ONEOF), one/lone → comprehension.one/lone when
   all decls are unary ONEOF, else LONE = all/all pairs; guards for non-unary decls.
+
+## Known caveats & licensing
+
+- **Licensing (SAT4J 2.3.1 — LGPL-2.1 / EPL-1.0)**: `crates/satsolver/src/sat4j.rs` is a bit-exact port of SAT4J 2.3.1 (`org.sat4j.core`), which is covered by GNU LGPL-2.1 (upstream dual-licensed EPL-1.0 / LGPL-2.1; see `THIRD_PARTY_LICENSES.md`). Because LGPL-2.1 Section 0 explicitly covers straightforward translations into another language and `sat4j.rs` is currently statically linked via `satsolver`, workspace builds are not pure MIT. Isolating `sat4j` into a separate crate or opt-in Cargo feature (`sat4j-exact`) is planned before any pure-MIT binary distribution.
+- **Dual-pipeline divergence & option forwarding (`crates/alloy-translate/src/lib.rs`)**:
+  - In `execute_command`, a `UNSAT` from the fast pipeline cancels the exact thread (`stop.store(true, ...)`) without waiting to check whether the exact pipeline would have returned `SAT`.
+  - When the fast pipeline returns `SAT`, if the exact pipeline errors or returns `UNSAT`, `execute_command` silently falls back to the fast instance without raising a divergence diagnostic.
+  - `spawn_exact` currently forwards only `opt.symmetry`; `skolem_depth`, `no_overflow`, and `unrolls` in `Options` are not yet wired into the exact (or CLI) path.

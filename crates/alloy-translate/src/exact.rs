@@ -39,7 +39,7 @@ pub struct Hier<'a> {
 }
 
 impl Hier<'_> {
-    fn parent(&self, s: SigId) -> Option<SigId> {
+    pub(crate) fn parent(&self, s: SigId) -> Option<SigId> {
         match s {
             SIG_UNIV | SIG_NONE => None,
             SIG_INT | SIG_STRING => Some(SIG_UNIV),
@@ -93,7 +93,7 @@ impl Hier<'_> {
         (0..x.len()).rev().all(|i| self.same_or_desc(x[i], y[i]))
     }
     /// `Type.add(entries, arities, x)`
-    fn add(&self, ee: &mut Vec<Vec<SigId>>, x: Vec<SigId>) {
+    pub(crate) fn add(&self, ee: &mut Vec<Vec<SigId>>, x: Vec<SigId>) {
         if x.is_empty() {
             return;
         }
@@ -116,12 +116,12 @@ impl Hier<'_> {
         }
         ee.push(x);
     }
-    pub fn make(&self, s: SigId) -> JType {
+    pub(crate) fn make(&self, s: SigId) -> JType {
         JType {
             entries: vec![vec![s]],
         }
     }
-    pub fn product(&self, a: &JType, b: &JType) -> JType {
+    pub(crate) fn product(&self, a: &JType, b: &JType) -> JType {
         let mut ee = Vec::new();
         for x in &a.entries {
             for y in &b.entries {
@@ -139,7 +139,7 @@ impl Hier<'_> {
         JType { entries: ee }
     }
     /// `Type.unionWithCommonArity`
-    pub fn union(&self, a: &JType, b: &JType) -> JType {
+    pub(crate) fn union(&self, a: &JType, b: &JType) -> JType {
         let has = |t: &JType, n: usize| t.entries.iter().any(|e| e.len() == n);
         let mut ee = Vec::new();
         if !a.entries.is_empty() && !b.entries.is_empty() {
@@ -156,7 +156,7 @@ impl Hier<'_> {
         }
         JType { entries: ee }
     }
-    pub fn intersect(&self, a: &JType, b: &JType) -> JType {
+    pub(crate) fn intersect(&self, a: &JType, b: &JType) -> JType {
         let mut ee = Vec::new();
         for x in &a.entries {
             for y in &b.entries {
@@ -182,7 +182,7 @@ impl Hier<'_> {
         }
         JType { entries: ee }
     }
-    pub fn join(&self, a: &JType, b: &JType) -> JType {
+    pub(crate) fn join(&self, a: &JType, b: &JType) -> JType {
         let mut ee = Vec::new();
         for x in &a.entries {
             for y in &b.entries {
@@ -202,7 +202,7 @@ impl Hier<'_> {
         }
         JType { entries: ee }
     }
-    pub fn transpose(&self, a: &JType) -> JType {
+    pub(crate) fn transpose(&self, a: &JType) -> JType {
         let mut ee = Vec::new();
         for x in &a.entries {
             if x.len() == 2 {
@@ -211,7 +211,7 @@ impl Hier<'_> {
         }
         JType { entries: ee }
     }
-    pub fn closure(&self, a: &JType) -> JType {
+    pub(crate) fn closure(&self, a: &JType) -> JType {
         let mut ans = JType {
             entries: a.entries.iter().filter(|e| e.len() == 2).cloned().collect(),
         };
@@ -409,7 +409,7 @@ pub fn build(
     model: &Model,
     idx: usize,
 ) -> Result<(Problem, ExactInfo), AlloyError> {
-    let (cx, p) = prepare(world, model, idx, 20)?;
+    let (cx, p) = prepare(world, model, idx, &crate::Options::default())?;
     let info = ExactInfo {
         sig_expr: cx.a2k_sig.clone(),
         field_expr: cx.a2k_field.clone(),
@@ -423,11 +423,11 @@ pub fn build(
 }
 
 /// The Kodkod problem of a command (and the translation state, for the instance output).
-fn prepare<'a>(
+pub(crate) fn prepare<'a>(
     world: &alloy_core::World,
     model: &'a Model,
     idx: usize,
-    symmetry: i32,
+    opt: &crate::Options,
 ) -> Result<(Cx<'a>, Problem), AlloyError> {
     let cmd = model
         .commands
@@ -436,6 +436,7 @@ fn prepare<'a>(
     let expects = world.commands.get(idx).map(|c| c.expects).unwrap_or(-1);
     let labels = java_labels(world, model);
     let mut cx = Cx::new(model, cmd, labels)?;
+    cx.unrolls = opt.unrolls;
     cx.compute_bounds()?;
     cx.make_facts()?;
     // A4Solution.solve: Simplifier (inferPartialInstance), then `r = r` for every relation, then Formula.and(formulas)
@@ -463,7 +464,9 @@ fn prepare<'a>(
     };
     let options = KOptions {
         bitwidth: cx.bitwidth,
-        symmetry: if expects == 1 { 0 } else { symmetry },
+        symmetry: if expects == 1 { 0 } else { opt.symmetry },
+        skolem_depth: opt.skolem_depth,
+        no_overflow: opt.no_overflow,
         temporal,
         min_trace,
         max_trace,
@@ -525,6 +528,7 @@ pub struct Cx<'a> {
     min: i32,
     max: i32,
     bitwidth: i32,
+    maxseq: i32,
     sigint: Vec<u32>,
     seqidx: Vec<u32>,
     strings: Vec<u32>,
@@ -543,10 +547,11 @@ pub struct Cx<'a> {
     /// A4Solution.sigs: user sigs in addSig (allocation) order, used by makeFacts
     alloc_order: Vec<SigId>,
     /// atom-level types of the locals in scope (overload resolution)
-    ltypes: Vec<(LocalId, kodkod::instance::TupleSet)>,
-    ty_memo: Vec<Option<kodkod::instance::TupleSet>>,
+    ltypes: Vec<(LocalId, crate::resolve::TupleSet)>,
+    ty_memo: Vec<Option<crate::resolve::TupleSet>>,
     ub: HashMap<SigId, Vec<u32>>,
     lb: HashMap<SigId, Vec<u32>>,
+    unrolls: i32,
 }
 
 fn ts(arity: u32, v: Vec<u32>) -> TupleSet {
@@ -707,7 +712,7 @@ impl<'a> Cx<'a> {
 
 /// Dev check: the CNF calls of every SAT attempt of a temporal command (compare with Java's `.cnf` dumps).
 pub fn temporal_cnf_log(world: &alloy_core::World, model: &Model, idx: usize) -> Result<Vec<Vec<String>>, AlloyError> {
-    let (_cx, mut p) = prepare(world, model, idx, 20)?;
+    let (_cx, mut p) = prepare(world, model, idx, &crate::Options::default())?;
     let s = pardinus::temporal::solve(&mut p, None, true).map_err(fatal)?;
     Ok(s.cnf_log)
 }

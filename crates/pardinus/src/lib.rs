@@ -1,5 +1,5 @@
-//! Bit-exact port of the Pardinus/Kodkod pipeline that Alloy 6.2.0 runs for a command:
-//! Kodkod problem (formula DAG + bounds) -> boolean circuit -> CNF -> SAT4J 2.3.1 -> instance.
+//! Pure-MIT port of the Pardinus/Kodkod pipeline:
+//! Kodkod problem (formula DAG + bounds) -> boolean circuit -> CNF -> BatSat portfolio -> instance.
 //! See docs/EXACT_PORT.md. Java sources: reference/alloy-java/org.alloytools.pardinus.core/src/main/java/kodkod.
 
 pub mod annotate;

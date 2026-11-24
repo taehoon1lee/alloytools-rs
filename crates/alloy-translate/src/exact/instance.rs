@@ -1,16 +1,23 @@
-//! Port of the instance side of `A4Solution`: solving with SAT4J (`A4Solution.solve`), the Kodkod instance,
+//! Port of the instance side of `A4Solution`: solving with `pardinus` + `BatSat`, the Kodkod instance,
 //! `rename` (atom names `Sig$i`, ordered along `next`/`prev` fields, `unused<i>`, skolems `$name`) and `eval`
 //! of sigs/fields/skolems as printed by the oracle (`AlloyOracle.instanceJson`).
 
 use super::*;
 use pardinus::instance::TupleSet as PTs;
-use std::collections::{BTreeMap, HashSet};
+use crate::xml::{XmlData, XmlField, XmlSig, XmlSkolem, XmlState};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::time::Instant;
 
-/// Result of the exact pipeline for one command.
+/// Result of solving a command via the unified `pardinus` + `BatSat` pipeline.
 pub struct ExactOutcome {
     pub sat: bool,
+    pub temporal: bool,
+    pub min_trace: i32,
+    pub max_trace: i32,
+    pub translate_ms: f64,
+    pub solve_ms: f64,
     /// First instance, one map per state (static problems: one): `this/Sig`, `this/Sig.field`, `skolem:$x` ->
     /// tuples of atom names (sorted like Java).
     pub instance: Option<Vec<BTreeMap<String, Vec<Vec<String>>>>>,
@@ -19,6 +26,7 @@ pub struct ExactOutcome {
     pub primary_vars: i32,
     pub vars: i32,
     pub clauses: i64,
+    pub xml_data: Option<XmlData>,
 }
 
 /// Java `UniqueNameGenerator`.
@@ -37,48 +45,38 @@ fn tail_this(s: &str) -> &str {
     s.strip_prefix("this/").unwrap_or(s)
 }
 
-/// Clause counter in front of SAT4J (A4Reporter.solve statistics).
-struct Counting<'s> {
-    s: &'s mut satsolver::sat4j::Sat4j,
-    clauses: i64,
-}
-impl pardinus::cnf::CnfSink for Counting<'_> {
-    fn num_vars(&self) -> i32 {
-        self.s.num_vars() as i32
-    }
-    fn add_variables(&mut self, n: i32) {
-        self.s.add_variables(n as u32)
-    }
-    fn add_clause(&mut self, lits: &[i32]) {
-        self.clauses += 1;
-        self.s.add_clause(lits);
-    }
-}
-
-/// `TranslateAlloyToKodkod.execute_command` + `A4Solution.solve` + the oracle's instance printer, exactly as Java.
+/// `TranslateAlloyToKodkod.execute_command` + `A4Solution.solve` + the oracle's instance printer.
 pub fn solve_first(
     world: &alloy_core::World,
     model: &Model,
     idx: usize,
-    symmetry: i32,
+    opt: &crate::Options,
     stop: Option<Arc<AtomicBool>>,
 ) -> Result<ExactOutcome, AlloyError> {
-    let (mut cx, mut p) = prepare(world, model, idx, symmetry)?;
+    let t0 = Instant::now();
+    let (mut cx, mut p) = prepare(world, model, idx, opt)?;
+    let prep_ms = t0.elapsed().as_secs_f64() * 1000.0;
     p.options.stop = stop.clone();
     if p.options.temporal {
         let ts = pardinus::temporal::solve(&mut p, stop, false).map_err(fatal)?;
         let mut out = ExactOutcome {
             sat: ts.sat,
+            temporal: true,
+            min_trace: p.options.min_trace,
+            max_trace: p.options.max_trace,
+            translate_ms: prep_ms + ts.translate_ms,
+            solve_ms: ts.solve_ms,
             instance: None,
-            loop_state: ts.loop_state as i32,
+            loop_state: if ts.sat { ts.loop_state as i32 } else { -1 },
             primary_vars: ts.primary_vars,
             vars: ts.vars,
             clauses: ts.clauses,
+            xml_data: None,
         };
-        if !ts.sat {
+        if !ts.sat || (!opt.want_instance && !opt.want_xml) {
             return Ok(out);
         }
-        let skolems: Vec<N> = ts.skolems.iter().filter(|(s, _)| cx.typed_vars.contains(&s.var)).map(|(s, _)| s.relation).collect();
+        let skolems: Vec<(N, N)> = ts.skolems.iter().filter(|(s, _)| cx.typed_vars.contains(&s.var)).map(|(s, _)| (s.var, s.relation)).collect();
         let mut insts = ts.states.clone();
         for m in &mut insts {
             for (s, v) in &ts.skolems {
@@ -87,32 +85,55 @@ pub fn solve_first(
         }
         let n = p.bounds.universe_size();
         let mut ev = Eval { ast: &mut p.ast, insts: &insts, n, ints: &p.bounds.ints, bitwidth: p.options.bitwidth };
-        out.instance = Some(cx.render(&mut ev, &skolems, &p.bounds.atoms)?);
+        let (rendered, xml_data) = cx.render(&mut ev, &skolems, &p.bounds, opt.want_xml.then(|| XmlMeta {
+            min_trace: out.min_trace,
+            max_trace: out.max_trace,
+            loop_state: out.loop_state,
+            world,
+            cmd_idx: idx,
+        }))?;
+        if opt.want_instance {
+            out.instance = Some(rendered);
+        }
+        out.xml_data = xml_data;
         return Ok(out);
     }
-    let mut solver = satsolver::sat4j::Sat4j::new();
-    if let Some(f) = stop {
-        solver.set_stop_flag(f);
-    }
-    let mut sink = Counting { s: &mut solver, clauses: 0 };
-    let tr = pardinus::translator::translate(&mut p, &mut sink).map_err(fatal)?;
-    let clauses = sink.clauses;
-    let sat = match tr.trivial {
-        Some(v) => v,
-        None => solver.solve().ok_or_else(|| AlloyError::new(ErrorKind::Other, None, "solver interrupted".to_string()))?,
+    let solved = pardinus::translator::solve_portfolio(&mut p).map_err(fatal)?;
+    let mut out = ExactOutcome {
+        sat: solved.sat,
+        temporal: false,
+        min_trace: -1,
+        max_trace: -1,
+        translate_ms: prep_ms + solved.translate_ms,
+        solve_ms: solved.solve_ms,
+        instance: None,
+        loop_state: -1,
+        primary_vars: solved.translation.num_primary,
+        vars: solved.vars,
+        clauses: solved.clauses,
+        xml_data: None,
     };
-    let mut out = ExactOutcome { sat, instance: None, loop_state: -1, primary_vars: tr.num_primary, vars: solver.num_vars() as i32, clauses };
-    if !sat {
+    if !solved.sat || (!opt.want_instance && !opt.want_xml) {
         return Ok(out);
     }
-    let trivial = tr.trivial.is_some();
-    let value = |v: i32| !trivial && v > 0 && solver.value_of(v as u32);
-    let inst: HashMap<N, PTs> = tr.interpret(&value).into_iter().collect();
+    let trivial = solved.translation.trivial.is_some();
+    let value = |v: i32| !trivial && v > 0 && *solved.model.get(v as usize).unwrap_or(&false);
+    let inst: HashMap<N, PTs> = solved.translation.interpret(&value).into_iter().collect();
     // A4Solution's skolemizing reporter: a skolem gets a type (and is shown) only if its variable has one
-    let skolems: Vec<N> = tr.skolems.iter().filter(|s| cx.typed_vars.contains(&s.var)).map(|s| s.relation).collect();
+    let skolems: Vec<(N, N)> = solved.translation.skolems.iter().filter(|s| cx.typed_vars.contains(&s.var)).map(|s| (s.var, s.relation)).collect();
     let insts = vec![inst];
     let mut ev = Eval { ast: &mut p.ast, insts: &insts, n: p.bounds.universe_size(), ints: &p.bounds.ints, bitwidth: p.options.bitwidth };
-    out.instance = Some(cx.render(&mut ev, &skolems, &p.bounds.atoms)?);
+    let (rendered, xml_data) = cx.render(&mut ev, &skolems, &p.bounds, opt.want_xml.then(|| XmlMeta {
+        min_trace: -1,
+        max_trace: -1,
+        loop_state: 0,
+        world,
+        cmd_idx: idx,
+    }))?;
+    if opt.want_instance {
+        out.instance = Some(rendered);
+    }
+    out.xml_data = xml_data;
     Ok(out)
 }
 
@@ -194,9 +215,33 @@ fn is_order(b: &[Vec<u32>], u: &[Vec<u32>]) -> Option<Vec<u32>> {
     }
 }
 
+struct XmlMeta<'w> {
+    min_trace: i32,
+    max_trace: i32,
+    loop_state: i32,
+    world: &'w alloy_core::World,
+    cmd_idx: usize,
+}
+
+fn decode_tuple_idx(mut x: u32, arity: u32, n: u32) -> Vec<u32> {
+    let mut v = vec![0u32; arity as usize];
+    for k in (0..arity as usize).rev() {
+        v[k] = x % n;
+        x /= n;
+    }
+    v
+}
+
 impl<'a> Cx<'a> {
-    /// `A4Solution.rename` then the oracle's `instanceJson` (one state).
-    fn render(&mut self, ev: &mut Eval, skolems: &[N], atoms: &[String]) -> Result<Vec<BTreeMap<String, Vec<Vec<String>>>>, AlloyError> {
+    /// `A4Solution.rename` then the oracle's `instanceJson` (one state) and optional XML data.
+    fn render(
+        &mut self,
+        ev: &mut Eval,
+        skolems: &[(N, N)],
+        bounds: &Bounds,
+        xml_meta: Option<XmlMeta<'_>>,
+    ) -> Result<(Vec<BTreeMap<String, Vec<Vec<String>>>>, Option<XmlData>), AlloyError> {
+        let atoms = &bounds.atoms;
         let mut un = Unique(HashSet::new());
         let sigs = self.alloc_order.clone();
         // orders along `next`/`prev` fields
@@ -268,34 +313,333 @@ impl<'a> Cx<'a> {
             v.sort_by(|a, b| java_cmp(&a.0, &b.0));
             v.into_iter().map(|(_, t)| t).collect()
         };
-        let mut sk_labels = Vec::new();
-        for &r in skolems {
-            let n = match ev.ast.get(r) {
+        let mut sk_labels: Vec<(N, N, String)> = Vec::new();
+        for &(sk_var, sk_rel) in skolems {
+            let n = match ev.ast.get(sk_rel) {
                 Node::Rel(ri) => ri.name.clone(),
                 _ => continue,
             };
             let n = tail_this(&n).trim_start_matches('$').to_string();
-            sk_labels.push((r, un.make(&format!("${n}"))));
+            sk_labels.push((sk_var, sk_rel, un.make(&format!("${n}"))));
         }
-        let mut states = Vec::new();
+        let mut states = Vec::with_capacity(ev.insts.len());
+        let mut raw_sig_states: Vec<Vec<Vec<u32>>> = if xml_meta.is_some() { Vec::with_capacity(ev.insts.len()) } else { Vec::new() };
+        let mut raw_field_states: Vec<Vec<Vec<Vec<u32>>>> = if xml_meta.is_some() { Vec::with_capacity(ev.insts.len()) } else { Vec::new() };
+        let mut raw_sk_states: Vec<Vec<Vec<Vec<u32>>>> = if xml_meta.is_some() { Vec::with_capacity(ev.insts.len()) } else { Vec::new() };
+
         for st in 0..ev.insts.len() {
             let mut out = BTreeMap::new();
+            let collect_raw = xml_meta.is_some();
+            let mut st_sigs = if collect_raw { vec![Vec::new(); self.model.sigs.len()] } else { Vec::new() };
+            let mut st_fields = if collect_raw { vec![Vec::new(); self.model.fields.len()] } else { Vec::new() };
             for &s in &sigs {
                 let label = self.label(s).to_string();
                 let se = self.a2k(s);
-                out.insert(label.clone(), render(ev.eval_at(se, st)?));
+                let raw_s = ev.eval_at(se, st)?;
+                if collect_raw {
+                    st_sigs[s as usize] = raw_s.iter().map(|t| t[0]).collect();
+                }
+                out.insert(label.clone(), render(raw_s));
                 for f in self.model.sigs[s as usize].fields.clone() {
                     let Some(fe) = self.a2k_field[f as usize] else { continue };
                     let key = format!("{label}.{}", self.model.fields[f as usize].name);
-                    out.insert(key, render(ev.eval_at(fe, st)?));
+                    let raw_f = ev.eval_at(fe, st)?;
+                    if collect_raw {
+                        st_fields[f as usize] = raw_f.clone();
+                    }
+                    out.insert(key, render(raw_f));
                 }
             }
-            for (r, label) in &sk_labels {
-                out.insert(format!("skolem:{label}"), render(ev.eval_at(*r, st)?));
+            let mut st_sk = if collect_raw { Vec::with_capacity(sk_labels.len()) } else { Vec::new() };
+            for &(sk_var, sk_rel, ref label) in &sk_labels {
+                let _ = sk_var;
+                let raw_k = ev.eval_at(sk_rel, st)?;
+                if collect_raw {
+                    st_sk.push(raw_k.clone());
+                }
+                out.insert(format!("skolem:{label}"), render(raw_k));
+            }
+            if collect_raw {
+                raw_sig_states.push(st_sigs);
+                raw_field_states.push(st_fields);
+                raw_sk_states.push(st_sk);
             }
             states.push(out);
         }
-        Ok(states)
+
+        let xml_data = if let Some(meta) = xml_meta {
+            Some(self.build_xml_data(
+                ev,
+                bounds,
+                &atom_name,
+                &render,
+                &sk_labels,
+                &raw_sig_states,
+                &raw_field_states,
+                &raw_sk_states,
+                &states,
+                meta,
+            )?)
+        } else {
+            None
+        };
+        Ok((states, xml_data))
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn build_xml_data(
+        &mut self,
+        ev: &Eval,
+        bounds: &Bounds,
+        atom_name: &dyn Fn(u32) -> String,
+        render: &dyn Fn(Vec<Vec<u32>>) -> Vec<Vec<String>>,
+        sk_labels: &[(N, N, String)],
+        raw_sig_states: &[Vec<Vec<u32>>],
+        raw_field_states: &[Vec<Vec<Vec<u32>>>],
+        raw_sk_states: &[Vec<Vec<Vec<u32>>>],
+        rendered_states: &[BTreeMap<String, Vec<Vec<String>>>],
+        meta: XmlMeta<'_>,
+    ) -> Result<XmlData, AlloyError> {
+        let n_sigs = self.model.sigs.len();
+        let n_fields = self.model.fields.len();
+        let n_states = ev.insts.len();
+
+        let seqidx_set: HashSet<u32> = self.seqidx.iter().copied().collect();
+        let sigint_set: HashSet<u32> = self.sigint.iter().copied().collect();
+        let string_set: HashSet<u32> = self.strings.iter().copied().collect();
+
+        let mut direct_prim_children: Vec<Vec<SigId>> = vec![Vec::new(); n_sigs];
+        for (sid, s) in self.model.sigs.iter().enumerate() {
+            if s.kind == SigKind::User && s.subset_of.is_empty() {
+                if let Some(p) = s.parent {
+                    direct_prim_children[p as usize].push(sid as SigId);
+                }
+            }
+        }
+
+        let mut global_atom_prim: HashMap<u32, SigId> = HashMap::new();
+        for &a in &self.sigint {
+            global_atom_prim.insert(a, SIG_INT);
+        }
+        for &a in &self.seqidx {
+            global_atom_prim.insert(a, SIG_SEQINT);
+        }
+        for &a in &self.strings {
+            global_atom_prim.insert(a, SIG_STRING);
+        }
+
+        let mut xml_states = Vec::with_capacity(n_states);
+        let mut atom_prim_per_state: Vec<HashMap<u32, SigId>> = Vec::with_capacity(n_states);
+        let string_atoms_rendered: Vec<String> = render(self.strings.iter().map(|&a| vec![a]).collect())
+            .into_iter()
+            .map(|mut t| t.pop().unwrap())
+            .collect();
+
+        for st in 0..n_states {
+            let mut sig_direct_atoms = vec![Vec::new(); n_sigs];
+            sig_direct_atoms[SIG_STRING as usize] = string_atoms_rendered.clone();
+            let mut state_atom_prim = HashMap::new();
+
+            for (sid, s) in self.model.sigs.iter().enumerate() {
+                if s.kind != SigKind::User {
+                    continue;
+                }
+                let raw = &raw_sig_states[st][sid];
+                if s.subset_of.is_empty() {
+                    let mut child_atoms = HashSet::new();
+                    for &c in &direct_prim_children[sid] {
+                        for &a in &raw_sig_states[st][c as usize] {
+                            child_atoms.insert(a);
+                        }
+                    }
+                    let mut direct_u32 = Vec::new();
+                    for &a in raw {
+                        if !child_atoms.contains(&a) {
+                            direct_u32.push(vec![a]);
+                            state_atom_prim.insert(a, sid as SigId);
+                            global_atom_prim.entry(a).or_insert(sid as SigId);
+                        }
+                    }
+                    sig_direct_atoms[sid] = render(direct_u32).into_iter().map(|mut t| t.pop().unwrap()).collect();
+                } else {
+                    sig_direct_atoms[sid] = render(raw.iter().map(|&a| vec![a]).collect())
+                        .into_iter()
+                        .map(|mut t| t.pop().unwrap())
+                        .collect();
+                }
+            }
+            atom_prim_per_state.push(state_atom_prim);
+
+            let mut field_tuples = vec![Vec::new(); n_fields];
+            for (fid, fld) in self.model.fields.iter().enumerate() {
+                let key = format!("{}.{}", self.label(fld.owner), fld.name);
+                if let Some(v) = rendered_states[st].get(&key) {
+                    field_tuples[fid] = v.clone();
+                }
+            }
+
+            let mut skolem_tuples = Vec::with_capacity(sk_labels.len());
+            for (_, _, label) in sk_labels {
+                let key = format!("skolem:{label}");
+                skolem_tuples.push(rendered_states[st].get(&key).cloned().unwrap_or_default());
+            }
+
+            xml_states.push(XmlState {
+                sig_direct_atoms,
+                field_tuples,
+                skolem_tuples,
+            });
+        }
+
+        let atom_prim = |a: u32, st: Option<usize>| -> SigId {
+            if seqidx_set.contains(&a) {
+                return SIG_SEQINT;
+            }
+            if sigint_set.contains(&a) {
+                return SIG_INT;
+            }
+            if string_set.contains(&a) {
+                return SIG_STRING;
+            }
+            if let Some(st_i) = st {
+                if let Some(&s) = atom_prim_per_state[st_i].get(&a) {
+                    return s;
+                }
+            }
+            global_atom_prim.get(&a).copied().unwrap_or(SIG_UNIV)
+        };
+
+        let mut fields = Vec::with_capacity(n_fields);
+        for fid in 0..n_fields {
+            let f = fid as FieldId;
+            let mut jt = self.field_type(f)?;
+            let h = self.hier();
+            let mut seen_rows: HashSet<Vec<SigId>> = HashSet::new();
+            for st in 0..n_states {
+                for tup in &raw_field_states[st][fid] {
+                    let sig_row: Vec<SigId> = tup.iter().map(|&a| atom_prim(a, Some(st))).collect();
+                    if seen_rows.insert(sig_row.clone()) {
+                        h.add(&mut jt.entries, sig_row);
+                    }
+                }
+            }
+            let types: Vec<Vec<SigId>> = h
+                .fold(&jt)
+                .into_iter()
+                .filter(|r| !r.is_empty() && !r.contains(&SIG_NONE))
+                .collect();
+            let fld = &self.model.fields[fid];
+            fields.push(XmlField {
+                id: f,
+                label: fld.name.clone(),
+                owner: fld.owner,
+                is_private: fld.is_private,
+                is_var: fld.is_var,
+                types,
+            });
+        }
+
+        let mut xml_skolems = Vec::with_capacity(sk_labels.len());
+        let h = self.hier();
+        for (ki, &(sk_var, sk_rel, ref label)) in sk_labels.iter().enumerate() {
+            let ar = ev.ast.arity(sk_rel);
+            let mut jt = self
+                .var_types
+                .get(&sk_var)
+                .filter(|t| t.entries.iter().any(|r| r.len() == ar as usize))
+                .cloned()
+                .unwrap_or_default();
+            let mut seen_rows: HashSet<Vec<SigId>> = HashSet::new();
+            if let Some(ub) = bounds.upper.get(&sk_rel) {
+                for &idx_u in &ub.idx {
+                    let tup = decode_tuple_idx(idx_u, ub.arity, ev.n);
+                    let sig_row: Vec<SigId> = tup.iter().map(|&a| atom_prim(a, None)).collect();
+                    if seen_rows.insert(sig_row.clone()) {
+                        h.add(&mut jt.entries, sig_row);
+                    }
+                }
+            }
+            for st in 0..n_states {
+                for tup in &raw_sk_states[st][ki] {
+                    let sig_row: Vec<SigId> = tup.iter().map(|&a| atom_prim(a, Some(st))).collect();
+                    if seen_rows.insert(sig_row.clone()) {
+                        h.add(&mut jt.entries, sig_row);
+                    }
+                }
+            }
+            let mut types: Vec<Vec<SigId>> = h
+                .fold(&jt)
+                .into_iter()
+                .filter(|r| !r.is_empty() && !r.contains(&SIG_NONE))
+                .collect();
+            if types.is_empty() && ar > 0 {
+                types.push(vec![SIG_UNIV; ar as usize]);
+            }
+            xml_skolems.push(XmlSkolem {
+                label: label.clone(),
+                types,
+            });
+        }
+
+        let _ = atom_name;
+        let mut xml_sigs = Vec::with_capacity(n_sigs);
+        for (sid, s) in self.model.sigs.iter().enumerate() {
+            let id = sid as SigId;
+            let builtin = s.kind == SigKind::Builtin;
+            let label = if builtin { s.label.clone() } else { self.label(id).to_string() };
+            let parent = match id {
+                SIG_UNIV | SIG_NONE => None,
+                SIG_INT | SIG_STRING => Some(SIG_UNIV),
+                SIG_SEQINT => Some(SIG_INT),
+                _ if !s.subset_of.is_empty() => None,
+                _ => s.parent,
+            };
+            xml_sigs.push(XmlSig {
+                id,
+                label,
+                parent,
+                subset_of: s.subset_of.clone(),
+                builtin,
+                is_abstract: s.is_abstract,
+                mult: s.mult,
+                is_private: s.is_private,
+                is_exact: s.is_exact,
+                is_enum: s.is_enum,
+                is_var: s.is_var,
+                fields: s.fields.clone(),
+            });
+        }
+
+        let command = meta
+            .world
+            .commands
+            .get(meta.cmd_idx)
+            .map_or_else(String::new, |c| c.scope_string.clone());
+        let filename = meta
+            .world
+            .modules
+            .first()
+            .map_or_else(String::new, |m| m.path.clone());
+        let mut sources = BTreeMap::new();
+        for m in &meta.world.modules {
+            sources.entry(m.path.clone()).or_insert_with(|| m.source.clone());
+        }
+
+        Ok(XmlData {
+            bitwidth: self.bitwidth,
+            maxseq: self.maxseq,
+            min_trace: meta.min_trace,
+            max_trace: meta.max_trace,
+            trace_length: n_states as i32,
+            loop_state: meta.loop_state,
+            command,
+            filename,
+            sigs: xml_sigs,
+            fields,
+            skolems: xml_skolems,
+            states: xml_states,
+            sources,
+        })
     }
 
     fn rename_sig(

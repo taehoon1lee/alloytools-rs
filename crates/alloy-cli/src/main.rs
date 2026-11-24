@@ -24,12 +24,14 @@ struct Args {
     timeout_ms: u64,
     count: u32,
     opt: Options,
+    xml: Option<String>,
+    explicit_json: bool,
 }
 
 fn usage() -> ! {
     eprintln!(
         "usage: alloy-rs exec --json --file F [--display-name N] [--no-solve] [--command I]\n\
-         \x20                [--timeout-ms MS] [--symmetry S] [--count N] [--no-instance]"
+         \x20                [--timeout-ms MS] [--symmetry S] [--count N] [--no-instance] [--verify] [--xml PATH]"
     );
     std::process::exit(2)
 }
@@ -47,11 +49,13 @@ fn parse_args() -> Args {
         timeout_ms: 60_000,
         count: 0,
         opt: Options::default(),
+        xml: None,
+        explicit_json: false,
     };
     while let Some(s) = it.next() {
         let mut val = || it.next().unwrap_or_else(|| usage());
         match s.as_str() {
-            "--json" => {}
+            "--json" => a.explicit_json = true,
             "--file" => a.file = PathBuf::from(val()),
             "--display-name" => a.display = val(),
             "--no-solve" => a.no_solve = true,
@@ -60,6 +64,11 @@ fn parse_args() -> Args {
             "--symmetry" => a.opt.symmetry = val().parse().unwrap_or_else(|_| usage()),
             "--count" => a.count = val().parse().unwrap_or_else(|_| usage()),
             "--no-instance" => a.opt.want_instance = false,
+            "--verify" => a.opt.verify = true,
+            "--xml" => {
+                a.xml = Some(val());
+                a.opt.want_xml = true;
+            }
             _ => usage(),
         }
     }
@@ -119,8 +128,14 @@ fn ms(t: Instant) -> f64 {
 }
 
 /// Runs one command; never panics outward (panics are converted to CRASH by the caller).
-fn run_command(world: &World, idx: usize, opt: &Options, count: u32) -> Map<String, Value> {
+fn run_command(
+    world: &World,
+    idx: usize,
+    opt: &Options,
+    count: u32,
+) -> (Map<String, Value>, Option<String>) {
     let mut j = header(&world.commands()[idx], idx);
+    let mut xml_out = None;
     let t0 = Instant::now();
     match execute_command(world, idx, opt) {
         Ok(sol) => {
@@ -140,6 +155,9 @@ fn run_command(world: &World, idx: usize, opt: &Options, count: u32) -> Map<Stri
                 if let Some(i) = sol.instance() {
                     j.insert("instance".into(), instance_json(&i));
                 }
+            }
+            if sol.sat && opt.want_xml {
+                xml_out = sol.to_xml();
             }
             if count > 0 {
                 let c0 = Instant::now();
@@ -162,11 +180,19 @@ fn run_command(world: &World, idx: usize, opt: &Options, count: u32) -> Map<Stri
             j.insert("total_ms".into(), json!(ms(t0)));
         }
     }
-    j
+    (j, xml_out)
 }
 
 fn main() {
+    use std::io::Write;
     let a = parse_args();
+    if a.xml.is_some() && a.no_solve {
+        eprintln!("error: --xml cannot be combined with --no-solve");
+        std::process::exit(2);
+    }
+    let want_xml_file = a.xml.as_deref();
+    let emit_json = a.xml.is_none() || (a.explicit_json && want_xml_file != Some("-"));
+
     let mut doc = Map::new();
     doc.insert("schema".into(), json!(1));
     doc.insert("tool".into(), json!(concat!("alloy-rs-", env!("CARGO_PKG_VERSION"))));
@@ -184,18 +210,29 @@ fn main() {
     let world = match parsed {
         Ok(Ok(w)) => Arc::new(w),
         Ok(Err(e)) => {
-            doc.insert("status".into(), json!(e.status_str()));
-            doc.insert("error".into(), err_json(&e));
-            doc.insert("parse_ms".into(), json!(ms(p0)));
-            doc.insert("commands".into(), json!([]));
-            println!("{}", Value::Object(doc));
+            if emit_json {
+                doc.insert("status".into(), json!(e.status_str()));
+                doc.insert("error".into(), err_json(&e));
+                doc.insert("parse_ms".into(), json!(ms(p0)));
+                doc.insert("commands".into(), json!([]));
+                println!("{}", Value::Object(doc));
+            }
+            if a.xml.is_some() {
+                eprintln!("error: parse failed, XML not written: {e}");
+                std::process::exit(1);
+            }
             return;
         }
         Err(panic) => {
-            doc.insert("status".into(), json!("crash"));
-            doc.insert("error".into(), json!({"kind": "crash", "msg": panic_msg(&panic)}));
-            doc.insert("commands".into(), json!([]));
-            println!("{}", Value::Object(doc));
+            if emit_json {
+                doc.insert("status".into(), json!("crash"));
+                doc.insert("error".into(), json!({"kind": "crash", "msg": panic_msg(&panic)}));
+                doc.insert("commands".into(), json!([]));
+                println!("{}", Value::Object(doc));
+            }
+            if a.xml.is_some() {
+                eprintln!("error: parser panicked, XML not written");
+            }
             std::process::exit(101);
         }
     };
@@ -223,11 +260,34 @@ fn main() {
 
     let mut out_cmds: Vec<Value> = Vec::new();
     let mut exit = 0;
-    let indices: Vec<usize> = match a.command {
-        Some(i) if i < world.commands().len() => vec![i],
-        Some(_) => vec![],
-        None => (0..world.commands().len()).collect(),
+    let indices: Vec<usize> = if a.xml.is_some() {
+        match a.command {
+            Some(i) if i < world.commands().len() => vec![i],
+            Some(i) => {
+                eprintln!(
+                    "error: command index {i} out of range (0..{})",
+                    world.commands().len()
+                );
+                std::process::exit(2);
+            }
+            None if world.commands().len() == 1 => vec![0],
+            None => {
+                eprintln!(
+                    "error: --xml requires --command <I> when model has {} commands",
+                    world.commands().len()
+                );
+                std::process::exit(2);
+            }
+        }
+    } else {
+        match a.command {
+            Some(i) if i < world.commands().len() => vec![i],
+            Some(_) => vec![],
+            None => (0..world.commands().len()).collect(),
+        }
     };
+
+    let mut captured_xml: Option<String> = None;
     if a.no_solve {
         for (i, c) in world.commands().iter().enumerate() {
             let mut h = header(c, i);
@@ -243,22 +303,57 @@ fn main() {
             std::thread::Builder::new()
                 .stack_size(SOLVER_STACK)
                 .spawn(move || {
-                    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| run_command(&w, idx, &opt, count)));
+                    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        run_command(&w, idx, &opt, count)
+                    }));
                     let _ = tx.send(r);
                 })
                 .expect("spawn");
             match rx.recv_timeout(Duration::from_millis(a.timeout_ms)) {
-                Ok(Ok(m)) => out_cmds.push(Value::Object(m)),
+                Ok(Ok((m, xml_opt))) => {
+                    if a.xml.is_some() {
+                        let st = m.get("status").and_then(|v| v.as_str()).unwrap_or("ERROR");
+                        if st != "SAT" || xml_opt.is_none() {
+                            let label = &world.commands()[idx].label;
+                            let emsg = m
+                                .get("error")
+                                .and_then(|e| e.get("msg"))
+                                .and_then(|s| s.as_str())
+                                .unwrap_or("");
+                            eprintln!(
+                                "error: cannot write XML for command #{idx} ({label}): status={st}{}{emsg}",
+                                if emsg.is_empty() { "" } else { " " }
+                            );
+                            exit = 1;
+                        } else {
+                            captured_xml = xml_opt;
+                        }
+                    }
+                    out_cmds.push(Value::Object(m));
+                }
                 Ok(Err(panic)) => {
                     let mut h = header(&world.commands()[idx], idx);
                     h.insert("status".into(), json!("CRASH"));
                     h.insert("error".into(), json!({"kind": "crash", "msg": panic_msg(&panic)}));
+                    if a.xml.is_some() {
+                        eprintln!(
+                            "error: cannot write XML for command #{idx}: CRASH {}",
+                            panic_msg(&panic)
+                        );
+                        exit = 101;
+                    }
                     out_cmds.push(Value::Object(h));
                 }
                 Err(_) => {
                     let mut h = header(&world.commands()[idx], idx);
                     h.insert("status".into(), json!("TIMEOUT"));
                     h.insert("timeout_ms".into(), json!(a.timeout_ms));
+                    if a.xml.is_some() {
+                        eprintln!(
+                            "error: cannot write XML for command #{idx}: TIMEOUT ({}ms)",
+                            a.timeout_ms
+                        );
+                    }
                     out_cmds.push(Value::Object(h));
                     exit = 3;
                     break;
@@ -266,9 +361,34 @@ fn main() {
             }
         }
     }
-    doc.insert("commands".into(), Value::Array(out_cmds));
-    println!("{}", Value::Object(doc));
-    use std::io::Write;
+    if let Some(ref xml_path) = a.xml {
+        if let Some(xml_str) = captured_xml {
+            if xml_path == "-" {
+                if let Err(e) = std::io::stdout().write_all(xml_str.as_bytes()) {
+                    eprintln!("error: failed writing XML to stdout: {e}");
+                    exit = 1;
+                }
+            } else {
+                let p = std::path::Path::new(xml_path);
+                if let Some(parent) = p.parent() {
+                    if !parent.as_os_str().is_empty() {
+                        if let Err(e) = std::fs::create_dir_all(parent) {
+                            eprintln!("error: failed creating directory {}: {e}", parent.display());
+                            std::process::exit(1);
+                        }
+                    }
+                }
+                if let Err(e) = std::fs::write(p, &xml_str) {
+                    eprintln!("error: failed writing XML to {xml_path}: {e}");
+                    exit = 1;
+                }
+            }
+        }
+    }
+    if emit_json {
+        doc.insert("commands".into(), Value::Array(out_cmds));
+        println!("{}", Value::Object(doc));
+    }
     let _ = std::io::stdout().flush();
     std::process::exit(exit);
 }

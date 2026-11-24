@@ -553,19 +553,47 @@ impl<'a> Cx<'a> {
     }
 
     fn visit_call(&mut self, fid: FuncId, args: &[RExpr]) -> Result<V, AlloyError> {
-        let func = &self.model.funcs[fid as usize];
+        let model = self.model;
+        let func = &model.funcs[fid as usize];
         let n = func.params.len();
         if n == 0 {
             if let Some(v) = self.const_cache.get(&fid) {
                 return Ok(*v);
             }
         }
-        if self.current_function.contains(&fid) {
-            return Err(AlloyError::new(
-                ErrorKind::Syntax,
-                None,
-                format!("{} cannot call itself recursively!", func.label),
-            ));
+        let mut max_recursion = self.unrolls;
+        for &ff in &self.current_function {
+            if ff == fid {
+                if max_recursion < 0 {
+                    return Err(AlloyError::new(
+                        ErrorKind::Syntax,
+                        None,
+                        format!("{} cannot call itself recursively!", func.label),
+                    ));
+                }
+                if max_recursion == 0 {
+                    if func.is_pred {
+                        return Ok(V::F(self.ast.fls()));
+                    }
+                    if let Some(ref ret) = func.ret {
+                        if java_small_int(ret, &mut Vec::new())
+                            || matches!(ret, RExpr::Sig(SIG_INT) | RExpr::Const(Const::SigInt))
+                        {
+                            return Ok(V::I(self.iconst(0)));
+                        }
+                        let ret_c = ret.clone();
+                        let ar = self.static_arity(&ret_c)?;
+                        let mut ans = self.ast.none();
+                        for _ in 1..ar {
+                            let nn = self.ast.none();
+                            ans = self.ast.product(ans, nn);
+                        }
+                        return Ok(V::E(ans));
+                    }
+                    return Ok(V::E(self.ast.none()));
+                }
+                max_recursion -= 1;
+            }
         }
         if args.len() != n {
             return Err(fatal("call arity mismatch"));
@@ -585,7 +613,7 @@ impl<'a> Cx<'a> {
             let s = self.cset(&arg)?;
             newenv.push((*pl, V::E(s)));
             let t = self.ty(&arg).unwrap_or_else(|| {
-                kodkod::instance::TupleSet::from_tuples(1, std::iter::empty::<Vec<u32>>())
+                crate::resolve::TupleSet::from_tuples(1, std::iter::empty::<Vec<u32>>())
             });
             newtypes.push((*pl, t));
         }
@@ -851,15 +879,6 @@ impl<'a> Cx<'a> {
             _ => RExpr::Block(vec![g, body.clone()]),
         };
         self.visit_qt(op, &newdecls, &sub)
-    }
-
-    /// `addOne(decl expr)` + its multiplicity
-    fn add_one<'e>(&mut self, e: &'e RExpr) -> Result<(Option<UnOp>, &'e RExpr), AlloyError> {
-        let (m, inner) = decl_mult(e);
-        if m.is_some() {
-            return Ok((m, inner));
-        }
-        Ok((None, e))
     }
 
     fn visit_qt(&mut self, op: QtOp, decls: &[RDecl], body: &RExpr) -> Result<V, AlloyError> {

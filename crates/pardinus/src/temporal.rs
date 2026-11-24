@@ -1,14 +1,16 @@
 //! Port of `kodkod.engine.ltl2fol` (`TemporalTranslator`, `TemporalBoundsExpander`, `LTL2FOLTranslator`, explicit
-//! unrolls) and of the first-solution loop of `TemporalPardinusSolver.SolutionIterator` (trace lengths min..max,
-//! each a fresh static translation solved by SAT4J), plus `TemporalInstance` (states and loop of the lasso).
+//! unrolls) and of `TemporalPardinusSolver` (trace lengths min..max, each expanded and solved with BatSat),
+//! plus `TemporalInstance` (states and loop of the lasso).
 
 use std::collections::HashMap;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use std::time::Instant;
 
 use crate::ast::{Ast, ConstE, EOp, FOp, Mult, Node, Quant, RelInfo, TOp, N};
 use crate::instance::{Bounds, Problem, TupleSet};
 use crate::replace::SkolemInfo;
+use satsolver::{BatSat, SatSolver};
 
 /// The relations of the temporal encoding (static singletons in Java) and `TRACE = PREFIX + LAST->LOOP`.
 #[derive(Clone, Copy)]
@@ -694,40 +696,136 @@ pub struct TemporalSolution {
     pub primary_vars: i32,
     pub vars: i32,
     pub clauses: i64,
+    pub translate_ms: f64,
+    pub solve_ms: f64,
     /// with `record`: the CNF calls of every SAT attempt (dev comparison with Java's dumps)
     pub cnf_log: Vec<Vec<String>>,
 }
 
-struct Counting<'s> {
-    s: &'s mut satsolver::sat4j::Sat4j,
-    clauses: i64,
-    log: Option<Vec<String>>,
+struct RecordingBuf {
+    buf: crate::cnf::ClauseBuffer,
+    log: Vec<String>,
 }
-impl crate::cnf::CnfSink for Counting<'_> {
+impl crate::cnf::CnfSink for RecordingBuf {
     fn num_vars(&self) -> i32 {
-        self.s.num_vars() as i32
+        self.buf.num_vars
     }
     fn add_variables(&mut self, n: i32) {
-        if let Some(l) = &mut self.log {
-            l.push(format!("v {n}"));
-        }
-        self.s.add_variables(n as u32)
+        self.log.push(format!("v {n}"));
+        self.buf.add_variables(n);
     }
     fn add_clause(&mut self, lits: &[i32]) {
-        if let Some(l) = &mut self.log {
-            let mut s = String::from("c");
-            for x in lits {
-                s.push(' ');
-                s.push_str(&x.to_string());
-            }
-            l.push(s);
+        let mut s = String::from("c");
+        for x in lits {
+            s.push(' ');
+            s.push_str(&x.to_string());
         }
-        self.clauses += 1;
-        self.s.add_clause(lits);
+        self.log.push(s);
+        self.buf.add_clause(lits);
     }
 }
 
-/// `TemporalPardinusSolver.solveAll(...).next()` with SAT4J.
+fn decode_temporal_solution(
+    p_bounds: &Bounds,
+    ast: &Ast,
+    tr: &TRels,
+    exp: &HashMap<N, N>,
+    steps: u32,
+    unrolls: u32,
+    ep_bounds: &Bounds,
+    t: &crate::translator::Translation,
+    value: &dyn Fn(i32) -> bool,
+    vars: i32,
+    clauses: i64,
+    translate_ms: f64,
+    solve_ms: f64,
+    cnf_log: Vec<Vec<String>>,
+) -> Result<TemporalSolution, String> {
+    let inst: HashMap<N, TupleSet> = t.interpret(value).into_iter().collect();
+    let nt = steps * unrolls;
+    let n = ep_bounds.atoms.len() as u32;
+    let n0 = n - nt;
+    let decode = |idx: u32, ar: u32| -> Vec<u32> {
+        let mut d = vec![0u32; ar as usize];
+        let mut y = idx;
+        for k in (0..ar as usize).rev() {
+            d[k] = y % n;
+            y /= n;
+        }
+        d
+    };
+    let encode0 = |d: &[u32]| -> Option<u32> {
+        let mut acc = 0u32;
+        for &a in d {
+            if a < nt {
+                return None;
+            }
+            acc = acc * n0 + (a - nt);
+        }
+        Some(acc)
+    };
+    let loop_atom = inst.get(&tr.loop_).and_then(|ts| ts.idx.first().copied()).ok_or("no loop state")?;
+    let last_atom = inst.get(&tr.last).and_then(|ts| ts.idx.first().copied()).ok_or("no last state")?;
+    let end = last_atom % steps;
+    let loop_state = loop_atom % steps;
+    let mut states = Vec::new();
+    for i in 0..=end {
+        let ti = time_atom(steps, i, 0);
+        let mut m = HashMap::new();
+        for r in p_bounds.relations() {
+            let ar = ast.rel_info(r).arity;
+            let mut v = Vec::new();
+            if let Some(&e) = exp.get(&r) {
+                if let Some(ts) = inst.get(&e) {
+                    for &x in &ts.idx {
+                        let d = decode(x, ar + 1);
+                        if d[ar as usize] == ti {
+                            if let Some(y) = encode0(&d[..ar as usize]) {
+                                v.push(y);
+                            }
+                        }
+                    }
+                }
+            } else if let Some(ts) = inst.get(&r) {
+                for &x in &ts.idx {
+                    if let Some(y) = encode0(&decode(x, ar)) {
+                        v.push(y);
+                    }
+                }
+            }
+            m.insert(r, TupleSet::new(ar, v));
+        }
+        states.push(m);
+    }
+    let mut skolems = Vec::new();
+    for s in &t.skolems {
+        let ar = ast.rel_info(s.relation).arity;
+        let mut v = Vec::new();
+        if let Some(ts) = inst.get(&s.relation) {
+            for &x in &ts.idx {
+                if let Some(y) = encode0(&decode(x, ar)) {
+                    v.push(y);
+                }
+            }
+        }
+        skolems.push((s.clone(), TupleSet::new(ar, v)));
+    }
+    Ok(TemporalSolution {
+        sat: true,
+        steps: end + 1,
+        loop_state,
+        states,
+        skolems,
+        primary_vars: t.num_primary,
+        vars,
+        clauses,
+        translate_ms,
+        solve_ms,
+        cnf_log,
+    })
+}
+
+/// `TemporalPardinusSolver.solveAll(...).next()` with `BatSat` portfolio (or sequential `JavaOrder` when `record = true`).
 pub fn solve(p: &mut Problem, stop: Option<Arc<AtomicBool>>, record: bool) -> Result<TemporalSolution, String> {
     let mut cnf_log: Vec<Vec<String>> = Vec::new();
     let opt = p.options.clone();
@@ -744,7 +842,6 @@ pub fn solve(p: &mut Problem, stop: Option<Arc<AtomicBool>>, record: bool) -> Re
         }
     }
     let result = (|| -> Result<TemporalSolution, String> {
-        // TemporalTranslator: resolve the symbolic bounds, conjoin their constraints, measure the past depth
         let prep = |ast: &mut Ast, goal: N| -> Result<(N, Bounds, i32), String> {
             let mut b = p.bounds.clone();
             let resolved = crate::translator::resolve(ast, &mut b, opt.bitwidth)?;
@@ -755,145 +852,367 @@ pub fn solve(p: &mut Problem, stop: Option<Arc<AtomicBool>>, record: bool) -> Re
             Ok((f, b, depth))
         };
         let arity_of = |ast: &Ast, r: N| ast.rel_info(r).arity;
-        let mut steps = min;
-        let (f0, b0, depth0) = prep(&mut ast, p.goal)?;
-        let ext0 = ltl2fol(&mut ast, tr, &exp, f0, depth0 > 1)?;
-        let mut first = Some((ext0, b0, depth0));
-        loop {
-            if stop.as_ref().map_or(false, |s| s.load(std::sync::atomic::Ordering::Relaxed)) {
-                return Err("solver interrupted".into());
-            }
-            if steps > max {
-                return Ok(TemporalSolution {
-                    sat: false,
-                    steps: max,
-                    loop_state: 0,
-                    states: Vec::new(),
-                    skolems: Vec::new(),
-                    primary_vars: 0,
-                    vars: 0,
-                    clauses: 0,
-                    cnf_log: std::mem::take(&mut cnf_log),
-                });
-            }
-            let (ext, b, depth) = match first.take() {
-                Some(x) => x,
-                None => {
-                    let (f, b, depth) = prep(&mut ast, p.goal)?;
-                    let ext = ltl2fol(&mut ast, tr, &exp, f, depth > 1)?;
-                    (ext, b, depth)
+
+        if record {
+            let mut steps = min;
+            let (f0, b0, depth0) = prep(&mut ast, p.goal)?;
+            let ext0 = ltl2fol(&mut ast, tr, &exp, f0, depth0 > 1)?;
+            let mut first = Some((ext0, b0, depth0));
+            let mut translate_ms = 0.0;
+            let mut solve_ms = 0.0;
+            loop {
+                if stop.as_ref().map_or(false, |s| s.load(std::sync::atomic::Ordering::Relaxed)) {
+                    return Err("solver interrupted".into());
                 }
-            };
+                if steps > max {
+                    return Ok(TemporalSolution {
+                        sat: false,
+                        steps: max,
+                        loop_state: 0,
+                        states: Vec::new(),
+                        skolems: Vec::new(),
+                        primary_vars: 0,
+                        vars: 0,
+                        clauses: 0,
+                        translate_ms,
+                        solve_ms,
+                        cnf_log: std::mem::take(&mut cnf_log),
+                    });
+                }
+                let t0 = Instant::now();
+                let (ext, b, depth) = match first.take() {
+                    Some(x) => x,
+                    None => {
+                        let (f, b, depth) = prep(&mut ast, p.goal)?;
+                        let ext = ltl2fol(&mut ast, tr, &exp, f, depth > 1)?;
+                        (ext, b, depth)
+                    }
+                };
+                let unrolls = depth.max(1) as u32;
+                let eb = {
+                    let a = &ast;
+                    expand(&b, steps, unrolls, &tr, &exp, &|r| arity_of(a, r))
+                };
+                let mut ep = Problem { ast: std::mem::take(&mut ast), bounds: eb, options: opt.clone(), goal: ext };
+                let mut rec = RecordingBuf { buf: crate::cnf::ClauseBuffer::new(), log: Vec::new() };
+                let tres = crate::translator::translate_expanded(&mut ep, &mut rec);
+                cnf_log.push(rec.log);
+                translate_ms += t0.elapsed().as_secs_f64() * 1000.0;
+                ast = std::mem::take(&mut ep.ast);
+                let t = tres?;
+                let t1 = Instant::now();
+                let mut solver = BatSat::configured(false, 0.0, 0, Some(true));
+                solver.set_binary_watches(true);
+                if let Some(f) = &stop {
+                    solver.set_stop_flag(f.clone());
+                }
+                let sat = match t.trivial {
+                    Some(v) => v,
+                    None => {
+                        if !rec.buf.feed_to(&mut solver) {
+                            false
+                        } else {
+                            let frozen: Vec<u32> = (1..=t.num_primary as u32).collect();
+                            solver.set_simplify(&frozen);
+                            solver.solve().ok_or("solver interrupted")?
+                        }
+                    }
+                };
+                solve_ms += t1.elapsed().as_secs_f64() * 1000.0;
+                if !sat {
+                    steps += 1;
+                    continue;
+                }
+                let trivial = t.trivial.is_some();
+                let value = |v: i32| !trivial && v > 0 && solver.value_of(v as u32);
+                return decode_temporal_solution(
+                    &p.bounds,
+                    &ast,
+                    &tr,
+                    &exp,
+                    steps,
+                    unrolls,
+                    &ep.bounds,
+                    &t,
+                    &value,
+                    rec.buf.num_vars,
+                    rec.buf.num_clauses,
+                    translate_ms,
+                    solve_ms,
+                    std::mem::take(&mut cnf_log),
+                );
+            }
+        }
+
+        // Production path: portfolio + temporal max-length probe (after 2 UNSAT lengths, check max_trace).
+        let ks: Vec<u32> = (min..=max).collect();
+        let mut translate_ms = 0.0;
+        let mut solve_ms = 0.0;
+        let mut run_step = |steps: u32| -> Result<(u32, Bounds, crate::translator::Solved), String> {
+            let t0 = Instant::now();
+            let (f, b, depth) = prep(&mut ast, p.goal)?;
+            let ext = ltl2fol(&mut ast, tr, &exp, f, depth > 1)?;
             let unrolls = depth.max(1) as u32;
             let eb = {
                 let a = &ast;
                 expand(&b, steps, unrolls, &tr, &exp, &|r| arity_of(a, r))
             };
+            let prep_ms = t0.elapsed().as_secs_f64() * 1000.0;
             let mut ep = Problem { ast: std::mem::take(&mut ast), bounds: eb, options: opt.clone(), goal: ext };
-            let mut solver = satsolver::sat4j::Sat4j::new();
-            if let Some(f) = &stop {
-                solver.set_stop_flag(f.clone());
-            }
-            let mut sink = Counting { s: &mut solver, clauses: 0, log: if record { Some(Vec::new()) } else { None } };
-            let tres = crate::translator::translate_expanded(&mut ep, &mut sink);
-            let clauses = sink.clauses;
-            if let Some(l) = sink.log.take() {
-                cnf_log.push(l);
-            }
+            let res = crate::translator::solve_portfolio(&mut ep);
             ast = std::mem::take(&mut ep.ast);
-            let t = tres?;
-            let sat = match t.trivial {
-                Some(v) => v,
-                None => solver.solve().ok_or("solver interrupted")?,
-            };
-            if !sat {
-                steps += 1;
-                continue;
+            let solved = res?;
+            translate_ms += prep_ms + solved.translate_ms;
+            solve_ms += solved.solve_ms;
+            Ok((unrolls, ep.bounds, solved))
+        };
+
+        let mut probe: Option<(u32, u32, Bounds, crate::translator::Solved)> = None;
+        let mut probed = ks.len() <= 3 || std::env::var("KTRACE_ALL").is_ok();
+        let mut last_stats = (0i32, 0i32, 0i64);
+        for (n, &steps) in ks.iter().enumerate() {
+            if stop.as_ref().map_or(false, |s| s.load(std::sync::atomic::Ordering::Relaxed)) {
+                return Err("solver interrupted".into());
             }
-            // TemporalInstance(instance, originalBounds)
-            let trivial = t.trivial.is_some();
-            let value = |v: i32| !trivial && v > 0 && solver.value_of(v as u32);
-            let inst: HashMap<N, TupleSet> = t.interpret(&value).into_iter().collect();
-            let nt = steps * unrolls;
-            let n = ep.bounds.atoms.len() as u32;
-            let n0 = n - nt;
-            let decode = |idx: u32, ar: u32| -> Vec<u32> {
-                let mut d = vec![0u32; ar as usize];
-                let mut y = idx;
-                for k in (0..ar as usize).rev() {
-                    d[k] = y % n;
-                    y /= n;
+            if !probed && n == 2 {
+                probed = true;
+                let max_k = ks[ks.len() - 1];
+                let (unrolls, eb, solved) = run_step(max_k)?;
+                last_stats = (solved.translation.num_primary, solved.vars, solved.clauses);
+                if !solved.sat {
+                    return Ok(TemporalSolution {
+                        sat: false,
+                        steps: max_k,
+                        loop_state: 0,
+                        states: Vec::new(),
+                        skolems: Vec::new(),
+                        primary_vars: last_stats.0,
+                        vars: last_stats.1,
+                        clauses: last_stats.2,
+                        translate_ms,
+                        solve_ms,
+                        cnf_log: Vec::new(),
+                    });
                 }
-                d
+                probe = Some((max_k, unrolls, eb, solved));
+            }
+            let (unrolls, eb, solved) = if n + 1 == ks.len() && probe.is_some() {
+                let (_, u, b, s) = probe.take().unwrap();
+                (u, b, s)
+            } else {
+                run_step(steps)?
             };
-            let encode0 = |d: &[u32]| -> Option<u32> {
-                let mut acc = 0u32;
-                for &a in d {
-                    if a < nt {
-                        return None;
+            last_stats = (solved.translation.num_primary, solved.vars, solved.clauses);
+            if solved.sat {
+                let trivial = solved.translation.trivial.is_some();
+                let value = |v: i32| !trivial && v > 0 && *solved.model.get(v as usize).unwrap_or(&false);
+                return decode_temporal_solution(
+                    &p.bounds,
+                    &ast,
+                    &tr,
+                    &exp,
+                    steps,
+                    unrolls,
+                    &eb,
+                    &solved.translation,
+                    &value,
+                    solved.vars,
+                    solved.clauses,
+                    translate_ms,
+                    solve_ms,
+                    Vec::new(),
+                );
+            }
+        }
+        Ok(TemporalSolution {
+            sat: false,
+            steps: max,
+            loop_state: 0,
+            states: Vec::new(),
+            skolems: Vec::new(),
+            primary_vars: last_stats.0,
+            vars: last_stats.1,
+            clauses: last_stats.2,
+            translate_ms,
+            solve_ms,
+            cnf_log: Vec::new(),
+        })
+    })();
+    p.ast = ast;
+    result
+}
+
+/// Minimal-prefix / minimal-period canonical lasso formula (avoids counting unrolled duplicates across trace lengths).
+fn canonical_lasso(ast: &mut Ast, k: usize, var_exps: &[N], t0: &[N], tlast: &[N], loop_rel: N) -> N {
+    let eq_state = |ast: &mut Ast, i: usize, j: usize| -> N {
+        let mut parts = Vec::with_capacity(var_exps.len());
+        for &e in var_exps {
+            let ei = ast.join(e, t0[i]);
+            let ej = ast.join(e, t0[j]);
+            parts.push(ast.eq(ei, ej));
+        }
+        ast.and_all(&parts)
+    };
+    let mut cases = Vec::with_capacity(k);
+    for l in 0..k {
+        let is_l = ast.in_(tlast[l], loop_rel);
+        let mut conds = Vec::new();
+        if l > 0 {
+            let eq = eq_state(ast, l - 1, k - 1);
+            conds.push(ast.not(eq));
+        }
+        let q = k - l;
+        for q2 in 1..q {
+            if q % q2 == 0 {
+                let mut rep = Vec::with_capacity(k - q2 - l);
+                for j in l..k - q2 {
+                    rep.push(eq_state(ast, j, j + q2));
+                }
+                let rep_and = ast.and_all(&rep);
+                conds.push(ast.not(rep_and));
+            }
+        }
+        let rhs = ast.and_all(&conds);
+        cases.push(ast.binf(is_l, FOp::Implies, rhs));
+    }
+    ast.and_all(&cases)
+}
+
+/// Temporal `--count` (Pardinus `next()` semantics: first solution fixes static relations, then distinct canonical
+/// lassos are enumerated over `min_trace..=max_trace` up to `limit`).
+pub fn count_solutions(p: &mut Problem, limit: u32) -> Result<(u32, bool), String> {
+    let mut opt = p.options.clone();
+    opt.symmetry = 0;
+    let (min, max) = (opt.min_trace.max(1) as u32, opt.max_trace.max(1) as u32);
+    let mut ast = std::mem::take(&mut p.ast);
+    let tr = TRels::new(&mut ast);
+    let mut exp: HashMap<N, N> = HashMap::new();
+    let orig_rels = p.bounds.relations();
+    for &r in &orig_rels {
+        let ri = ast.rel_info(r).clone();
+        if ri.var {
+            let e = rel(&mut ast, &ri.name, ri.arity + 1);
+            exp.insert(r, e);
+        }
+    }
+    let result = (|| -> Result<(u32, bool), String> {
+        let mut b0 = p.bounds.clone();
+        let resolved = crate::translator::resolve(&mut ast, &mut b0, opt.bitwidth)?;
+        let tru = ast.tru();
+        let symb = ast.binf(tru, FOp::And, resolved);
+        let f0 = ast.binf(p.goal, FOp::And, symb);
+        let depth = count_height(&ast, f0);
+        let ext0 = ltl2fol(&mut ast, tr, &exp, f0, depth > 1)?;
+        let unrolls = depth.max(1) as u32;
+
+        let static_rels: Vec<N> = orig_rels
+            .iter()
+            .copied()
+            .filter(|r| !exp.contains_key(r) && b0.lower[r].len() < b0.upper[r].len())
+            .collect();
+        let var_exps: Vec<N> = orig_rels.iter().filter_map(|r| exp.get(r).copied()).collect();
+        let arity_of = |a: &Ast, r: N| a.rel_info(r).arity;
+
+        let mut statics: Option<Vec<(N, TupleSet)>> = None;
+        let mut total = 0u32;
+
+        for steps in min..=max {
+            if statics.is_none() {
+                let eb = {
+                    let a = &ast;
+                    expand(&b0, steps, unrolls, &tr, &exp, &|r| arity_of(a, r))
+                };
+                let mut ep = Problem { ast: std::mem::take(&mut ast), bounds: eb, options: opt.clone(), goal: ext0 };
+                let inst_res = crate::translator::first_instance(&mut ep, &static_rels);
+                ast = std::mem::take(&mut ep.ast);
+                let Some(inst) = inst_res? else {
+                    continue;
+                };
+                let nt = steps * unrolls;
+                let n = ep.bounds.atoms.len() as u32;
+                let n0 = n - nt;
+                let decode = |idx: u32, ar: u32| -> Vec<u32> {
+                    let mut d = vec![0u32; ar as usize];
+                    let mut y = idx;
+                    for k in (0..ar as usize).rev() {
+                        d[k] = y % n;
+                        y /= n;
                     }
-                    acc = acc * n0 + (a - nt);
-                }
-                Some(acc)
-            };
-            let loop_atom = inst.get(&tr.loop_).and_then(|t| t.idx.first().copied()).ok_or("no loop state")?;
-            let last_atom = inst.get(&tr.last).and_then(|t| t.idx.first().copied()).ok_or("no last state")?;
-            let end = last_atom % steps;
-            let loop_state = loop_atom % steps;
-            let mut states = Vec::new();
-            for i in 0..=end {
-                let ti = time_atom(steps, i, 0);
-                let mut m = HashMap::new();
-                for r in p.bounds.relations() {
+                    d
+                };
+                let encode0 = |d: &[u32]| -> Option<u32> {
+                    let mut acc = 0u32;
+                    for &a in d {
+                        if a < nt {
+                            return None;
+                        }
+                        acc = acc * n0 + (a - nt);
+                    }
+                    Some(acc)
+                };
+                let mut pinned = Vec::new();
+                for &r in &static_rels {
                     let ar = ast.rel_info(r).arity;
                     let mut v = Vec::new();
-                    if let Some(&e) = exp.get(&r) {
-                        if let Some(ts) = inst.get(&e) {
-                            for &x in &ts.idx {
-                                let d = decode(x, ar + 1);
-                                if d[ar as usize] == ti {
-                                    if let Some(y) = encode0(&d[..ar as usize]) {
-                                        v.push(y);
-                                    }
-                                }
-                            }
-                        }
-                    } else if let Some(ts) = inst.get(&r) {
+                    if let Some(ts) = inst.get(&r) {
                         for &x in &ts.idx {
                             if let Some(y) = encode0(&decode(x, ar)) {
                                 v.push(y);
                             }
                         }
                     }
-                    m.insert(r, TupleSet::new(ar, v));
-                }
-                states.push(m);
-            }
-            let mut skolems = Vec::new();
-            for s in &t.skolems {
-                let ar = ast.rel_info(s.relation).arity;
-                let mut v = Vec::new();
-                if let Some(ts) = inst.get(&s.relation) {
-                    for &x in &ts.idx {
-                        if let Some(y) = encode0(&decode(x, ar)) {
-                            v.push(y);
-                        }
+                    let ts0 = TupleSet::new(ar, v);
+                    if std::env::var("KCOUNT").is_ok() {
+                        eprintln!("static {:?} {}: {:?}", r, ast.rel_info(r).name, ts0.idx);
                     }
+                    pinned.push((r, ts0));
                 }
-                skolems.push((s.clone(), TupleSet::new(ar, v)));
+                statics = Some(pinned);
             }
-            return Ok(TemporalSolution {
-                sat: true,
-                steps: end + 1,
-                loop_state,
-                states,
-                skolems,
-                primary_vars: t.num_primary,
-                vars: solver.num_vars() as i32,
-                clauses,
-                cnf_log: std::mem::take(&mut cnf_log),
-            });
+
+            let mut b_pinned = b0.clone();
+            for (r, ts) in statics.as_ref().unwrap() {
+                b_pinned.bound_exactly(*r, ts.clone());
+            }
+            let mut eb = {
+                let a = &ast;
+                expand(&b_pinned, steps, unrolls, &tr, &exp, &|r| arity_of(a, r))
+            };
+            let k = steps as usize;
+            let mut t0 = Vec::with_capacity(k);
+            let mut tlast = Vec::with_capacity(k);
+            for i in 0..steps {
+                let r0 = rel(&mut ast, &format!("$ct0_{i}"), 1);
+                eb.bound_exactly(r0, TupleSet::new(1, vec![time_atom(steps, i, 0)]));
+                t0.push(r0);
+                if unrolls == 1 {
+                    tlast.push(r0);
+                } else {
+                    let rl = rel(&mut ast, &format!("$ctl_{i}"), 1);
+                    eb.bound_exactly(rl, TupleSet::new(1, vec![time_atom(steps, i, unrolls - 1)]));
+                    tlast.push(rl);
+                }
+            }
+            let canon = canonical_lasso(&mut ast, k, &var_exps, &t0, &tlast, tr.loop_);
+            let goal_k = ast.binf(ext0, FOp::And, canon);
+            let mut proj = var_exps.clone();
+            proj.push(tr.loop_);
+            let mut ep = Problem { ast: std::mem::take(&mut ast), bounds: eb, options: opt.clone(), goal: goal_k };
+            let count_res = crate::translator::count_projected(&mut ep, limit - total, Some(&proj));
+            ast = std::mem::take(&mut ep.ast);
+            let (c, capped) = count_res?;
+            if std::env::var("KCOUNT").is_ok() {
+                eprintln!("k={steps} count={c} capped={capped}");
+            }
+            total += c;
+            if capped {
+                return Ok((total, true));
+            }
+            if total >= limit {
+                continue;
+            }
         }
+        Ok((total, false))
     })();
     p.ast = ast;
     result

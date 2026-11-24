@@ -7,6 +7,7 @@ import java.nio.file.*;
 import java.util.*;
 
 import edu.mit.csail.sdg.alloy4.A4Reporter;
+import edu.mit.csail.sdg.alloy4.SafeList;
 import edu.mit.csail.sdg.ast.*;
 import edu.mit.csail.sdg.parser.CompModule;
 import edu.mit.csail.sdg.parser.CompUtil;
@@ -26,7 +27,21 @@ public class PinCheck {
 
     public static void main(String[] args) throws Exception {
         PrintStream out0 = new PrintStream(new FileOutputStream(FileDescriptor.out), true, "UTF-8");
-        try { run(args); } catch (Throwable e) { Throwable c = e; while (c.getCause() != null) c = c.getCause(); out0.println("RESULT	EXC " + c); for (StackTraceElement el : c.getStackTrace()) { out0.println("	at " + el); } out0.flush(); System.exit(2); }
+        try { run(args); } catch (Throwable e) { Throwable c = e; while (c.getCause() != null) c = c.getCause(); out0.println("RESULT\tEXC " + c); for (StackTraceElement el : c.getStackTrace()) { out0.println("\tat " + el); } out0.flush(); System.exit(2); }
+    }
+
+    static List<String> stripOneSig(List<String> t0, int arity) {
+        if (t0.size() == arity + 1) {
+            return t0.subList(1, t0.size());
+        }
+        return t0;
+    }
+
+    static void bindAtom(String ra, String ja, Map<String, String> rustToJava, Set<String> usedJava) {
+        if (!rustToJava.containsKey(ra) && !usedJava.contains(ja)) {
+            rustToJava.put(ra, ja);
+            usedJava.add(ja);
+        }
     }
 
     static void run(String[] args) throws Exception {
@@ -76,28 +91,52 @@ public class PinCheck {
             if (sl >= 0)
                 bySuffix.computeIfAbsent(r.name().substring(sl), k -> new ArrayList<>()).add(r);
         }
-        // Rust atom -> Java atom: exact, else unique universe atom ending with "/" + name (Java: "bool/True$0")
-        Map<String,String> atomMap = new HashMap<>();
-        Map<String,List<String>> atomSuffix = new HashMap<>();
-        for (int i = 0; i < fac.universe().size(); i++) {
-            String a = fac.universe().atom(i).toString();
-            atomMap.put(a, a);
-            int sl = a.lastIndexOf('/');
-            if (sl >= 0)
-                atomSuffix.computeIfAbsent(a.substring(sl + 1), k -> new ArrayList<>()).add(a);
+        // Derive <Parent>_remainder for non-abstract parent PrimSigs so non-child atoms are pinned explicitly.
+        for (Sig s : world.getAllReachableSigs()) {
+            if (s.builtin || !(s instanceof Sig.PrimSig))
+                continue;
+            Sig.PrimSig ps = (Sig.PrimSig) s;
+            if (ps.isAbstract != null)
+                continue;
+            SafeList<Sig.PrimSig> children = ps.children();
+            if (children.isEmpty())
+                continue;
+            String remName = ps.label + "_remainder";
+            if (!byName.containsKey(remName) || !inst.containsKey(ps.label) || inst.containsKey(remName))
+                continue;
+            Set<String> childAtoms = new HashSet<>();
+            for (Sig.PrimSig ch : children) {
+                List<List<String>> ct = inst.get(ch.label);
+                if (ct != null) {
+                    for (List<String> t : ct) {
+                        if (!t.isEmpty())
+                            childAtoms.add(t.get(0));
+                    }
+                }
+            }
+            List<List<String>> remTuples = new ArrayList<>();
+            for (List<String> t : inst.get(ps.label)) {
+                if (!t.isEmpty() && !childAtoms.contains(t.get(0)))
+                    remTuples.add(t);
+            }
+            inst.put(remName, remTuples);
         }
+
+        // Resolve inst keys to Kodkod Relations cleanly (preserving mapped annotations).
         List<String> renamedAtoms = new ArrayList<>();
         Map<Relation,String> pinnedBy = new LinkedHashMap<>();
         List<String> unpinned = new ArrayList<>(), oob = new ArrayList<>(), badAtom = new ArrayList<>(), symb = new ArrayList<>(),
                         extra = new ArrayList<>(), mapped = new ArrayList<>(), stripped = new ArrayList<>();
-        for (Map.Entry<String,List<List<String>>> e : inst.entrySet()) {
-            String n = e.getKey();
+        Map<String, Relation> instRels = new LinkedHashMap<>();
+        Map<Relation, String> relToInstKey = new LinkedHashMap<>();
+        Set<Relation> claimedRels = new HashSet<>();
+        for (String n : inst.keySet()) {
             Relation r = byName.get(n);
             if (r == null && n.startsWith("this/")) {
                 List<Relation> c2 = bySuffix.getOrDefault(n.substring(4), Collections.emptyList());
                 List<Relation> free = new ArrayList<>();
                 for (Relation x : c2)
-                    if (!x.name().startsWith("this/") && !pinnedBy.containsKey(x))
+                    if (!x.name().startsWith("this/") && !claimedRels.contains(x))
                         free.add(x);
                 if (free.size() == 1) {
                     r = free.get(0);
@@ -111,13 +150,173 @@ public class PinCheck {
                 extra.add(n);
                 continue;
             }
+            instRels.put(n, r);
+            relToInstKey.put(r, n);
+            claimedRels.add(r);
+        }
+
+        // Rust atom -> Java atom: exact, else unique universe atom ending with "/" + name (Java: "bool/True$0"),
+        // plus one global injective bijection rustToJava for renamed sub-sig / ordered atoms.
+        Map<String,String> atomMap = new HashMap<>();
+        Map<String,List<String>> atomSuffix = new HashMap<>();
+        for (int i = 0; i < fac.universe().size(); i++) {
+            String a = fac.universe().atom(i).toString();
+            atomMap.put(a, a);
+            int sl = a.lastIndexOf('/');
+            if (sl >= 0)
+                atomSuffix.computeIfAbsent(a.substring(sl + 1), k -> new ArrayList<>()).add(a);
+        }
+        Map<String, String> rustToJava = new HashMap<>();
+        Set<String> usedJava = new HashSet<>();
+        for (int i = 0; i < fac.universe().size(); i++) {
+            String a = fac.universe().atom(i).toString();
+            if (a.matches("-?\\d+") || a.startsWith("\"")) {
+                bindAtom(a, a, rustToJava, usedJava);
+            }
+        }
+        // Pass 1a: exact size-1 relations (locks one sigs and Ord.First).
+        for (Map.Entry<String, Relation> re : instRels.entrySet()) {
+            Relation r = re.getValue();
+            List<List<String>> tuples = inst.get(re.getKey());
+            TupleSet lo = b.lowerBound(r), hi = b.upperBound(r);
+            if (lo != null && hi != null && lo.equals(hi) && lo.size() == 1 && tuples.size() == 1) {
+                List<String> rt = stripOneSig(tuples.get(0), r.arity());
+                if (rt.size() == r.arity()) {
+                    Tuple jt = lo.iterator().next();
+                    for (int col = 0; col < r.arity(); col++) {
+                        bindAtom(rt.get(col), jt.atom(col).toString(), rustToJava, usedJava);
+                    }
+                }
+            }
+        }
+        // Pass 1b: exact binary chains (propagates Ord.Next, etc.).
+        boolean chainChanged = true;
+        while (chainChanged) {
+            chainChanged = false;
+            for (Map.Entry<String, Relation> re : instRels.entrySet()) {
+                Relation r = re.getValue();
+                if (r.arity() != 2)
+                    continue;
+                TupleSet lo = b.lowerBound(r), hi = b.upperBound(r);
+                if (lo == null || hi == null || !lo.equals(hi))
+                    continue;
+                Map<String, String> jNext = new HashMap<>(), jPrev = new HashMap<>();
+                Set<String> multiOut = new HashSet<>(), multiIn = new HashSet<>();
+                for (Tuple jt : lo) {
+                    String a0 = jt.atom(0).toString(), a1 = jt.atom(1).toString();
+                    if (jNext.containsKey(a0)) multiOut.add(a0); else jNext.put(a0, a1);
+                    if (jPrev.containsKey(a1)) multiIn.add(a1); else jPrev.put(a1, a0);
+                }
+                for (String k : multiOut) jNext.remove(k);
+                for (String k : multiIn) jPrev.remove(k);
+                for (List<String> t0 : inst.get(re.getKey())) {
+                    List<String> rt = stripOneSig(t0, 2);
+                    if (rt.size() != 2)
+                        continue;
+                    String ra = rt.get(0), rb = rt.get(1);
+                    String ja = rustToJava.get(ra), jb = rustToJava.get(rb);
+                    if (ja != null && jb == null && jNext.containsKey(ja)) {
+                        String cand = jNext.get(ja);
+                        if (!usedJava.contains(cand)) {
+                            rustToJava.put(rb, cand);
+                            usedJava.add(cand);
+                            chainChanged = true;
+                        }
+                    } else if (jb != null && ja == null && jPrev.containsKey(jb)) {
+                        String cand = jPrev.get(jb);
+                        if (!usedJava.contains(cand)) {
+                            rustToJava.put(ra, cand);
+                            usedJava.add(cand);
+                            chainChanged = true;
+                        }
+                    }
+                }
+            }
+        }
+        // Pass 2: concrete unary PrimSig leaf and _remainder relations, sorted by upperBound size ascending.
+        List<Relation> leafRels = new ArrayList<>();
+        for (Sig s : world.getAllReachableSigs()) {
+            if (s.builtin || !(s instanceof Sig.PrimSig))
+                continue;
+            Sig.PrimSig ps = (Sig.PrimSig) s;
+            String rname = ps.children().isEmpty() ? ps.label : (ps.isAbstract == null ? ps.label + "_remainder" : null);
+            if (rname == null)
+                continue;
+            Relation r = byName.get(rname);
+            if (r != null && b.upperBound(r) != null && relToInstKey.containsKey(r))
+                leafRels.add(r);
+        }
+        leafRels.sort(Comparator.comparingInt(r -> b.upperBound(r).size()));
+        // Pass 2a: exact or unique suffix matches within upperBound.
+        for (Relation r : leafRels) {
+            TupleSet hi = b.upperBound(r);
+            Set<String> hiAtoms = new LinkedHashSet<>();
+            for (Tuple t : hi) hiAtoms.add(t.atom(0).toString());
+            for (List<String> t0 : inst.get(relToInstKey.get(r))) {
+                if (t0.isEmpty()) continue;
+                String ra = t0.get(0);
+                if (rustToJava.containsKey(ra)) continue;
+                if (hiAtoms.contains(ra) && !usedJava.contains(ra)) {
+                    bindAtom(ra, ra, rustToJava, usedJava);
+                } else {
+                    List<String> c3 = atomSuffix.getOrDefault(ra, Collections.emptyList());
+                    List<String> avail = new ArrayList<>();
+                    for (String ja : c3) {
+                        if (hiAtoms.contains(ja) && !usedJava.contains(ja))
+                            avail.add(ja);
+                    }
+                    if (avail.size() == 1)
+                        bindAtom(ra, avail.get(0), rustToJava, usedJava);
+                }
+            }
+        }
+        // Pass 2b: assign remaining renamed sub-sig / ordered atoms to free atoms in lowerBound then upperBound.
+        for (Relation r : leafRels) {
+            TupleSet lo = b.lowerBound(r), hi = b.upperBound(r);
+            List<String> candAtoms = new ArrayList<>();
+            if (lo != null) {
+                for (Tuple t : lo) candAtoms.add(t.atom(0).toString());
+            }
+            for (Tuple t : hi) {
+                String a = t.atom(0).toString();
+                if (!candAtoms.contains(a))
+                    candAtoms.add(a);
+            }
+            for (List<String> t0 : inst.get(relToInstKey.get(r))) {
+                if (t0.isEmpty()) continue;
+                String ra = t0.get(0);
+                if (rustToJava.containsKey(ra)) continue;
+                for (String ja : candAtoms) {
+                    if (!usedJava.contains(ja)) {
+                        bindAtom(ra, ja, rustToJava, usedJava);
+                        break;
+                    }
+                }
+            }
+        }
+
+        for (Map.Entry<String, Relation> re : instRels.entrySet()) {
+            String n = re.getKey();
+            Relation r = re.getValue();
+            List<List<String>> tuples = inst.get(n);
             TupleSet lo = b.lowerBound(r), hi = b.upperBound(r);
             TupleSet set = fac.noneOf(r.arity());
             try {
-                for (List<String> t0 : e.getValue()) {
+                for (List<String> t0 : tuples) {
+                    List<String> t1 = t0;
+                    if (t1.size() == r.arity() + 1) {
+                        // Java: a field of a non-var "one sig" S is a2k(S) -> r (r without the first column)
+                        stripped.add(n);
+                        t1 = t1.subList(1, t1.size());
+                    }
                     List<Object> t = new ArrayList<>();
-                    for (String a : t0) {
-                        String ja = atomMap.get(a);
+                    for (String a : t1) {
+                        String ja = rustToJava.get(a);
+                        if (ja == null) {
+                            ja = atomMap.get(a);
+                        } else if (!ja.equals(a)) {
+                            renamedAtoms.add(a + "->" + ja);
+                        }
                         if (ja == null) {
                             List<String> c3 = atomSuffix.getOrDefault(a, Collections.emptyList());
                             if (c3.size() != 1)
@@ -126,11 +325,6 @@ public class PinCheck {
                             renamedAtoms.add(a + "->" + ja);
                         }
                         t.add(ja);
-                    }
-                    if (t.size() == r.arity() + 1) {
-                        // Java: a field of a non-var "one sig" S is a2k(S) -> r (r without the first column)
-                        stripped.add(n);
-                        t = t.subList(1, t.size());
                     }
                     set.add(fac.tuple(t));
                 }

@@ -1,124 +1,68 @@
-# Exact (Java-identical) instance pipeline
+# Unified Pardinus Translation & BatSat Verification Pipeline
 
-Goal: `alloy-rs` prints the **same first instance / counterexample** as Java Alloy 6.2.0 for every SAT command
-(not just the same SAT/UNSAT). Java's first model is an artifact of the CNF *and* SAT4J's search, so the exact path
-must reproduce, bit for bit: Alloy→Kodkod translation → Pardinus/Kodkod `Translator` (symbolic-bound resolution,
-predicate inlining + total-order breaking, skolemization, FOL→boolean circuit with CBC hash-consing, lex-leader SBP,
-Plaisted-Greenbaum CNF) → SAT4J 2.3.1 default solver → `A4Solution` atom renaming + sig/field/skolem evaluation.
+Goal: `alloy-rs` executes every Alloy command through one pure-Rust, pure-MIT pipeline whose semantics match Java Alloy 6.2.0 bit for bit up to CNF generation (`JavaOrder`), while solving via a fast 4-thread `BatSat` portfolio with runtime model verification:
 
-The existing fast pipeline (crates/kodkod, portfolio SAT) stays for verdicts/perf; the exact pipeline is used to
-produce the instance. `alloy_translate::execute_command` starts `exact::solve_first` on its own thread next to the
-fast pipeline: an UNSAT from the fast side stops it (SAT4J, the FOL→boolean translation and the trace-length loop
-honour the stop flag); a SAT result waits for the exact instance and falls back to the fast instance if the exact
-side fails. `ALLOY_RS_NO_EXACT=1` disables it.
+1. **Alloy → Pardinus (`crates/alloy-translate/src/exact/`)**: `TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, `Options` (`symmetry`, `skolem_depth`, `no_overflow`, `unrolls`), and `A4Solution` setup.
+2. **Pardinus → Circuit & CNF (`crates/pardinus/`)**: symbolic-bound resolution (`PardinusBounds.resolve`), predicate inlining + matrix symmetry breaking, skolemization, FOL → boolean circuit (`Fol2Bool` + flat-pool `CBCFactory` hash-consing), parameterized lex-leader SBP (`JavaOrder`, `ArityDecl`, `DeclOrder`, `NoSbp`), and iterative Plaisted-Greenbaum CNF (`Bool2CNFTranslator`).
+3. **Portfolio SAT Solving & Runtime Verification (`pardinus::translator::solve_portfolio`, `pardinus::temporal::solve`)**: builds the base `Fol2Bool` circuit once (`translate_circuit`), branches into 4 `BatSat` worker threads (`JavaOrder`/`NoSbp`/`ArityDecl`/`DeclOrder`, racing restarts + positive/negative polarities with BVE via `satsolver::simp`), and checks every returned SAT model against both the pre-BVE CNF (`cnf::verify_cnf_model`) and the SBP-free circuit (`Factory::eval_bv`). Temporal problems probe `min_trace..=max_trace` via `pardinus::temporal::solve`.
+4. **Solution Rendering (`crates/alloy-translate/src/exact/instance.rs`)**: `A4Solution.rename()` (`Sig$i`, `next`/`prev` chain ordering, `unused<i>`, skolems `$name`) and relation/skolem evaluation (`Evaluator`).
 
-**Status (2026-11-23): done.** All 215 SAT commands of the corpus with a golden instance (static and temporal) give
-the identical first instance through the CLI (`python harness/check.py --verbose`: 215 identical, 0 differ).
-`python tools/exact/cmp_inst.py --all -j 6`: the exact pipeline alone agrees with Java on all 465 scored commands
-(215 instances, 250 UNSAT/ERROR verdicts), so the CLI's fallback instance is never used on the corpus. The one
-command Java times out on in the harness (`extra/examples/temporal/buffer#2`, check orderIsPreserved) is UNSAT in
-Java when given time (109 s) and in Rust, so it has no counterexample.
+Legacy crates/modules (`crates/kodkod/`, `crates/alloy-translate/src/translate.rs`, and the LGPL-2.1/EPL-1.0 `crates/satsolver/src/sat4j.rs` port) have been removed, eliminating dual-pipeline divergence and making the workspace **100% pure MIT**.
 
-## Stages and their ground truth (all verified against Java dumps, never read by Rust code)
+**Status (2026-11-24): done.**
+- `python harness/check.py --perf`: **199/199** parse/commands, **465/465** verdict, **465/465** perf, **20.47 s** sequential Rust vs **285.66 s** Java (`x0.07`).
+- `python harness/check.py --count`: **432/432** solution counts match Java (`symmetry=0`).
+- `python tools/exact/cmp_alloy.py`: **215/215** `.kk` text and `JavaOrder` CNF identical (`8/8` temporal).
+- `kk_cnf`: **207/207** static `.kk` problems emit identical CNF call sequences.
+- `PinCheck.java`: **59/59** static SAT `check` counterexamples verified `RESULT\tSAT` with `OOB=0` and `BADATOM=0`.
+- Independent AST verification (`crates/alloy-translate/src/eval/`, `--verify` / `ALLOY_RS_VERIFY=1`): **215/215** Java golden and **215/215** Rust SAT instances verified, **240/240** random LTL+Past differential checks.
+- Alloy 6.2.0 XML (`crates/alloy-translate/src/xml.rs`, `--xml <PATH>`): `python tools/xml_check/run_all.py --oracle-self-test` **215/215** (`A4SolutionReader` + `StaticInstanceReader` + `sol.eval()` / pinned SAT4J across 207 static + 8 temporal commands, plus GUI `VizState`).
+- `python tools/exact/cmp_inst.py --all -j 6`: **465/465** verdict agreement (`verdict_mismatch=0`, `errors=0`, `missing=0`).
+
+## Stages and their verification (ground truth in `tools/exact/`, never read by Rust code)
 | stage | Rust | verified by | status |
 |---|---|---|---|
-| SAT4J 2.3.1 `newDefault()` | `crates/satsolver/src/sat4j.rs` | replay `out/*.cnf` (`cargo run --release -p satsolver --example sat4j_replay -- tools/exact/out/*.cnf`) | **216/216 models identical** |
-| Kodkod `Translator` (Kodkod problem → CNF) | `crates/pardinus` | `cargo run --release -p pardinus --example kk_cnf -- tools/exact/out/*.kk` | **207/207 static problems: identical CNF call sequence** |
-| Alloy → Kodkod (`TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `Simplifier`, A4Solution setup) | `crates/alloy-translate/src/exact/` | `python tools/exact/cmp_alloy.py` (`.kk` text + CNF of every SAT call) | **215/215 `.kk` text and CNF identical** |
-| `A4Solution.rename` + eval → instance JSON | `exact/instance.rs` | `python tools/exact/cmp_inst.py` (vs harness goldens) | **215/215 identical** |
-| Pardinus temporal (`TemporalPardinusSolver`, LTL2FOL, bounds expansion, `TemporalInstance`) | `crates/pardinus/src/temporal.rs` | `cmp_alloy.py` (one CNF block per trace length) | **8/8 identical** |
+| Kodkod/Pardinus `Translator` (Kodkod problem → CNF) | `crates/pardinus` | `kk_cnf` over static `tools/exact/out/*.kk` | **207/207 static problems: identical CNF call sequence** |
+| Alloy → Kodkod/Pardinus (`exact/`) | `crates/alloy-translate/src/exact/` | `python tools/exact/cmp_alloy.py` (`.kk` text + `JavaOrder` CNF) | **215/215 `.kk` text and CNF identical** |
+| Pardinus temporal (`TemporalPardinusSolver`, LTL2FOL, bounds expansion, `TemporalInstance`) | `crates/pardinus/src/temporal.rs` | `cmp_alloy.py` (`record=true` mode, one CNF block per trace length) | **8/8 identical** |
+| Counterexample cross-check (`A4Solution` instance validation) | `alloy-rs` + `exact/instance.rs` | `PinCheck.java` over all static SAT `check` counterexamples | **59/59 `RESULT\tSAT` (`OOB=0`, `BADATOM=0`)** |
+| Full corpus parity & perf | `alloy-translate` + `pardinus` + `satsolver` (`BatSat`) | `check.py --perf`, `check.py --count`, `cmp_inst.py --all` | **465/465 verdict & perf (`20.47s`), 432/432 count** |
 
 ## Tools (`tools/exact/`)
 - `python tools/exact/build.py` — compiles `java/edu/mit/csail/sdg/translator/*.java` against the Alloy jar.
-- `python tools/exact/trace_all.py [check|all] [-j N] [--filter S]` — writes `out/<tag>.{kk,cnf,json}` (tag =
-  corpus id with `/`→`__` + `#<cmd>`), checks json == golden instance and Java replay of the cnf.
-- `KKDump.java` — hooks `PardinusSolver.solveAll` (subclass installed into `A4Solution.solver` by reflection), dumps
-  formula DAG + `PardinusBounds` (concrete + symbolic bounds, int bounds, relation order) + options.
+- `python tools/exact/trace_all.py [check|all] [-j N] [--filter S]` — writes `out/<tag>.{kk,cnf,json}` (tag = corpus id with `/`→`__` + `#<cmd>`), checks json == golden instance and Java replay of the cnf.
+- `KKDump.java` — hooks `PardinusSolver.solveAll` (subclass installed into `A4Solution.solver` by reflection), dumps formula DAG + `PardinusBounds` (concrete + symbolic bounds, int bounds, relation order) + options.
 - `TraceOracle.java` — SAT4J wrapper recording every `addVariables`/`addClause` + model; `replay` mode.
-- `PinCheck.java` — validates an arbitrary (Rust) instance by pinning it into Java's bounds and re-solving.
-- `cmp_alloy.py` + `crates/alloy-translate/examples/exact_cmp.rs` — Rust `.kk` text / CNF vs `out/` (temporal: per
-  trace length; `DUMP_TCNF=1` writes `<tag>.rust.cnf`, a differing `.kk` is written to `<tag>.rust.kk`).
-- `cmp_inst.py` + `examples/exact_inst.rs` — Rust first instance (all states) vs the harness golden instances.
-- Java lex-leader chains: run the oracle with `-Ddebug=yes -Dorg.slf4j.simpleLogger.defaultLogLevel=debug`
-  (`lex: [...]` lines, truncated to 320 chars).
+- `PinCheck.java` — validates a Rust static instance (with `_remainder` derivation and injective atom bijection for renamed sub-sig/ordered atoms) by pinning it into Java's bounds and re-solving.
+- `cmp_alloy.py` + `crates/alloy-translate/examples/exact_cmp.rs` — Rust `.kk` text / `JavaOrder` CNF vs `out/` (temporal: per trace length; `DUMP_TCNF=1` writes `<tag>.rust.cnf`, a differing `.kk` is written to `<tag>.rust.kk`).
+- `cmp_inst.py` + `examples/exact_inst.rs` — verifies verdict parity across all 465 scored commands and reports identical vs alternative valid SAT instances relative to harness goldens.
+- Java lex-leader chains: run the oracle with `-Ddebug=yes -Dorg.slf4j.simpleLogger.defaultLogLevel=debug` (`lex: [...]` lines, truncated to 320 chars).
 - `jstrip.py` — comment stripper for reading big Java files (the naive sed range strip loses code!).
-- SAT4J 2.3.1 sources: `https://repo1.maven.org/maven2/org/sat4j/org.sat4j.core/2.3.1/` (sources jar; the jar's
-  `Solver.class` is byte-identical to the one inside the Alloy dist jar).
 
 ## .kk format (KKDump)
-`U n` + `A "atom"`×n; `O key=value…`; nodes `n <id> KIND args` emitted before use (REL arity var atom "name",
-VAR arity "name", CONSTE/CONSTF, BINE op l r, UNE op e, NARYE op c…, COMPR decls f, IFE c t e, PROJ e cols…,
-I2E op i, E2I op e, ICONST v, BINI/NARYI/UNI, SUM decls i, IFI, ICMP op l r, CMP op l r, MULT mult e,
-QUANT q decls f, BINF op l r, NARYF op c…, NOT f, PACYCLIC r, PFUNCTION r dom mult rng, PTOTAL r ord first last,
-DECL var mult expr, DECLS d…, UTEMPF/BTEMPF/TEMPE); then `R relid` (bounds.relations() order), `L/H relid idx…`
-(concrete lower/upper, absent when symbolic-only), `SB relid lo hi` (symbolic, insertion order), `IB int idx…`,
-`G goal`. Node ids preserve Java object identity (sharing).
+`U n` + `A "atom"`×n; `O key=value…`; nodes `n <id> KIND args` emitted before use (REL arity var atom "name", VAR arity "name", CONSTE/CONSTF, BINE op l r, UNE op e, NARYE op c…, COMPR decls f, IFE c t e, PROJ e cols…, I2E op i, E2I op e, ICONST v, BINI/NARYI/UNI, SUM decls i, IFI, ICMP op l r, CMP op l r, MULT mult e, QUANT q decls f, BINF op l r, NARYF op c…, NOT f, PACYCLIC r, PFUNCTION r dom mult rng, PTOTAL r ord first last, DECL var mult expr, DECLS d…, UTEMPF/BTEMPF/TEMPE); then `R relid` (bounds.relations() order), `L/H relid idx…` (concrete lower/upper, absent when symbolic-only), `SB relid lo hi` (symbolic, insertion order), `IB int idx…`, `G goal`. Node ids preserve Java object identity (sharing).
 
 ## Exactness notes (things that bit or will bite)
-- SAT4J: phase is always the negative literal (VarOrderHeap.assignLiteral is a no-op, so RSAT never records);
-  heap ties never move; learnt activity = LBD (glucose), reduceDB every 5000 then +1000 conflicts (cap
-  max(#constrs,10000)), sorted with SAT4J's own quicksort; analyze undoes the trail itself; backjump level is the
-  pre-minimization max level; `Vec.remove` shifts, `VecInt.delete` swaps with last.
-- Kodkod CBC: gate labels are CNF variables (gaps from unused gates matter, e.g. DefCond overflow gates are always
-  built); `CacheSet` inserts at chain head and `resize` reverses chains; lookup returns the first flatten-equivalent
-  gate; `superFastHash` with Java int wrap-around.
-- FOL2BoolCache caches shared nodes *and* nodes not depending on the innermost quantified variable; which nodes get
-  a record depends on traversal order.
-- Pardinus symbolic bounds (`Version.experimental=true` in Alloy): `this/Sig.field` often has only a symbolic bound;
-  `Translator` resolves them (`PardinusBounds.resolve`) and conjoins extra constraints.
-
+- Kodkod CBC: gate labels are CNF variables (gaps from unused gates matter, e.g. DefCond overflow gates are always built); `CacheSet` inserts at chain head and `resize` reverses chains; lookup returns the first flatten-equivalent gate; `superFastHash` with Java int wrap-around. Note `solve_portfolio` always constructs `SbpOrder::JavaOrder` first on `&mut circ.factory` so gate labels stay deterministic when comparing CNF, while `eval_bv(circ.circuit, ...)` evaluates only `1..=circ.circuit.abs()` (excluding SBP gates).
+- FOL2BoolCache caches shared nodes *and* nodes not depending on the innermost quantified variable; which nodes get a record depends on traversal order.
+- Pardinus symbolic bounds (`Version.experimental=true` in Alloy): `this/Sig.field` often has only a symbolic bound; `Translator` resolves them (`PardinusBounds.resolve`) and conjoins extra constraints.
 - Alloy-side Java quirks that each cost an exact match (all ported):
-  `ExprChoice` resolves top-down (an overloaded right operand of a join is distributed, `CompModule.process`;
-  2+ legal all-empty candidates → `none`; the chosen candidate is resolved further); macro arguments are substituted
-  as expressions (re-translated at every use, fresh Kodkod nodes); a small-int `fun` body gets an implicit `Int[..]`
-  (`resolve_as_set`); `Int[e]` is `e`; `S <: S.f` is `f`; string atoms come in `java.util.HashSet` order of
-  `Command.getAllStringConstants`; `Simplifier` tightens bounds before `r = r`; `enum E` opens
-  `util/ordering[this/E]` with alias `open$N` (renamed by `doneParsing`), and BoundsComputer pre-binds its
-  First/Next; merged module instantiations keep the path minimal by (`$`, `Util.slashComparator`); skolems are shown
-  only for variables with an Alloy type (`kv2typepos`).
-- Name lookup is Java's `getRawNQS`/`populate`: names of this module and of every module reachable through opens
-  (private opens only from the module itself), without shadowing; `jtype::check_calls` (port of
-  `CompModule.applicable` on Java's sig-level `Type`) drops overloaded calls whose arguments cannot fit and reports
-  a type error when no candidate is left (`isIntsNotUsed` is `false` in Java, so `integer/` functions always
-  compete). `pred/totalOrder` / `disj` arguments are resolved against each other like `ExprList.resolve`.
-- Temporal: symbolic-bound constraints over variable relations are wrapped in `always` (PardinusBounds.resolve); the
-  lex-leader SBP takes the static entries first, then the entries of each time step (`[HASLab]` loop over
-  `lowerBound(STATE)`); LTL2FOL builds fresh nodes per occurrence except for unchanged subtrees.
+  `ExprChoice` resolves top-down (an overloaded right operand of a join is distributed, `CompModule.process`; 2+ legal all-empty candidates → `none`; the chosen candidate is resolved further); macro arguments are substituted as expressions (re-translated at every use, fresh Kodkod nodes); a small-int `fun` body gets an implicit `Int[..]` (`resolve_as_set`); `Int[e]` is `e`; `S <: S.f` is `f`; string atoms come in `java.util.HashSet` order of `Command.getAllStringConstants`; `Simplifier` tightens bounds before `r = r`; `enum E` opens `util/ordering[this/E]` with alias `open$N` (renamed by `doneParsing`), and BoundsComputer pre-binds its First/Next; merged module instantiations keep the path minimal by (`$`, `Util.slashComparator`); skolems are shown only for variables with an Alloy type (`kv2typepos`).
+- Name lookup is Java's `getRawNQS`/`populate`: names of this module and of every module reachable through opens (private opens only from the module itself), without shadowing; `jtype::check_calls` (port of `CompModule.applicable` on Java's sig-level `Type`) drops overloaded calls whose arguments cannot fit and reports a type error when no candidate is left (`isIntsNotUsed` is `false` in Java, so `integer/` functions always compete). `pred/totalOrder` / `disj` arguments are resolved against each other like `ExprList.resolve`.
+- Temporal: symbolic-bound constraints over variable relations are wrapped in `always` (PardinusBounds.resolve); the lex-leader SBP takes the static entries first, then the entries of each time step (`[HASLab]` loop over `lowerBound(STATE)`); LTL2FOL builds fresh nodes per occurrence except for unchanged subtrees.
 
 ## Alloy → Kodkod — facts gathered from the Java sources
-Target: build a `pardinus::instance::Problem` from the Rust sema `Model` + `RCommand` whose `.kk` serialization is
-textually identical to KKDump's (write a `write_kk` in pardinus that emits nodes in KKDump's DFS order: BINE left
-then right, NARY children in order, COMPR/QUANT/SUM decls then body, DECL var then expr, then `R`/`L`/`H`/`SB`/`SC`/
-`IB`/`G`). Java: `TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `A4Solution` (ctor, addRel/addSig/
-addField/query/addFormula/solve), `Simplifier`.
-- A4Solution ctor: universe = ScopeComputer atoms; int atoms bound with `bounds.boundExactly(i, {"i"})` for
-  min..max, relations created in this order: `Int/min`, `Int/zero`, `Int/max`, `Int/next` (exact), `seq/Int` (0..
-  maxseq-1), one unary relation named `""` per string literal (s2k), `String` (exact). Then BoundsComputer.
-- BoundsComputer: computeLowerBound/UpperBound over top-level PrimSigs; allocatePrimSig (children first; `no (a&b)`
-  disjointness formulas for siblings; `S_remainder` relation for non-abstract sigs with children); subset sigs; the
-  `one sig` with 2 fields + totalorder fact special case; fields (`sim()` for `one sig` exactly-of fields; upper =
-  union over `f.type().fold()` of products of sig uppers; `one sig` fields are `a2k(S).product(r)` with r of arity-1);
-  symbolic bounds (addSymbolicBound for non-top-level non-PrimSig... see A4Solution.addSymbolicBound); then per sig
-  size/one/some/lone formulas (`size()` uses fresh `v<cnt>` variables).
-- Variable names: `TranslateAlloyToKodkod.cnt` is a JVM-global counter (`"v"+cnt++`) used by BoundsComputer.size,
-  isInBinary, TOTALORDER fallback. KKDump runs one command per JVM (cnt starts at 0); goldens ran all commands of a
-  file in one JVM (cnt carried over) yet all 215 instances matched, so start at 0 unless a diff says otherwise.
-  Quantifier variables are `skolem(label)` = `<cmdlabel>_<name>` outside functions (`<func tail>_<name>` inside a
-  call; plain name when the label/func name contains `$`).
-- makeFacts order: BoundsComputer formulas, then for each reachable sig: per field decl `all this: S | this.f in
-  decl.expr` (ExprLet for `one` sigs) [+ `f.univ..univ in S` unless one sig], disj2 / disjoint field constraints,
-  then sig facts; then the command formula split on top-level ExprList AND (after ConvToConjunction); A4Solution.solve
-  appends `r = r` for every relation in bounds.relations() and builds `Formula.and(formulas)` (NaryFormula).
+Build a `pardinus::instance::Problem` from the Rust sema `Model` + `RCommand` whose `.kk` serialization is textually identical to KKDump's (`write_kk` in `pardinus` emits nodes in KKDump's DFS order: BINE left then right, NARY children in order, COMPR/QUANT/SUM decls then body, DECL var then expr, then `R`/`L`/`H`/`SB`/`SC`/`IB`/`G`). Java: `TranslateAlloyToKodkod`, `BoundsComputer`, `ScopeComputer`, `A4Solution` (ctor, addRel/addSig/addField/query/addFormula/solve), `Simplifier`.
+- A4Solution ctor: universe = ScopeComputer atoms; int atoms bound with `bounds.boundExactly(i, {"i"})` for min..max, relations created in this order: `Int/min`, `Int/zero`, `Int/max`, `Int/next` (exact), `seq/Int` (0..maxseq-1), one unary relation named `""` per string literal (s2k), `String` (exact). Then BoundsComputer.
+- BoundsComputer: computeLowerBound/UpperBound over top-level PrimSigs; allocatePrimSig (children first; `no (a&b)` disjointness formulas for siblings; `S_remainder` relation for non-abstract sigs with children); subset sigs; the `one sig` with 2 fields + totalorder fact special case; fields (`sim()` for `one sig` exactly-of fields; upper = union over `f.type().fold()` of products of sig uppers; `one sig` fields are `a2k(S).product(r)` with r of arity-1); symbolic bounds (addSymbolicBound for non-top-level non-PrimSig... see A4Solution.addSymbolicBound); then per sig size/one/some/lone formulas (`size()` uses fresh `v<cnt>` variables).
+- Variable names: `TranslateAlloyToKodkod.cnt` is a JVM-global counter (`"v"+cnt++`) used by BoundsComputer.size, isInBinary, TOTALORDER fallback. KKDump runs one command per JVM (cnt starts at 0); goldens ran all commands of a file in one JVM (cnt carried over) yet all 215 matched, so start at 0 unless a diff says otherwise. Quantifier variables are `skolem(label)` = `<cmdlabel>_<name>` outside functions (`<func tail>_<name>` inside a call; plain name when the label/func name contains `$`).
+- makeFacts order: BoundsComputer formulas, then for each reachable sig: per field decl `all this: S | this.f in decl.expr` (ExprLet for `one` sigs) [+ `f.univ..univ in S` unless one sig], disj2 / disjoint field constraints, then sig facts; then the command formula split on top-level ExprList AND (after ConvToConjunction); A4Solution.solve appends `r = r` for every relation in bounds.relations() and builds `Formula.and(formulas)` (NaryFormula).
 - ExprList AND/OR → `getSingleFormula` heap-shaped binary tree (me & child 2i & child 2i+1), NOT a flat Nary.
-- ExprCall inlines the body with an env of `cset(args)`; 0-arity functions are cached per Func (cacheForConstants).
+- ExprCall inlines the body with an env of `cset(args)`; 0-arity functions are cached per Func (`cacheForConstants`), and recursive calls obey `Options.unrolls`.
 - isIn/isInBinary: arrow multiplicities expand to quantified formulas with fresh `v<cnt>` variables (am=true).
-- ExprQt: desugar (disj), addOne (unary decl without multiplicity → ONEOF), one/lone → comprehension.one/lone when
-  all decls are unary ONEOF, else LONE = all/all pairs; guards for non-unary decls.
+- ExprQt: desugar (disj), addOne (unary decl without multiplicity → ONEOF), one/lone → comprehension.one/lone when all decls are unary ONEOF, else LONE = all/all pairs; guards for non-unary decls.
 
-## Known caveats & licensing
+## Licensing & Resolved Caveats
 
-- **Licensing (SAT4J 2.3.1 — LGPL-2.1 / EPL-1.0)**: `crates/satsolver/src/sat4j.rs` is a bit-exact port of SAT4J 2.3.1 (`org.sat4j.core`), which is covered by GNU LGPL-2.1 (upstream dual-licensed EPL-1.0 / LGPL-2.1; see `THIRD_PARTY_LICENSES.md`). Because LGPL-2.1 Section 0 explicitly covers straightforward translations into another language and `sat4j.rs` is currently statically linked via `satsolver`, workspace builds are not pure MIT. Isolating `sat4j` into a separate crate or opt-in Cargo feature (`sat4j-exact`) is planned before any pure-MIT binary distribution.
-- **Dual-pipeline divergence & option forwarding (`crates/alloy-translate/src/lib.rs`)**:
-  - In `execute_command`, a `UNSAT` from the fast pipeline cancels the exact thread (`stop.store(true, ...)`) without waiting to check whether the exact pipeline would have returned `SAT`.
-  - When the fast pipeline returns `SAT`, if the exact pipeline errors or returns `UNSAT`, `execute_command` silently falls back to the fast instance without raising a divergence diagnostic.
-  - `spawn_exact` currently forwards only `opt.symmetry`; `skolem_depth`, `no_overflow`, and `unrolls` in `Options` are not yet wired into the exact (or CLI) path.
+- **100% pure MIT licensing**: `crates/satsolver/src/sat4j.rs` (SAT4J 2.3.1, LGPL-2.1/EPL-1.0) and `crates/kodkod` have been removed. All workspace crates are pure MIT (see `THIRD_PARTY_LICENSES.md`).
+- **Single unified pipeline**: dual-pipeline divergence (`ALLOY_RS_NO_EXACT`, separate `translate.rs` vs `exact.rs` paths) is eliminated. Every command executes through `exact/` + `pardinus` + `BatSat`, with `Options.{symmetry, skolem_depth, no_overflow, unrolls}` wired end to end and runtime pre-BVE CNF + SBP-free circuit verification on every SAT model.

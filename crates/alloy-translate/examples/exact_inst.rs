@@ -1,4 +1,4 @@
-//! Dev tool: runs the exact pipeline (Java-identical translation + SAT4J) and prints the first instance
+//! Dev tool: runs the unified `pardinus` + `batsat` pipeline and prints the first instance
 //! the way the Java oracle does. stdin lines: `<model.als>\t<command index>\t<tag>`; one JSON line per input.
 //! cargo run --release -p alloy-translate --example exact_inst < list.txt
 
@@ -22,7 +22,8 @@ fn run(model: &str, idx: usize) -> Result<String, String> {
     let world = alloy_core::parse_everything_from_file(std::path::Path::new(model)).map_err(|e| e.to_string())?;
     let m = alloy_core::sema::build(&world.modules).map_err(|e| e.to_string())?;
     let t = std::time::Instant::now();
-    let r = alloy_translate::exact::solve_first(&world, &m, idx, 20, None).map_err(|e| e.to_string())?;
+    let r = alloy_translate::exact::solve_first(&world, &m, idx, &alloy_translate::Options::default(), None)
+        .map_err(|e| e.to_string())?;
     let ms = t.elapsed().as_secs_f64() * 1000.0;
     let mut s = format!("\"sat\":{},\"ms\":{ms:.1}", r.sat);
     if let Some(states) = r.instance {

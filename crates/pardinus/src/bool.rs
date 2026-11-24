@@ -7,7 +7,7 @@
 //! Everything that influences which gate gets which label (assembler rules, `CacheSet` chain order, `superFastHash`,
 //! accumulator order, overflow gates) mirrors the Java code exactly.
 
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 
 pub type BV = i32;
 pub const TRUE: BV = i32::MAX;
@@ -136,10 +136,12 @@ impl CacheSet {
 
 // ---------------------------------------------------------------------------------------------- circuits
 
+#[derive(Clone, Copy)]
 struct Gate {
     op: Op,
-    /// And/Or: ascending labels (binary or n-ary); Ite: [if, then, else]
-    inputs: Vec<BV>,
+    /// Slice in `Factory::pool`: And/Or ascending labels; Ite [if, then, else]
+    start: u32,
+    len: u32,
     /// the `hashcode` field of MultiGate / ITEGate
     hash: i32,
     /// `superFastHash(label)`
@@ -150,12 +152,12 @@ struct Gate {
 #[derive(Clone, Debug)]
 pub struct Acc {
     pub op: Op,
-    pub inputs: BTreeSet<i32>,
+    pub inputs: Vec<i32>,
 }
 
 impl Acc {
     pub fn new(op: Op) -> Acc {
-        Acc { op, inputs: BTreeSet::new() }
+        Acc { op, inputs: Vec::new() }
     }
     /// Java `add`: returns the short-circuit constant, or 0 for "this".
     pub fn add(&mut self, v: BV) -> BV {
@@ -163,18 +165,20 @@ impl Acc {
         if self.is_short_circuited() {
             return sc;
         }
-        if v == sc || self.inputs.contains(&v.wrapping_neg()) {
+        if v == sc || self.inputs.binary_search(&v.wrapping_neg()).is_ok() {
             self.inputs.clear();
-            self.inputs.insert(sc);
+            self.inputs.push(sc);
             return sc;
         }
         if v != identity(self.op) {
-            self.inputs.insert(v);
+            if let Err(pos) = self.inputs.binary_search(&v) {
+                self.inputs.insert(pos, v);
+            }
         }
         0
     }
     pub fn is_short_circuited(&self) -> bool {
-        self.inputs.len() == 1 && *self.inputs.iter().next().unwrap() == short_circuit(self.op)
+        self.inputs.len() == 1 && self.inputs[0] == short_circuit(self.op)
     }
     pub fn len(&self) -> usize {
         self.inputs.len()
@@ -187,6 +191,7 @@ impl Acc {
 /// `BooleanFactory` (two's complement) over a `CBCFactory`.
 pub struct Factory {
     gates: Vec<Gate>,
+    pool: Vec<BV>,
     label: i32,
     max_var: i32,
     num_vars: i32,
@@ -204,12 +209,13 @@ impl Factory {
     pub fn new(num_vars: i32, sharing: i32, bitwidth: i32, no_overflow: bool) -> Factory {
         let cmp_max = if num_vars == 0 { 1 } else { 1 << sharing };
         let mut gates = Vec::with_capacity(num_vars as usize + 1);
-        gates.push(Gate { op: Op::Const, inputs: Vec::new(), hash: 0, lh: 0 });
+        gates.push(Gate { op: Op::Const, start: 0, len: 0, hash: 0, lh: 0 });
         for i in 1..=num_vars {
-            gates.push(Gate { op: Op::Var, inputs: Vec::new(), hash: 0, lh: super_fast_hash(i) });
+            gates.push(Gate { op: Op::Var, start: 0, len: 0, hash: 0, lh: super_fast_hash(i) });
         }
         Factory {
             gates,
+            pool: Vec::new(),
             label: num_vars + 1,
             max_var: num_vars,
             num_vars,
@@ -240,7 +246,7 @@ impl Factory {
         }
         for i in 0..n {
             let l = self.label + i;
-            self.gates.push(Gate { op: Op::Var, inputs: Vec::new(), hash: 0, lh: super_fast_hash(l) });
+            self.gates.push(Gate { op: Op::Var, start: 0, len: 0, hash: 0, lh: super_fast_hash(l) });
         }
         self.label += n;
         self.max_var = self.label - 1;
@@ -258,17 +264,55 @@ impl Factory {
             self.gates[v as usize].op
         }
     }
-    #[inline]
-    fn size(&self, v: BV) -> usize {
-        if v < 0 {
-            1
-        } else {
-            self.gates[v as usize].inputs.len()
-        }
-    }
     /// Inputs of a gate (`-v`'s single input is `v`).
+    #[inline]
     pub fn inputs(&self, v: BV) -> &[BV] {
-        &self.gates[v as usize].inputs
+        let g = &self.gates[v as usize];
+        &self.pool[g.start as usize..(g.start + g.len) as usize]
+    }
+    /// Evaluates the circuit rooted at `root` bottom-up given primary variable values `value_of(v)` (1-based).
+    pub fn eval_bv(&self, root: BV, value_of: &dyn Fn(u32) -> bool) -> Result<bool, String> {
+        if root == TRUE {
+            return Ok(true);
+        }
+        if root == FALSE {
+            return Ok(false);
+        }
+        let target = root.unsigned_abs() as usize;
+        if target == 0 || target >= self.gates.len() {
+            return Err(format!("invalid BV label {root}"));
+        }
+        #[inline]
+        fn lit(val: &[bool], x: BV) -> bool {
+            if x == TRUE {
+                true
+            } else if x == FALSE {
+                false
+            } else if x > 0 {
+                val[x as usize]
+            } else {
+                !val[(-x) as usize]
+            }
+        }
+        let mut val = vec![false; target + 1];
+        for g in 1..=target {
+            let gate = &self.gates[g];
+            let inputs = &self.pool[gate.start as usize..(gate.start + gate.len) as usize];
+            val[g] = match gate.op {
+                Op::Var => value_of(g as u32),
+                Op::And => inputs.iter().all(|&x| lit(&val, x)),
+                Op::Or => inputs.iter().any(|&x| lit(&val, x)),
+                Op::Ite => {
+                    if lit(&val, inputs[0]) {
+                        lit(&val, inputs[1])
+                    } else {
+                        lit(&val, inputs[2])
+                    }
+                }
+                Op::Const | Op::Not => return Err(format!("unexpected gate op {:?} at {g}", gate.op)),
+            };
+        }
+        Ok(lit(&val, root))
     }
     /// `BooleanFormula.hash(op)`
     #[inline]
@@ -289,6 +333,7 @@ impl Factory {
             return if f == v { 1 } else { -1 };
         }
         let g = &self.gates[v as usize];
+        let inputs = &self.pool[g.start as usize..(g.start + g.len) as usize];
         let label = v;
         match g.op {
             Op::Ite => {
@@ -296,20 +341,20 @@ impl Factory {
                     1
                 } else if op != Op::Ite || k < 3 || f > label || f.wrapping_neg() > label {
                     -1
-                } else if g.inputs[0] == f || g.inputs[1] == f || g.inputs[2] == f {
+                } else if inputs[0] == f || inputs[1] == f || inputs[2] == f {
                     3
                 } else {
                     -3
                 }
             }
-            _ if g.inputs.len() == 2 => {
+            _ if inputs.len() == 2 => {
                 if f == label {
                     return 1;
                 }
                 if g.op != op || k < 2 || f > label || f.wrapping_neg() > label {
                     return -1;
                 }
-                let (lo, hi) = (g.inputs[0], g.inputs[1]);
+                let (lo, hi) = (inputs[0], inputs[1]);
                 let l = self.contains(lo, op, f, k - 1);
                 if l > 0 {
                     return l;
@@ -328,7 +373,6 @@ impl Factory {
                 if g.op != op || f > label || f.wrapping_neg() > label {
                     return -1;
                 }
-                let inputs = &g.inputs;
                 let (mut low, mut high, mut step) = (0i32, inputs.len() as i32 - 1, 1);
                 while low <= high && step <= k {
                     let mid = ((low + high) as u32 >> 1) as i32;
@@ -360,31 +404,32 @@ impl Factory {
             return;
         }
         let g = &self.gates[v as usize];
+        let inputs = &self.pool[g.start as usize..(g.start + g.len) as usize];
         match g.op {
             Op::Ite => {
                 if op == Op::Ite && k > 2 {
-                    add(set, g.inputs[0]);
-                    add(set, g.inputs[1]);
-                    add(set, g.inputs[2]);
+                    add(set, inputs[0]);
+                    add(set, inputs[1]);
+                    add(set, inputs[2]);
                 } else {
                     add(set, v);
                 }
             }
-            _ if g.inputs.len() == 2 => {
+            _ if inputs.len() == 2 => {
                 if g.op == op && k > 1 {
                     let old = set.len();
-                    self.flatten(g.inputs[0], op, set, k - 1);
+                    self.flatten(inputs[0], op, set, k - 1);
                     let used = (set.len() - old) as i32;
-                    self.flatten(g.inputs[1], op, set, k - used);
+                    self.flatten(inputs[1], op, set, k - used);
                 } else {
                     add(set, v);
                 }
             }
             _ => {
-                let n = g.inputs.len() as i32;
+                let n = inputs.len() as i32;
                 if g.op == op && k >= n {
                     let mut diff = k - n;
-                    for &f in &g.inputs {
+                    for &f in inputs {
                         let old = set.len();
                         self.flatten(f, op, set, diff.max(1));
                         diff -= (set.len() - old) as i32;
@@ -400,10 +445,13 @@ impl Factory {
         a.len() == b.len() && a.iter().all(|x| b.contains(x))
     }
 
-    fn new_gate(&mut self, op: Op, inputs: Vec<BV>, hash: i32) -> BV {
+    fn new_gate(&mut self, op: Op, inputs: &[BV], hash: i32) -> BV {
         let l = self.label;
         self.label += 1;
-        self.gates.push(Gate { op, inputs, hash, lh: super_fast_hash(l) });
+        let start = self.pool.len() as u32;
+        let len = inputs.len() as u32;
+        self.pool.extend_from_slice(inputs);
+        self.gates.push(Gate { op, start, len, hash, lh: super_fast_hash(l) });
         let ci = op as usize;
         self.caches[ci].add(l, hash);
         l
@@ -438,13 +486,13 @@ impl Factory {
             let mut cand = self.take_cand();
             self.caches[Op::Ite as usize].get(hash, &mut cand);
             let found = cand.iter().copied().find(|&g| {
-                let gi = &self.gates[g as usize].inputs;
+                let gi = self.inputs(g);
                 gi[0] == i && gi[1] == t && gi[2] == e
             });
             self.give_cand(cand);
             match found {
                 Some(g) => g,
-                None => self.new_gate(Op::Ite, vec![i, t, e], hash),
+                None => self.new_gate(Op::Ite, &[i, t, e], hash),
             }
         }
     }
@@ -650,7 +698,7 @@ impl Factory {
             let k2 = cm - s0.len() as i32;
             self.flatten(h, op, &mut s0, k2);
             for &g in &cand {
-                let gi = &self.gates[g as usize].inputs;
+                let gi = self.inputs(g);
                 if gi.len() == 2 && gi[0] == l && gi[1] == h {
                     found = Some(g);
                     break;
@@ -666,7 +714,7 @@ impl Factory {
             self.scrap1 = s1;
         } else {
             for &g in &cand {
-                let gi = &self.gates[g as usize].inputs;
+                let gi = self.inputs(g);
                 if gi.len() == 2 && gi[0] == l && gi[1] == h {
                     found = Some(g);
                     break;
@@ -676,7 +724,7 @@ impl Factory {
         self.give_cand(cand);
         match found {
             Some(g) => g,
-            None => self.new_gate(op, vec![l, h], hash),
+            None => self.new_gate(op, &[l, h], hash),
         }
     }
 
@@ -686,13 +734,8 @@ impl Factory {
         let asize = acc.inputs.len();
         match asize {
             0 => identity(op),
-            1 => *acc.inputs.iter().next().unwrap(),
-            2 => {
-                let mut it = acc.inputs.iter();
-                let a = *it.next().unwrap();
-                let b = *it.next().unwrap();
-                self.assemble2(op, a, b)
-            }
+            1 => acc.inputs[0],
+            2 => self.assemble2(op, acc.inputs[0], acc.inputs[1]),
             _ => {
                 let mut hash = 0i32;
                 for &x in &acc.inputs {
@@ -701,10 +744,10 @@ impl Factory {
                 let mut cand = self.take_cand();
                 self.caches[op as usize].get(hash, &mut cand);
                 let mut found = None;
-                let same = |gi: &[BV]| gi.len() == asize && gi.iter().zip(acc.inputs.iter()).all(|(a, b)| a == b);
+                let same = |gi: &[BV]| gi == acc.inputs.as_slice();
                 if asize as i32 > self.cmp_max {
                     for &g in &cand {
-                        if same(&self.gates[g as usize].inputs) {
+                        if same(self.inputs(g)) {
                             found = Some(g);
                             break;
                         }
@@ -713,7 +756,7 @@ impl Factory {
                     let mut s0 = std::mem::take(&mut self.scrap0);
                     let cm = self.cmp_max;
                     'lookup: for &g in &cand {
-                        let gi = &self.gates[g as usize].inputs;
+                        let gi = self.inputs(g);
                         if same(gi) {
                             found = Some(g);
                             break;
@@ -736,7 +779,7 @@ impl Factory {
                 self.give_cand(cand);
                 match found {
                     Some(g) => g,
-                    None => self.new_gate(op, acc.inputs.iter().copied().collect(), hash),
+                    None => self.new_gate(op, &acc.inputs, hash),
                 }
             }
         }
@@ -1782,5 +1825,24 @@ mod tests {
         assert_eq!(f.and(2, 1), 4);
         assert_eq!(f.and(g, 1), g);
         assert_eq!(f.or(g, 1), 1);
+    }
+
+    #[test]
+    fn eval_bv_matches_truth_table() {
+        let mut f = Factory::new(3, 3, 4, false);
+        assert_eq!(f.eval_bv(TRUE, &|_| false).unwrap(), true);
+        assert_eq!(f.eval_bv(FALSE, &|_| true).unwrap(), false);
+        let a_and_b = f.and(1, 2);
+        let not_c = -3;
+        let ite = f.ite(1, 2, -3);
+        let rhs = f.and(not_c, ite);
+        let top = f.or(a_and_b, rhs);
+        for mask in 0u32..8 {
+            let v = |id: u32| (mask >> (id - 1)) & 1 != 0;
+            let (a, b, c) = (v(1), v(2), v(3));
+            let expected = (a && b) || (!c && if a { b } else { !c });
+            assert_eq!(f.eval_bv(top, &v).unwrap(), expected);
+            assert_eq!(f.eval_bv(-top, &v).unwrap(), !expected);
+        }
     }
 }

@@ -18,15 +18,15 @@ harness/                      the judge — must not be edited inside the loop
   quick.txt                   16-model smoke set
   SCHEMA.md                   JSON protocol shared by Java and Rust
 crates/                       Rust workspace
-  alloy-core  kodkod  satsolver  batsat  pardinus  alloy-translate  alloy-cli (→ target/release/alloy-rs.exe)
+  alloy-core  pardinus  satsolver  batsat  alloy-translate  alloy-cli (→ target/release/alloy-rs.exe)
 loop/
   PROMPT.md                   procedure for one Haiku iteration (do not edit)
   TASKS.md                    milestone task list M1~M9 (ticked off by Haiku)
   PROGRESS.md / NOTES.md      iteration log / knowledge base (memory across sessions)
   run-loop.ps1                loop driver
 CLAUDE.md                     rules every session reads automatically
-THIRD_PARTY_LICENSES.md       upstream component licenses & SAT4J LGPL-2.1 notice
-docs/EXACT_PORT.md            bit-exact Java instance pipeline (Pardinus + SAT4J 2.3.1)
+THIRD_PARTY_LICENSES.md       upstream component licenses (100% pure MIT)
+docs/EXACT_PORT.md            unified Pardinus + 4-thread BatSat pipeline & exactness verification
 docs/JAVA_MAP.md              Java file ↔ Rust module map
 ```
 
@@ -39,47 +39,33 @@ docs/JAVA_MAP.md              Java file ↔ Rust module map
 | perf | verdict matches **and** `rust_ms ≤ 1.1 × java_ms + 20ms` |
 | --count | (M7) the number of solutions with symmetry=0 equals Java's |
 
-## Current status (2026-11-23, rev `cd6bc87`)
+## Current status (2026-11-24)
 | Item | Result |
 |---|---|
 | parse / commands | 199/199, 199/199 (`error_line_match` is 1/5, ungated; 4 `type_error` files differ in line/col) |
 | verdict | 465/465 (SAT 215, UNSAT 238, ERROR 12; 1 Java timeout skipped) |
-| perf (sequential `--perf`) | 465/465; Rust 23.23 s vs Java 285.66 s (~12.3× faster, `x0.08`; single-run timings swing 10–20% with machine load) |
-| exact first instances (`cmp_inst.py --all`) | 465/465 agreement (215/215 SAT first instances byte-identical; `cmp_alloy.py`: 215/215 `.kk` and CNF identical) |
+| perf (sequential `--perf`) | 465/465; Rust 20.47 s vs Java 285.66 s (~14.0× faster, `x0.07`; single-run timings swing 10–20% with machine load) |
+| translation & instance checks | `cmp_alloy.py`: 215/215 `.kk` and `JavaOrder` CNF identical; `kk_cnf`: 207/207 static `.kk` identical; `PinCheck.java`: 59/59 static SAT `check` counterexamples verified SAT (`OOB=0`); `cmp_inst.py --all`: 465/465 verdict agreement |
 | `--count` (symmetry=0) | 432/432 (the 34 commands Java timed out on are not scored; `Solution::next()` is `Unsupported`) |
-| temporal logic (`var`, LTL, steps) | implemented; all temporal verdict, exact-instance, and `--count` commands match |
+| temporal logic (`var`, LTL, steps) | implemented; all temporal verdict, `.kk`/CNF parity (`8/8`), and `--count` commands match |
+| independent AST instance verifier (`--verify` / `ALLOY_RS_VERIFY=1`) | `alloy_translate::eval`: 215/215 Java golden & 215/215 Rust SAT instances verified (~0.60s total), 240/240 random LTL+Past differential tests |
+| Alloy 6.2.0 XML (`--xml <PATH>`) | `alloy_translate::xml`: `tools/xml_check/run_all.py` **215/215** (`A4SolutionReader` + `StaticInstanceReader` + `sol.eval()`, static 207 + temporal 8) |
 
-- `--gate` runs 8 commands in parallel, so the perf score of borderline commands fluctuates with machine load
-  (398–465/465 observed). Check speed with the sequential `python harness/check.py --perf`.
-- In `--count` mode `check.py` prints "REGRESSIONS vs best.json" on commands Java timed out on or skipped in `--count`,
-  because verdict-mode `best.json` includes commands not scored in `--count` mode.
-- Debug environment variables: `KTIME`, `KPROF`, `KSAT_CONFIGS`, `KSAT_STATS`, `KCOUNT`, `KSAT_WHO`, `KSAT_DUMP`,
-  `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL`, `ALLOY_RS_NO_EXACT` (see `loop/NOTES.md` and `docs/EXACT_PORT.md`).
+- `--gate` runs 8 commands in parallel, so the perf score of borderline commands fluctuates with machine load. Check speed with the sequential `python harness/check.py --perf`.
+- In `--count` mode `check.py` prints "REGRESSIONS vs best.json" on commands Java timed out on or skipped in `--count`, because verdict-mode `best.json` includes commands not scored in `--count` mode.
+- Debug environment variables: `KTIME`, `KSAT_CONFIGS`, `KSAT_ORDER`, `KSAT_PRIO`, `KSAT_STATS`, `KCOUNT`, `KSAT_WHO`, `KSAT_DUMP`, `KSAT_NOBIN`, `KSAT_NOSIMP`, `KTRACE_ALL` (see `loop/NOTES.md` and `docs/EXACT_PORT.md`).
 
 ## Implementation notes: temporal logic (Alloy 6)
-(`crates/alloy-translate/src/translate.rs`, `lib.rs`)
-- Traces of length k are solved for k = min..max steps (default 1..10), stopping at the first SAT. An unbounded
-  `N..` steps range gives the same ERROR as Java ("Bounded engines do not support complete model checking.").
-- Each time atom `$time$i` lives in its own exact relation; a free relation `$loop` (exactly one tuple) points at the
-  state the loop returns to. `var` sigs/fields get a trailing time column.
-- Every expression is translated at a time point `Tp{level, state}`. Level 1 is the first pass; level 2 is the loop
-  part (reachable only if the loop start is at or before that state). `always`, `eventually`, `after`, `before`,
-  `historically`, `once`, `until`, `since`, `releases` and `triggered` expand into And/Or over the reachable time
-  points, and `e'` becomes an ITE over the loop targets at the last state. Facts and the command formula are
-  evaluated at `Tp{1,0}`; declaration constraints of var sigs/fields and sig facts are imposed in every state.
-- 240 random temporal formulas (including the until/since/releases/triggered equivalences) were differentially tested
-  against Java with 0 mismatches.
+(`crates/alloy-translate/src/exact/`, `crates/pardinus/src/temporal.rs`)
+- Traces of length k are solved for k = min..max steps (default 1..10), stopping at the first SAT; after 2 UNSAT lengths, a max-trace probe (`max_trace`) fast-paths UNSAT bounds (`KTRACE_ALL=1` disables the probe). An unbounded `N..` steps range gives the same ERROR as Java ("Bounded engines do not support complete model checking.").
+- Uses Pardinus's `LTL2FOLTranslator` and `TemporalBoundsExpander` (`ExplicitUnrolls` with unroll count derived from past-operator nesting height `countHeight`), expanding `var` sigs/fields with a trailing time column and encoding future/past operators (`always`, `eventually`, `after`, `before`, `historically`, `once`, `until`, `since`, `releases`, `triggered`, `'`) over explicit trace/loop relations.
+- Each trace step `k` can solve either via the 4-thread `BatSat` portfolio (`solve`) or sequentially in `record=true` mode (for `cmp_alloy.py` 8/8 temporal `.kk`/CNF verification).
 
 ## Implementation notes: `--count` (solution enumeration)
-(`alloy_translate::count_solutions`, `kodkod::translate::{count_all, count_projected, first_instance}`)
-- Non-temporal models: solutions are counted one by one without symmetry breaking, adding a clause that blocks the
-  primary and skolem variables of each solution found (limit N, reported as `count_capped`).
-- Temporal models follow Pardinus `next()` semantics. The first solution fixes the static relations; afterwards only
-  distinct lasso traces are counted, over increasing trace lengths. Each trace is counted once, at its minimal
-  prefix and minimal loop period (`canonical_lasso`).
-- Java's count depends on its first solution (MiniSat's false-first phase), so the static-relation variables are
-  chosen lexicographically smallest (`first_instance` + `SatSolver::solve_assuming`). This matches Java on the whole
-  corpus but is an approximation, not a copy of Java's solver.
+(`alloy_translate::count_solutions`, `pardinus::translator::{count_all, count_projected, first_instance}`, `pardinus::temporal::count_solutions`)
+- Non-temporal models: solutions are counted one by one without symmetry breaking, adding a clause that blocks the primary and skolem variables of each solution found (limit N, reported as `count_capped`).
+- Temporal models follow Pardinus `next()` semantics. The first solution fixes the static relations (`first_instance`); afterwards only distinct lasso traces are counted, over increasing trace lengths. Each trace is counted once, at its minimal prefix and minimal loop period (`canonical_lasso`).
+- Java's count depends on its first solution (MiniSat's false-first phase), so the static-relation variables are chosen lexicographically smallest (`first_instance` + `SatSolver::solve_assuming`).
 
 ## Running the Haiku loop
 
@@ -96,8 +82,7 @@ After every iteration the driver:
 2. commits leftover uncommitted changes
 3. **re-runs the full gate** (`check.py --gate --update-best`)
    - pass → updates and commits the baseline (best.json)
-   - build failure / regression → keeps that iteration's work on a `rejected/iter-NNN` branch, resets HEAD to the
-     state before the iteration and records the reason in `loop/LAST_REJECTED.md`, which the next iteration reads
+   - build failure / regression → keeps that iteration's work on a `rejected/iter-NNN` branch, resets HEAD to the state before the iteration and records the reason in `loop/LAST_REJECTED.md`, which the next iteration reads
 4. stops after 4 consecutive iterations without changes under `crates/` (stuck detection)
 
 Logs: `loop/logs/driver.log` (summary), `loop/logs/iter-NNN-*.jsonl` (full stream-json of each session).
@@ -121,8 +106,7 @@ git log --oneline | Select-Object -First 20
 ```
 
 ## Rebuilding / checks
-Fetch the pinned reference sources first (`harness/setup.py` would otherwise clone the current upstream master, which
-may not match `harness/corpus.json` and the goldens):
+Fetch the pinned reference sources first (`harness/setup.py` would otherwise clone the current upstream master, which may not match `harness/corpus.json` and the goldens):
 ```powershell
 git clone --recursive git@github.com:taehoon1lee/alloytools-rs.git   # or, in an existing clone:
 git submodule update --init --depth 1
@@ -132,28 +116,12 @@ python harness/gen_golden.py --count-mode --force -j 4
 ```
 
 ## Design notes
-- **Java oracle**: the official CLI's receipt.json has no parse-error positions, translation statistics or per-command
-  timing split, and the Windows Java launcher expands `-c *` as a file glob. So the oracle calls the Alloy API directly
-  (`CompUtil.parseEverything_fromFile`, `TranslateAlloyToKodkod.execute_command`). Per-command timeout 60 s.
-- **Rust execution**: the harness runs every command in a separate process (isolating crashes and infinite loops);
-  timeout = `min(60s, max(3s, 5×Java+2s))`.
-- **SAT solver**: the pure-Rust `batsat` (MiniSat family, vendored in `crates/batsat` with binary-clause watches) sits
-  behind the `satsolver` trait, standing in for Java's default SAT4J; `satsolver::simp` adds MiniSat-style variable
-  elimination. The toolchain is `x86_64-pc-windows-gnu` (no C compiler), so only pure-Rust dependencies are allowed.
-- **Anti-cheating**: Rust code must not read golden files or special-case file names (CLAUDE.md). Protected files are
-  guarded twice: the deny rules in `loop/haiku-settings.json` (the driver applies them to Haiku only, via `--settings`)
-  and the driver's automatic revert. The deny rules do not apply to interactive sessions (Option B), so start those
-  with `claude --model haiku --settings loop/haiku-settings.json`.
-- **Dual fast + exact pipeline**: the fast pipeline (`crates/kodkod` + `batsat` portfolio) decides verdicts and
-  gives ~13× sequential speedup, while the exact pipeline (`crates/pardinus` + `satsolver::sat4j`, see
-  `docs/EXACT_PORT.md`) races on a second thread to reproduce Java Alloy 6.2.0's exact first instance on all 215 SAT
-  corpus commands (`ALLOY_RS_NO_EXACT=1` disables it).
+- **Java oracle**: the official CLI's receipt.json has no parse-error positions, translation statistics or per-command timing split, and the Windows Java launcher expands `-c *` as a file glob. So the oracle calls the Alloy API directly (`CompUtil.parseEverything_fromFile`, `TranslateAlloyToKodkod.execute_command`). Per-command timeout 60 s.
+- **Rust execution**: the harness runs every command in a separate process (isolating crashes and infinite loops); timeout = `min(60s, max(3s, 5×Java+2s))`.
+- **SAT solver**: the pure-Rust `batsat` (MiniSat family, vendored in `crates/batsat` with binary-clause watches) sits behind the `satsolver` trait; `satsolver::simp` adds MiniSat-style variable elimination. The toolchain is `x86_64-pc-windows-gnu` (no C compiler), so only pure-Rust dependencies are allowed.
+- **Anti-cheating**: Rust code must not read golden files or special-case file names (CLAUDE.md). Protected files are guarded twice: the deny rules in `loop/haiku-settings.json` (the driver applies them to Haiku only, via `--settings`) and the driver's automatic revert. The deny rules do not apply to interactive sessions (Option B), so start those with `claude --model haiku --settings loop/haiku-settings.json`.
+- **Unified pure-MIT pipeline**: a single pipeline translates Alloy → Pardinus AST (`crates/alloy-translate/src/exact/`) → Boolean circuit (`crates/pardinus`, wiring `Options.{symmetry, skolem_depth, no_overflow, unrolls}`) → 4-thread `batsat` portfolio (`solve_portfolio`, racing `JavaOrder`/`ArityDecl`/`DeclOrder`/`NoSbp` SBPs + restart/polarity schedules including fixed negative polarity). Any SAT model is runtime-verified against both the pre-BVE CNF (`verify_cnf_model`) and the SBP-free original circuit (`Factory::eval_bv`), failing loudly on any mismatch. Temporal commands use `pardinus::temporal::solve` over `min..=max` steps.
 
 ## Licensing
 
-See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). Briefly:
-- Ports of Alloy Analyzer 6.2.0 and Kodkod/Pardinus, plus vendored `batsat`, are **MIT**.
-- `crates/satsolver/src/sat4j.rs` is a direct port of **SAT4J 2.3.1** (**GNU LGPL-2.1**; upstream dual-licensed
-  EPL-1.0 / LGPL-2.1) and is currently compiled into `satsolver` and statically linked into `alloy-rs`. Builds
-  from the current workspace configuration therefore carry LGPL-2.1/EPL-1.0 obligations until `sat4j.rs` is isolated
-  behind an optional crate/feature.
+See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md). The entire workspace (`alloy-core`, `pardinus`, `satsolver`, vendored `batsat`, `alloy-translate`, `alloy-cli`) is **100% pure MIT** (including the MIT no-endorsement clause from `Alloy.txt`). SAT4J (LGPL-2.1/EPL-1.0) and the legacy `kodkod` crate have been removed.

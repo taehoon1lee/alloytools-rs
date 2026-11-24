@@ -10,3 +10,5 @@ __pycache__/
 *.pyc
 /tools/exact/classes
 /tools/exact/out
+/tools/xml_check/classes
+/tools/xml_check/out

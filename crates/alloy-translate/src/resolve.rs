@@ -5,9 +5,296 @@
 //! (Java resolves top-down: `ExprBinary.resolve` then `ExprChoice.resolve`).
 
 use alloy_core::error::{AlloyError, ErrorKind};
-use alloy_core::sema::{Model, RExpr};
-use alloy_core::syntax::{BinOp, UnOp};
-use kodkod::instance::TupleSet;
+use alloy_core::sema::{
+    FieldId, LocalId, Model, RExpr, SigId, SigKind, SIG_INT, SIG_NONE, SIG_SEQINT, SIG_STRING,
+    SIG_UNIV,
+};
+use alloy_core::syntax::{BinOp, Const, Quant, UnOp};
+use std::collections::{BTreeSet, HashMap};
+
+use crate::scope::Layout;
+
+/// Atom-level upper bound tuple set for overload resolution (`ExprChoice.resolve`).
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub(crate) struct TupleSet {
+    pub arity: usize,
+    pub tuples: BTreeSet<Vec<u32>>,
+}
+
+impl TupleSet {
+    pub fn empty(arity: usize) -> Self {
+        TupleSet {
+            arity,
+            tuples: BTreeSet::new(),
+        }
+    }
+
+    pub fn from_tuples(arity: usize, tuples: impl IntoIterator<Item = Vec<u32>>) -> Self {
+        let mut t = TupleSet::empty(arity);
+        for x in tuples {
+            debug_assert_eq!(x.len(), arity);
+            t.tuples.insert(x);
+        }
+        t
+    }
+
+    pub fn union(&self, o: &TupleSet) -> TupleSet {
+        TupleSet {
+            arity: self.arity,
+            tuples: self.tuples.union(&o.tuples).cloned().collect(),
+        }
+    }
+
+    pub fn product(&self, o: &TupleSet) -> TupleSet {
+        let mut out = BTreeSet::new();
+        for a in &self.tuples {
+            for b in &o.tuples {
+                let mut t = a.clone();
+                t.extend_from_slice(b);
+                out.insert(t);
+            }
+        }
+        TupleSet {
+            arity: self.arity + o.arity,
+            tuples: out,
+        }
+    }
+}
+
+fn unsupported(msg: impl Into<String>) -> AlloyError {
+    AlloyError::unsupported(msg)
+}
+
+fn other(msg: impl Into<String>) -> AlloyError {
+    AlloyError::new(ErrorKind::Other, None, msg)
+}
+
+fn unary(atoms: Vec<u32>) -> TupleSet {
+    TupleSet::from_tuples(1, atoms.into_iter().map(|a| vec![a]))
+}
+
+/// Upper atoms of a sig, including subset sigs (`sig A in B + C` may take the atoms of B and C).
+fn sig_upper(model: &Model, lay: &Layout, s: SigId, n_atoms: u32) -> Result<Vec<u32>, AlloyError> {
+    let sig = &model.sigs[s as usize];
+    if sig.kind == SigKind::Builtin {
+        return Ok(match s {
+            SIG_UNIV => (0..n_atoms)
+                .filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1)
+                .collect(),
+            SIG_NONE => Vec::new(),
+            SIG_INT => (lay.atoms.len() as u32..n_atoms).collect(),
+            SIG_STRING => (lay.string_range.0..lay.string_range.1).collect(),
+            SIG_SEQINT => (lay.atoms.len() as u32..n_atoms).collect(),
+            _ => {
+                return Err(unsupported(format!(
+                    "builtin sig {} (strings/seq)",
+                    sig.label
+                )))
+            }
+        });
+    }
+    if !sig.subset_of.is_empty() {
+        let mut out = Vec::new();
+        for &t in &sig.subset_of {
+            out.extend(sig_upper(model, lay, t, n_atoms)?);
+        }
+        out.sort_unstable();
+        out.dedup();
+        return Ok(out);
+    }
+    Ok(lay.upper(s))
+}
+
+fn field_upper(
+    model: &Model,
+    lay: &Layout,
+    n_atoms: u32,
+    f: FieldId,
+    memo: &mut Vec<Option<TupleSet>>,
+    stack: &mut Vec<FieldId>,
+) -> Result<TupleSet, AlloyError> {
+    if let Some(t) = &memo[f as usize] {
+        return Ok(t.clone());
+    }
+    if stack.contains(&f) {
+        return Err(unsupported("recursive field declaration types"));
+    }
+    stack.push(f);
+    let fld = &model.fields[f as usize];
+    let owner = unary(sig_upper(model, lay, fld.owner, n_atoms)?);
+    let mut env = HashMap::new();
+    env.insert(LocalId::MAX, owner.clone());
+    let decl = type_of(model, lay, n_atoms, &fld.decl, memo, stack, &mut env)?;
+    stack.pop();
+    let upper = owner.product(&decl);
+    memo[f as usize] = Some(upper.clone());
+    Ok(upper)
+}
+
+fn join_ts(a: &TupleSet, b: &TupleSet) -> Result<TupleSet, AlloyError> {
+    if a.arity + b.arity < 3 {
+        return Err(unsupported("join of two unary types in a declaration"));
+    }
+    let mut out = TupleSet::empty(a.arity + b.arity - 2);
+    for ta in &a.tuples {
+        for tb in &b.tuples {
+            if ta[ta.len() - 1] == tb[0] {
+                let mut t = ta[..ta.len() - 1].to_vec();
+                t.extend_from_slice(&tb[1..]);
+                out.tuples.insert(t);
+            }
+        }
+    }
+    Ok(out)
+}
+
+/// Type (upper-bound tuples) of an Alloy expression in the current scope.
+pub(crate) fn type_of(
+    model: &Model,
+    lay: &Layout,
+    n_atoms: u32,
+    e: &RExpr,
+    memo: &mut Vec<Option<TupleSet>>,
+    stack: &mut Vec<FieldId>,
+    env: &mut HashMap<LocalId, TupleSet>,
+) -> Result<TupleSet, AlloyError> {
+    macro_rules! t {
+        ($x:expr) => {
+            type_of(model, lay, n_atoms, $x, memo, stack, env)?
+        };
+    }
+    Ok(match e {
+        RExpr::Sig(s) => unary(sig_upper(model, lay, *s, n_atoms)?),
+        RExpr::Field(f) => field_upper(model, lay, n_atoms, *f, memo, stack)?,
+        RExpr::Const(Const::Univ) => unary(
+            (0..n_atoms)
+                .filter(|a| *a < lay.time_range.0 || *a >= lay.time_range.1)
+                .collect(),
+        ),
+        RExpr::Const(Const::None) => TupleSet::empty(1),
+        RExpr::Un(UnOp::Set | UnOp::One | UnOp::Lone | UnOp::Some | UnOp::Prime, x) => t!(x),
+        RExpr::Un(UnOp::Seq, x) => {
+            unary(sig_upper(model, lay, SIG_SEQINT, n_atoms)?).product(&t!(x))
+        }
+        RExpr::Bin(BinOp::Plus, a, b) => t!(a).union(&t!(b)),
+        RExpr::Bin(BinOp::Intersect, a, b) => {
+            let (a, b) = (t!(a), t!(b));
+            TupleSet {
+                arity: a.arity,
+                tuples: a.tuples.intersection(&b.tuples).cloned().collect(),
+            }
+        }
+        RExpr::Bin(BinOp::Minus, a, _) => t!(a),
+        RExpr::Bin(BinOp::Arrow(_, _), a, b) => t!(a).product(&t!(b)),
+        RExpr::Bin(BinOp::Join, a, b) => join_ts(&t!(a), &t!(b))?,
+        RExpr::Local(l) => match env.get(l).or_else(|| env.get(&LocalId::MAX)) {
+            Some(t) => t.clone(),
+            None => return Err(unsupported("unbound local in a declaration type")),
+        },
+        RExpr::Compr(decls, _) => {
+            let mut acc: Option<TupleSet> = None;
+            for d in decls {
+                let b = t!(&d.bound);
+                for v in &d.vars {
+                    env.insert(*v, b.clone());
+                    acc = Some(match acc {
+                        None => b.clone(),
+                        Some(a) => a.product(&b),
+                    });
+                }
+            }
+            acc.ok_or_else(|| other("empty comprehension"))?
+        }
+        RExpr::Call(fid, args) => {
+            let f = &model.funcs[*fid as usize];
+            for ((pid, _), a) in f.params.iter().zip(args) {
+                let ty = t!(a);
+                env.insert(*pid, ty);
+            }
+            t!(&f.body)
+        }
+        RExpr::Block(items) if items.len() == 1 => t!(&items[0]),
+        RExpr::Choice(c) if c.len() == 1 => t!(&c[0]),
+        RExpr::Choice(c) => {
+            let mut acc: Option<TupleSet> = None;
+            let has_plain = c
+                .iter()
+                .any(|x| !matches!(x, RExpr::Choice(v) if v.len() == 1));
+            for x in c {
+                if has_plain && matches!(x, RExpr::Choice(v) if v.len() == 1) {
+                    continue;
+                }
+                let t = t!(x);
+                acc = Some(match acc {
+                    Some(a) if a.arity == t.arity => a.union(&t),
+                    Some(a) => a,
+                    None => t,
+                });
+            }
+            acc.ok_or_else(|| other("empty choice"))?
+        }
+        RExpr::Str(text) => {
+            let name = format!("\"{text}\"");
+            match lay.atoms.iter().position(|x| *x == name) {
+                Some(a) => unary(vec![a as u32]),
+                None => TupleSet::empty(1),
+            }
+        }
+        RExpr::Const(Const::Iden) => {
+            let all = unary((0..n_atoms).collect());
+            TupleSet::from_tuples(2, all.tuples.iter().map(|t| vec![t[0], t[0]]))
+        }
+        RExpr::Const(Const::IntNext)
+        | RExpr::Const(Const::IntMin)
+        | RExpr::Const(Const::IntMax) => {
+            let ints = unary(sig_upper(model, lay, SIG_INT, n_atoms)?);
+            if matches!(e, RExpr::Const(Const::IntNext)) {
+                ints.product(&ints)
+            } else {
+                ints
+            }
+        }
+        RExpr::Num(_)
+        | RExpr::Quant(Quant::Sum, _, _)
+        | RExpr::Un(UnOp::Card | UnOp::IntCast | UnOp::SigInt | UnOp::Neg, _)
+        | RExpr::Bin(
+            BinOp::IntPlus | BinOp::IntMinus | BinOp::Mul | BinOp::Div | BinOp::Rem,
+            _,
+            _,
+        ) => unary(sig_upper(model, lay, SIG_INT, n_atoms)?),
+        RExpr::Un(UnOp::Closure | UnOp::ReflClosure, x) => {
+            let a = t!(x);
+            let mut out = TupleSet::empty(2);
+            let firsts: BTreeSet<u32> = a.tuples.iter().map(|t| t[0]).collect();
+            let lasts: BTreeSet<u32> = a.tuples.iter().map(|t| t[t.len() - 1]).collect();
+            for &f in &firsts {
+                for &l in &lasts {
+                    out.tuples.insert(vec![f, l]);
+                }
+            }
+            out
+        }
+        RExpr::Bin(BinOp::DomainRestrict, _, b) => t!(b),
+        RExpr::Bin(BinOp::RangeRestrict, a, _) => t!(a),
+        RExpr::Bin(BinOp::Override, a, b) => t!(a).union(&t!(b)),
+        RExpr::Ite(_, a, b) => t!(a).union(&t!(b)),
+        RExpr::Un(UnOp::Transpose, x) => {
+            let a = t!(x);
+            TupleSet::from_tuples(
+                a.arity,
+                a.tuples
+                    .iter()
+                    .map(|t| t.iter().rev().copied().collect::<Vec<_>>()),
+            )
+        }
+        other_e => {
+            return Err(unsupported(format!(
+                "declaration type that is not a sig expression: {:.80}",
+                format!("{other_e:?}")
+            )))
+        }
+    })
+}
 
 /// Expected type of an overloaded operand.
 pub(crate) enum Exp {

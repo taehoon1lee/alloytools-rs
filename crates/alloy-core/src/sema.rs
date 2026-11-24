@@ -239,6 +239,7 @@ struct Scope {
 
 struct Builder<'a> {
     mods: &'a [LoadedModule],
+    module_paths: Vec<String>,
     model: Model,
     scopes: Vec<Scope>,
     macros: Vec<MacroDef>,
@@ -255,9 +256,85 @@ struct Builder<'a> {
 }
 
 /// Builds the resolved model for the loaded modules (index 0 = root).
+fn slash_cmp(a: &str, b: &str) -> std::cmp::Ordering {
+    use std::cmp::Ordering;
+    if a == b {
+        return Ordering::Equal;
+    }
+    for special in ["extends", "in"] {
+        if a == special {
+            return Ordering::Less;
+        }
+        if b == special {
+            return Ordering::Greater;
+        }
+    }
+    match (a.starts_with("this/"), b.starts_with("this/")) {
+        (true, false) => return Ordering::Less,
+        (false, true) => return Ordering::Greater,
+        _ => {}
+    }
+    let (sa, sb) = (a.matches('/').count(), b.matches('/').count());
+    if sa != sb {
+        return sa.cmp(&sb);
+    }
+    let r = a.to_lowercase().cmp(&b.to_lowercase());
+    if r != Ordering::Equal {
+        return r;
+    }
+    a.cmp(b)
+}
+
+fn java_paths(mods: &[LoadedModule]) -> Vec<String> {
+    let n = mods.len();
+    if n == 0 {
+        return Vec::new();
+    }
+    let mut cands: Vec<Vec<String>> = vec![Vec::new(); n];
+    cands[0].push(String::new());
+    for _ in 0..n {
+        let mut changed = false;
+        for m in 0..n {
+            let prefixes = cands[m].clone();
+            for o in &mods[m].opens {
+                if o.target == 0 {
+                    continue;
+                }
+                for pm in &prefixes {
+                    let c = if pm.is_empty() {
+                        o.alias.clone()
+                    } else {
+                        format!("{pm}/{}", o.alias)
+                    };
+                    if !cands[o.target].contains(&c) && cands[o.target].len() < 64 {
+                        cands[o.target].push(c);
+                        changed = true;
+                    }
+                }
+            }
+        }
+        if !changed {
+            break;
+        }
+    }
+    cands
+        .into_iter()
+        .enumerate()
+        .map(|(i, c)| {
+            if i == 0 {
+                return String::new();
+            }
+            c.into_iter()
+                .min_by(|a, b| (a.contains('$'), 0).cmp(&(b.contains('$'), 0)).then_with(|| slash_cmp(a, b)))
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
 pub fn build(mods: &[LoadedModule]) -> Result<Model, AlloyError> {
     let mut b = Builder {
         mods,
+        module_paths: java_paths(mods),
         model: Model::default(),
         scopes: Vec::new(),
         macros: Vec::new(),
@@ -406,7 +483,7 @@ impl<'a> Builder<'a> {
                             for f in &d.names {
                                 let fid = self.model.fields.len() as FieldId;
                                 self.model.fields.push(Field {
-                                    label: format!("this/{name}.{f}"),
+                                    label: format!("{}.{f}", self.model.sigs[id as usize].label),
                                     name: f.clone(),
                                     owner: id,
                                     decl: RExpr::Num(0),
@@ -483,7 +560,11 @@ impl<'a> Builder<'a> {
     ) -> SigId {
         let id = self.model.sigs.len() as SigId;
         self.model.sigs.push(Sig {
-            label: format!("this/{name}"),
+            label: if self.module_paths[i].is_empty() {
+                format!("this/{name}")
+            } else {
+                format!("{}/{name}", self.module_paths[i])
+            },
             name: name.to_string(),
             kind: SigKind::User,
             parent,

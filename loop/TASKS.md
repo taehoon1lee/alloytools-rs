@@ -6,13 +6,13 @@ Scores come from `python harness/check.py` (see CLAUDE.md). Java paths are relat
 `reference/alloy-java/` (abbrev: `CORE` = `org.alloytools.alloy.core/src/main/java/edu/mit/csail/sdg`,
 `KK` = `org.alloytools.pardinus.core/src/main/java/kodkod`).
 
-## STATUS (2026-11-23, rev `cd6bc87`) — parse 199/199, commands 199/199, verdict 465/465, perf 465/465 (sequential 23.23 s vs Java 285.66 s); exact 215/215; `--count` 432/432; gate green
-Done: M1-M8 (incl. temporal and `--count` 432/432) and bit-exact instance pipeline (`pardinus` + `sat4j` 2.3.1; `cmp_inst.py --all` 465/465, `cmp_alloy.py` 215/215 `.kk`/CNF).
-Open / known gaps on `cd6bc87`:
+## STATUS (2026-11-24) — parse 199/199, commands 199/199, verdict 465/465, perf 465/465 (sequential 20.47 s vs Java 285.66 s); `cmp_alloy.py` 215/215; `kk_cnf` 207/207; `PinCheck` 59/59; `--count` 432/432; gate green
+Done: M1-M8 (incl. temporal and `--count` 432/432), unified pure-MIT `pardinus` + 4-thread `BatSat` portfolio with runtime pre-BVE CNF + SBP-free circuit verification (`cmp_inst.py --all` 465/465 verdict agreement, `cmp_alloy.py` 215/215 `.kk`/CNF, `PinCheck` 59/59 static SAT `check` counterexamples), legacy `kodkod`/`translate.rs`/`sat4j.rs` removed.
+Open / known gaps:
 - [x] `--count` regressions fixed in `cd6bc87` (432/432: enum `util/ordering` pre-binding + RelId-based temporal static pinning)
 - [ ] M9 error parity: `error_line_match` 1/5 (`models/utilities/types/{seqrel,integer,sequniv,sequence}` report `-1` pos and differing error text)
-- [ ] Product API & options wiring: `Solution::next()` (`Unsupported`), `Options.{skolem_depth,no_overflow,unrolls}`, CLI subcommands/flags beyond `exec`
-- [ ] Licensing isolation: isolate `crates/satsolver/src/sat4j.rs` (LGPL-2.1 / EPL-1.0) behind an opt-in crate/feature so default `batsat` builds remain pure MIT (`THIRD_PARTY_LICENSES.md`)
+- [~] Product API & options wiring: `Options.{symmetry,skolem_depth,no_overflow,unrolls,verify,want_xml}` wired into `exact` + `pardinus` + `eval::verify_instance` (`--verify` / `ALLOY_RS_VERIFY=1`) + `xml::write_solution_xml` (`--xml <PATH>`, 215/215 `A4SolutionReader` + `sol.eval()`); `Solution::next()` (`Unsupported`) remains
+- [x] Licensing isolation: `crates/satsolver/src/sat4j.rs` (LGPL-2.1 / EPL-1.0) and `crates/kodkod/` removed — workspace builds are 100% pure MIT (`THIRD_PARTY_LICENSES.md`)
 - [ ] Unseen holdout & Migration Harness Coverage PoCs (JaCoCo Java coverage, differential fuzzing, completion-gap curve)
 
 ## M0 — Environment (done by the environment builder)

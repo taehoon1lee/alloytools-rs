@@ -252,6 +252,19 @@ fn refine(parts: &mut Vec<Vec<u32>>, set: &[u32], arity: u32, n: u32, map: &mut 
     }
 }
 
+/// Relation ordering used when building the truncated lex-leader symmetry-breaking predicate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum SbpOrder {
+    /// Arity ascending, then Java UTF-16 relation name (exact Java Kodkod order).
+    JavaOrder,
+    /// Arity ascending, then `Bounds::relations()` declaration order.
+    ArityDecl,
+    /// `Bounds::relations()` declaration order.
+    DeclOrder,
+    /// Skip lex-leader SBP generation.
+    NoSbp,
+}
+
 /// `SymmetryBreaker` (non-decomposed: stage bounds == bounds).
 pub struct Breaker {
     pub symmetries: Vec<Vec<u32>>,
@@ -406,11 +419,19 @@ impl Breaker {
     }
 
     /// `generateSBP(interpreter, options)`
-    pub fn generate_sbp(&mut self, ast: &Ast, b: &Bounds, leaf: &Leaf, f: &mut Factory, opt: &Options) -> Result<BV, String> {
-        let pred_len = opt.symmetry as usize;
-        if self.symmetries.is_empty() || pred_len == 0 {
+    pub fn generate_sbp(
+        &self,
+        ast: &Ast,
+        b: &Bounds,
+        leaf: &Leaf,
+        f: &mut Factory,
+        opt: &Options,
+        order: SbpOrder,
+    ) -> Result<BV, String> {
+        if order == SbpOrder::NoSbp || self.symmetries.is_empty() || opt.symmetry <= 0 {
             return Ok(TRUE);
         }
+        let pred_len = opt.symmetry as usize;
         let n = self.n;
         // relParts
         let mut rel_parts: Vec<(N, Vec<u32>)> = Vec::new();
@@ -433,14 +454,21 @@ impl Breaker {
             }
             rel_parts.push((r, reps));
         }
-        rel_parts.sort_by(|a, b| {
-            let (ia, ib) = (ast.rel_info(a.0), ast.rel_info(b.0));
-            ia.arity.cmp(&ib.arity).then_with(|| java_string_cmp(&ia.name, &ib.name))
-        });
+        match order {
+            SbpOrder::JavaOrder => {
+                rel_parts.sort_by(|a, b| {
+                    let (ia, ib) = (ast.rel_info(a.0), ast.rel_info(b.0));
+                    ia.arity.cmp(&ib.arity).then_with(|| java_string_cmp(&ia.name, &ib.name))
+                });
+            }
+            SbpOrder::ArityDecl => {
+                rel_parts.sort_by_key(|a| ast.rel_info(a.0).arity);
+            }
+            SbpOrder::DeclOrder | SbpOrder::NoSbp => {}
+        }
         let mut sbp = Acc::new(Op::And);
         let mut original: Vec<BV> = Vec::new();
         let mut permuted: Vec<BV> = Vec::new();
-        let syms = self.symmetries.clone();
         // [HASLab] temporal expansions: the static entries first, then the entries of each time step in turn
         let times: Option<Vec<u32>> = b.state.filter(|s| b.lower.contains_key(s)).map(|s| b.lower[&s].idx.clone());
         let mut passes: Vec<Option<u32>> = vec![None];
@@ -457,7 +485,7 @@ impl Breaker {
             }
             false
         };
-        for sym in &syms {
+        for sym in &self.symmetries {
             let mut prev = sym[0];
             for &cur in &sym[1..] {
                 for &time in &passes {
@@ -498,7 +526,6 @@ impl Breaker {
                 prev = cur;
             }
         }
-        self.symmetries.clear();
         Ok(f.accumulate(&sbp))
     }
 }

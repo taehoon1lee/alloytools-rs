@@ -151,6 +151,7 @@ impl<'a> Cx<'a> {
             min,
             max,
             bitwidth,
+            maxseq,
             sigint,
             seqidx,
             strings,
@@ -166,6 +167,7 @@ impl<'a> Cx<'a> {
             typed_vars: Default::default(),
             ltypes: Vec::new(),
             ty_memo: vec![None; model.fields.len()],
+            unrolls: -1,
             ub: HashMap::new(),
             lb: HashMap::new(),
         })
@@ -719,7 +721,7 @@ impl<'a> Cx<'a> {
 
     /// `A4Solution.addSymbolicBound(Sig)`: only subset sigs
     fn symbolic_sig(&mut self, s: SigId) -> Result<(), AlloyError> {
-        if self.is_prim(s) || self.is_top(s) {
+        if self.is_prim(s) || self.is_top(s) || self.model.sigs[s as usize].is_exact {
             return Ok(());
         }
         let r = match self.a2k_sig[s as usize] {

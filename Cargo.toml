@@ -2,7 +2,6 @@
 resolver = "2"
 members = [
     "crates/alloy-core",
-    "crates/kodkod",
     "crates/satsolver",
     "crates/alloy-translate",
     "crates/alloy-cli",

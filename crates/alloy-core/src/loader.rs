@@ -24,6 +24,8 @@ pub struct LoadedModule {
     pub module: Module,
     /// Resolved `open` declarations in source order.
     pub opens: Vec<ResolvedOpen>,
+    /// Full source text of this module (used for XML `<source>` elements).
+    pub source: String,
 }
 
 /// An `open` after loading: which module instance it refers to and under which alias.
@@ -265,6 +267,7 @@ fn load_one(
         path: path.to_string(),
         module,
         opens: Vec::new(),
+        source: src.to_string(),
     });
 
     // Java's alias map in insertion order: the implicit `integer` (added before parsing), the explicit opens,

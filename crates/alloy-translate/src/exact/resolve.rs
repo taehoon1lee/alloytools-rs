@@ -2,9 +2,7 @@
 //! locals' atom-level types tracked while translating.
 
 use super::*;
-use crate::resolve::Resolver;
-use crate::translate::type_of;
-use kodkod::instance::TupleSet as KTs;
+use crate::resolve::{type_of, Resolver, TupleSet as KTs};
 
 impl<'a> Resolver for Cx<'a> {
     fn model(&self) -> &Model {

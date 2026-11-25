@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "alloytools-rs"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloytools-rs-core",
  "alloytools-rs-translate",
@@ -13,7 +13,7 @@ dependencies = [
 
 [[package]]
 name = "alloytools-rs-batsat"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "bit-vec",
  "log",
@@ -21,25 +21,25 @@ dependencies = [
 
 [[package]]
 name = "alloytools-rs-core"
-version = "0.0.1"
+version = "0.0.2"
 
 [[package]]
 name = "alloytools-rs-pardinus"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloytools-rs-satsolver",
 ]
 
 [[package]]
 name = "alloytools-rs-satsolver"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloytools-rs-batsat",
 ]
 
 [[package]]
 name = "alloytools-rs-translate"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "alloytools-rs-core",
  "alloytools-rs-pardinus",

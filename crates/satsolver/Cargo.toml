@@ -1,8 +1,15 @@
 [package]
-name = "satsolver"
+name = "alloytools-rs-satsolver"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "SAT solver abstraction (port of kodkod.engine.satlab.SATSolver) with pure-Rust backends"
+
+[lib]
+name = "satsolver"
 
 [dependencies]
 batsat = { workspace = true }

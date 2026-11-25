@@ -2,7 +2,7 @@ name: Release
 
 # Push a version tag (e.g. v0.1.0) -> build binaries for Windows / Linux / macOS
 # and attach them to the GitHub Release page of that tag.
-# The tag must match the `alloy-cli` crate version (v0.1.0 <-> version = "0.1.0").
+# The tag must match the `alloytools-rs` crate version (v0.1.0 <-> version = "0.1.0").
 on:
   push:
     tags:
@@ -29,11 +29,11 @@ jobs:
       - name: Tag must match crate version
         run: |
           crate=$(cargo metadata --no-deps --locked --format-version 1 \
-            | jq -r '.packages[] | select(.name == "alloy-cli") | .version')
+            | jq -r '.packages[] | select(.name == "alloytools-rs") | .version')
           tag="${GITHUB_REF_NAME#v}"
           echo "tag=$tag crate=$crate"
           # allow pre-release suffixes on the tag (0.2.0-rc1 -> 0.2.0)
-          [ "${tag%%-*}" = "$crate" ] || { echo "::error::tag $GITHUB_REF_NAME does not match alloy-cli version $crate"; exit 1; }
+          [ "${tag%%-*}" = "$crate" ] || { echo "::error::tag $GITHUB_REF_NAME does not match alloytools-rs version $crate"; exit 1; }
 
       - name: Stable tags must be on main
         if: ${{ !contains(github.ref_name, '-') }}
@@ -80,7 +80,7 @@ jobs:
           save-if: false
 
       - name: Build
-        run: cargo build --release --locked -p alloy-cli --target ${{ matrix.target }}
+        run: cargo build --release --locked -p alloytools-rs --target ${{ matrix.target }}
 
       - name: Smoke test
         shell: bash

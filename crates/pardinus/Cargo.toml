@@ -1,8 +1,15 @@
 [package]
-name = "pardinus"
+name = "alloytools-rs-pardinus"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Pure-MIT port of the Pardinus/Kodkod translation pipeline (Kodkod problem -> CNF -> BatSat -> instance)"
 
+[lib]
+name = "pardinus"
+
 [dependencies]
-satsolver = { path = "../satsolver" }
+satsolver = { package = "alloytools-rs-satsolver", path = "../satsolver", version = "0.0.1" }

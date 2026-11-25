@@ -12,11 +12,15 @@ members = [
 [workspace.package]
 version = "0.0.1"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/taehoon1lee/alloytools-rs"
+keywords = ["alloy", "formal-methods", "model-finder", "sat", "relational-logic"]
+categories = ["command-line-utilities", "development-tools", "science"]
 
 [workspace.dependencies]
 # RULE: pure-Rust crates only (toolchain is x86_64-pc-windows-gnu without a C compiler). Add serde etc. here when needed.
 serde_json = "1"
-batsat = { path = "crates/batsat" }   # vendored batsat 0.6.0 (MIT), modified in-tree
+batsat = { package = "alloytools-rs-batsat", path = "crates/batsat", version = "0.0.1" }   # vendored batsat 0.6.0 (MIT), modified in-tree
 
 [profile.release]
 opt-level = 3

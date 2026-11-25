@@ -1,0 +1,151 @@
+name: Release
+
+# Push a version tag (e.g. v0.1.0) -> build binaries for Windows / Linux / macOS
+# and attach them to the GitHub Release page of that tag.
+# The tag must match the `alloy-cli` crate version (v0.1.0 <-> version = "0.1.0").
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  # Smaller release binaries (the workspace profile keeps debug info for profiling).
+  CARGO_PROFILE_RELEASE_DEBUG: "0"
+  CARGO_PROFILE_RELEASE_STRIP: symbols
+
+jobs:
+  check:
+    name: check tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Tag must match crate version
+        run: |
+          crate=$(cargo metadata --no-deps --locked --format-version 1 \
+            | jq -r '.packages[] | select(.name == "alloy-cli") | .version')
+          tag="${GITHUB_REF_NAME#v}"
+          echo "tag=$tag crate=$crate"
+          # allow pre-release suffixes on the tag (0.2.0-rc1 -> 0.2.0)
+          [ "${tag%%-*}" = "$crate" ] || { echo "::error::tag $GITHUB_REF_NAME does not match alloy-cli version $crate"; exit 1; }
+
+      - name: Stable tags must be on main
+        if: ${{ !contains(github.ref_name, '-') }}
+        run: git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+  build:
+    name: build (${{ matrix.target }})
+    needs: check
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            archive: zip
+          # Linux: static musl binaries -> no glibc version requirement.
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            archive: tar.gz
+          - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            archive: tar.gz
+          - os: macos-15-intel   # Intel
+            target: x86_64-apple-darwin
+            archive: tar.gz
+          - os: macos-latest     # Apple Silicon
+            target: aarch64-apple-darwin
+            archive: tar.gz
+    steps:
+      # Submodules (reference/**) are only test/oracle data; the build does not need them.
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install stable --profile minimal --target ${{ matrix.target }}
+          rustup default stable
+          rustc -Vv
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.target }}
+          save-if: false
+
+      - name: Build
+        run: cargo build --release --locked -p alloy-cli --target ${{ matrix.target }}
+
+      - name: Smoke test
+        shell: bash
+        run: |
+          exe=alloy-rs
+          if [ "${{ matrix.archive }}" = "zip" ]; then exe=alloy-rs.exe; fi
+          printf 'sig A {}\nrun { some A } for 3\n' > smoke.als
+          out=$("target/${{ matrix.target }}/release/$exe" exec --json --file smoke.als)
+          echo "${out:0:300}"
+          grep -q '"status":"SAT"' <<<"$out"
+          grep -q '"error":null' <<<"$out"
+
+      - name: Package
+        id: pack
+        shell: bash
+        run: |
+          name="alloy-rs-${GITHUB_REF_NAME}-${{ matrix.target }}"
+          mkdir "$name"
+          exe=alloy-rs
+          if [ "${{ matrix.archive }}" = "zip" ]; then exe=alloy-rs.exe; fi
+          cp "target/${{ matrix.target }}/release/$exe" "$name/"
+          cp README.md THIRD_PARTY_LICENSES.md "$name/"
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            7z a "$name.zip" "$name" > /dev/null
+            file="$name.zip"
+          else
+            tar czf "$name.tar.gz" "$name"
+            file="$name.tar.gz"
+          fi
+          echo "file=$file" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: ${{ steps.pack.outputs.file }}
+          if-no-files-found: error
+
+  release:
+    name: publish release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          IS_PRERELEASE: ${{ contains(github.ref_name, '-') }}
+        run: |
+          # idempotent: a re-run of this job updates the existing release's assets
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+          else
+            flags=()
+            [ "$IS_PRERELEASE" = "true" ] && flags+=(--prerelease)
+            gh release create "$GITHUB_REF_NAME" dist/* \
+              --verify-tag --title "$GITHUB_REF_NAME" --generate-notes "${flags[@]}"
+          fi

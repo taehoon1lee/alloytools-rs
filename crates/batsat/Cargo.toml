@@ -1,11 +1,16 @@
 [package]
-name = "batsat"
-version = "0.6.0"
+name = "alloytools-rs-batsat"
+version.workspace = true
 authors = ["Simon Cruanes", "Masaki Hara <ackie.h.gmai@gmail.com>"]
 description = "Vendored copy of batsat 0.6.0 (MIT, github.com/c-cube/batsat), a MiniSat 2.2 port, tuned for Kodkod CNFs"
 license = "MIT"
 edition = "2018"
-publish = false
+repository.workspace = true
+keywords = ["sat", "solver", "minisat", "cdcl"]
+categories = ["algorithms"]
+
+[lib]
+name = "batsat"
 
 [dependencies]
 bit-vec = "0.5.0"

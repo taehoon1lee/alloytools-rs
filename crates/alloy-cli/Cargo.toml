@@ -1,14 +1,19 @@
 [package]
-name = "alloy-cli"
+name = "alloytools-rs"
 version.workspace = true
 edition.workspace = true
-description = "alloy-rs command line; implements the harness JSON protocol (harness/SCHEMA.md)"
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+readme = "README.md"
+description = "alloy-rs: a pure-Rust Alloy Analyzer 6.2.0 command line (run/check Alloy models, JSON output)"
 
 [[bin]]
 name = "alloy-rs"
 path = "src/main.rs"
 
 [dependencies]
-alloy-core = { path = "../alloy-core" }
-alloy-translate = { path = "../alloy-translate" }
+alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.1" }
+alloy-translate = { package = "alloytools-rs-translate", path = "../alloy-translate", version = "0.0.1" }
 serde_json = { workspace = true }

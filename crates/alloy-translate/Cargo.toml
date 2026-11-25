@@ -1,13 +1,20 @@
 [package]
-name = "alloy-translate"
+name = "alloytools-rs-translate"
 version.workspace = true
 edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
 description = "Alloy AST -> Kodkod translation and solving (port of edu.mit.csail.sdg.translator)"
 
+[lib]
+name = "alloy_translate"
+
 [dependencies]
-alloy-core = { path = "../alloy-core" }
-pardinus = { path = "../pardinus" }
-satsolver = { path = "../satsolver" }
+alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.1" }
+pardinus = { package = "alloytools-rs-pardinus", path = "../pardinus", version = "0.0.1" }
+satsolver = { package = "alloytools-rs-satsolver", path = "../satsolver", version = "0.0.1" }
 
 [dev-dependencies]
 serde_json = { workspace = true }

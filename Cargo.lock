@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "alloy-cli"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "alloy-core",
  "alloy-translate",
@@ -13,11 +13,11 @@ dependencies = [
 
 [[package]]
 name = "alloy-core"
-version = "0.1.0"
+version = "0.0.1"
 
 [[package]]
 name = "alloy-translate"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "alloy-core",
  "pardinus",
@@ -59,7 +59,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "pardinus"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "satsolver",
 ]
@@ -84,7 +84,7 @@ dependencies = [
 
 [[package]]
 name = "satsolver"
-version = "0.1.0"
+version = "0.0.1"
 dependencies = [
  "batsat",
 ]

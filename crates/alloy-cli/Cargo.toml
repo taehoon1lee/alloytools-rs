@@ -14,6 +14,6 @@ name = "alloy-rs"
 path = "src/main.rs"
 
 [dependencies]
-alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.1" }
-alloy-translate = { package = "alloytools-rs-translate", path = "../alloy-translate", version = "0.0.1" }
+alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.2" }
+alloy-translate = { package = "alloytools-rs-translate", path = "../alloy-translate", version = "0.0.2" }
 serde_json = { workspace = true }

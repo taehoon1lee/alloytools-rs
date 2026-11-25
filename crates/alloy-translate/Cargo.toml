@@ -12,9 +12,9 @@ description = "Alloy AST -> Kodkod translation and solving (port of edu.mit.csai
 name = "alloy_translate"
 
 [dependencies]
-alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.1" }
-pardinus = { package = "alloytools-rs-pardinus", path = "../pardinus", version = "0.0.1" }
-satsolver = { package = "alloytools-rs-satsolver", path = "../satsolver", version = "0.0.1" }
+alloy-core = { package = "alloytools-rs-core", path = "../alloy-core", version = "0.0.2" }
+pardinus = { package = "alloytools-rs-pardinus", path = "../pardinus", version = "0.0.2" }
+satsolver = { package = "alloytools-rs-satsolver", path = "../satsolver", version = "0.0.2" }
 
 [dev-dependencies]
 serde_json = { workspace = true }

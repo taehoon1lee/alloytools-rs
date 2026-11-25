@@ -2,7 +2,7 @@ name: Release
 
 # Push a version tag (e.g. v0.1.0) -> build binaries for Windows / Linux / macOS
 # and attach them to the GitHub Release page of that tag.
-# The tag must match the `alloytools-rs` crate version (v0.1.0 <-> version = "0.1.0").
+# The tag must match the `alloytools-rs` crate version (v0.0.2 <-> version = "0.0.2").
 on:
   push:
     tags:
